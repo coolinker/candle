@@ -1,0 +1,20 @@
+{
+  "name": "candle",
+  "version": "1.0.0",
+  "description": "",
+  "main": "candle.js",
+  "dependencies": {
+    "babel-preset-react": "^6.11.1",
+    "babelify": "^7.3.0",
+    "node-fetch": "^1.5.3",
+    "react": "^15.1.0",
+    "react-dom": "^15.1.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "watchify -t [ babelify --presets [ react ] ] src/web/index.js -o build/app.js"
+  },
+  "author": "",
+  "license": "ISC"
+}
