@@ -12,12 +12,18 @@ let server = http.createServer(function(req, res) {
     if (uri === "/api" && handleApiRequest(req, res)) {
         return;
     } else {
-        if (uri ==='/') uri = '/index.html';
+        if (uri === '/') uri = '/index.html';
         uri = "../build" + uri;
-        console.log(uri)
-        let content = fs.readFileSync(uri);
-        res.writeHead(200, {'Content-Type': 'text/html;charset=UTF-8'});
-        res.end(content);
+        res.writeHead(200, { 'Content-Type': 'text/html;charset=UTF-8' });
+        if (fs.existsSync(uri)) {
+            console.log(uri)
+            let content = fs.readFileSync(uri);
+            res.end(content);
+        } else {
+            console.log("file doesn't exists", uri);
+            res.end("");
+        }
+
     }
 
 }).listen(parseInt(port, 10));
@@ -25,13 +31,15 @@ let server = http.createServer(function(req, res) {
 console.log("Static file server running at\n  => http://" + serverIp + ":" + port + "/\nCTRL + C to shutdown");
 
 function handleApiRequest(request, response) {
-    let query = url.parse(request.url, true).query;
-    let action = query.action;
-    if (!apiDispatcher[action]) return false;
+    //let query = url.parse(request.url, true).query;
+    //let action = query.action;
+    //if (!apiDispatcher[action]) return false;
     if (request.method == 'GET') {
-        apiDispatcher[action](query, function(output) {
-                outputResponse(response, output);
-            });
+        // apiDispatcher[action](query, function(output) {
+        //         outputResponse(response, output);
+        //     });
+        console.log("There is no Get  API.")
+        return false;
     } else if (request.method == 'POST') {
         let jsonString = '';
         request.on('data', function(data) {
@@ -40,6 +48,9 @@ function handleApiRequest(request, response) {
 
         request.on('end', function() {
             let postJson = JSON.parse(jsonString);
+            let action = postJson.action;
+            if (!apiDispatcher[action]) return false;
+
             apiDispatcher[action](postJson, function(output) {
                 outputResponse(response, output);
             });
@@ -64,8 +75,26 @@ let dataSourceIO = new DataSourceIO('../data');
 let apiDispatcher = {
     stock: function(params, outputCallback) {
         let sid = params.sid;
-        let str = JSON.stringify(dataSourceIO.readJsonSync(sid.toUpperCase()));
-        outputCallback(str);
+        let content = dataSourceIO.readJsonSync(sid.toUpperCase());
+        if (content) {
+            let str = JSON.stringify(content);
+            outputCallback(str);
+        } else {
+            outputCallback(errorMessage("Can not find stock:" + sid));
+        }
+
+    },
+
+    stockMoneyFlow: function(params, outputCallback) {
+        let sid = params.sid;
+        let content = dataSourceIO.readMoneyFlowSync(sid.toUpperCase());
+        if (content) {
+            let str = JSON.stringify(content);
+            outputCallback(str);
+        } else {
+            outputCallback(errorMessage("Can not find money flow:" + sid));
+        }
+
     }
 
 }
