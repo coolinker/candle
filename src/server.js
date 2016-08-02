@@ -4,6 +4,8 @@ let http = require("http"),
     url = require("url"),
     path = require("path"),
     fs = require('fs'),
+    zlib = require('zlib'),
+
     port = process.argv[3] || 80,
     serverIp = process.argv[2] || "localhost";
 
@@ -50,8 +52,10 @@ function handleApiRequest(request, response) {
             let postJson = JSON.parse(jsonString);
             let action = postJson.action;
             if (!apiDispatcher[action]) return false;
-
+            let startTime = new Date();
             apiDispatcher[action](postJson, function(output) {
+                let endTime = new Date();
+                console.log("Action", action, "takes",  endTime - startTime, "ms");
                 outputResponse(response, output);
             });
         });
@@ -62,17 +66,48 @@ function handleApiRequest(request, response) {
 
 function outputResponse(response, output) {
     response.writeHead(200, {
-        "Content-Type": "application/x-javascript; charset=utf-8",
-        // 'Content-Length': output.length
+        "Content-Type": "application/json",
+        "Content-Encoding": "gzip",
         "Access-Control-Allow-Origin": "http://" + serverIp
     });
-    response.write(output);
-    response.end();
+    let startTime = new Date();
+    zlib.gzip(output, function(error, result) { // The callback will give you the 
+        //response.write(result);
+        let endTime = new Date();
+        console.log("gzip takes", endTime - startTime , "ms");
+        response.end(result); // result, so just send it.
+    });
+}
+
+function errorMessage(msg) {
+    return { "error": msg };
 }
 
 let DataSourceIO = require("./alpha/DataSourceIO");
 let dataSourceIO = new DataSourceIO('../data');
 let apiDispatcher = {
+    stockIds: function(params, outputCallback) {
+        let filter = params.filter;
+        let ids = dataSourceIO.getAllStockIds(filter);
+        let str = JSON.stringify(ids);
+        outputCallback(str);
+    },
+
+
+    stockFull: function(params, outputCallback) {
+        let sid = params.sid;
+        let fields = params.fields.split(',');
+        let content = dataSourceIO.readStockFullJsonSync(sid.toUpperCase(), fields);
+        if (content) {
+            let str = JSON.stringify(content);
+            outputCallback(str);
+        } else {
+            outputCallback(errorMessage("Can not find stockFull:" + sid));
+        }
+
+    },
+
+
     stock: function(params, outputCallback) {
         let sid = params.sid;
         let content = dataSourceIO.readJsonSync(sid.toUpperCase());

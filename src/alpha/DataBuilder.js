@@ -32,7 +32,7 @@ module.exports = class DataBuilder {
         let len = ids.length;
         let me = this;
         this.updateStockJson(ids[index], startDate, function(updatedCount) {
-            console.log("updateJson", index, ids[index], updatedCount);
+            if (!updatedCount) console.log("updateJson", index, ids[index], updatedCount);
             index = updatedCount===null ? index: (index+1);
             if (index < len) me.updateJson(startDate, index)
         })
@@ -60,6 +60,7 @@ module.exports = class DataBuilder {
             for (let i = len-1; i>=0; i--) {
                 let d = new Date(jsondata[i].date);
                 if (startDate <= d) jsondata.pop();
+                else break;
             }
             len = jsondata.length;
             let lday = new Date(len>0 ? jsondata[len-1].date:0);
@@ -132,6 +133,8 @@ module.exports = class DataBuilder {
 
             for (let i = 0; i<items.length; i++) {
                 let item = items[i];
+                if (item.turnover === 0) continue;
+
                 let d = new Date(item.date);
                 if (d>=startDate) mfarr.push(item);
             }

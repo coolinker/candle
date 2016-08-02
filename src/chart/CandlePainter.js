@@ -1,10 +1,10 @@
 'use strict';
 let MassPainter = require('./MassPainter');
-module.exports = class CandlePainter  extends MassPainter{
+module.exports = class CandlePainter extends MassPainter {
     constructor(painterCore, canvas) {
         super(painterCore, canvas);
 
-        this.doOnPriceRange =  this.doOnPriceRange.bind(this);
+        this.doOnPriceRange = this.doOnPriceRange.bind(this);
         this.core.on("priceRange", this.doOnPriceRange);
         this.topPadding = 20;
         this.bottomPadding = 20;
@@ -12,9 +12,9 @@ module.exports = class CandlePainter  extends MassPainter{
         this.topBorder = 1;
     }
 
-    doOnPriceRange(){
+    doOnPriceRange() {
         this.updateHeightPerUnit();
-        this.clearDrawCache(); 
+        this.clearDrawCache();
     }
 
     updateHeightPerUnit() {
@@ -26,13 +26,15 @@ module.exports = class CandlePainter  extends MassPainter{
         return lastv != this.heightPerUnit;
     }
 
-    drawSingle(x, data, data_pre) {
+    drawSingle(x, idx, dataArr) {
+        let data = dataArr[idx];
+
         let open = data.open;
         let close = data.close;
         let high = data.high;
         let low = data.low;
         let ctx = this.canvas2DCtx;
-        let color = (data.close === data.open ? '#ffffff' : (data.close < data.open ? '#4caf50' : '#f44336')); //data_pre ? (data_pre.close > data.close ? '#4caf50' : '#f44336') : (data.close < data.open ? '#4caf50' : '#f44336');
+        let color = (data.close === data.open ? '#ffffff' : (data.close < data.open ? '#4caf50' : '#f44336'));
         ctx.strokeStyle = color;
         ctx.beginPath();
         let w = this.core.unitWidth;
@@ -43,13 +45,38 @@ module.exports = class CandlePainter  extends MassPainter{
         ctx.fillStyle = color;
         let openY = this.getPriceY(open);
         let closeY = this.getPriceY(close);
-       
-        ctx.fillRect(x, openY, w - 1, openY===closeY ? 1 : (closeY - openY));
+
+        ctx.fillRect(x, openY, w - 1, openY === closeY ? 1 : (closeY - openY));
+
+        if (idx === 0) return;
+        let data_pre = dataArr[idx - 1];
+        let aves = [8, 13, 21];
+        let avecolors = ["#FFEB3B", "#00BCD4", "#9C27B0"];
+        for (let i = 0; i < aves.length; i++) {
+            let avy = this.getPriceY(data["ave_close_" + aves[i]]);
+            let avpy = this.getPriceY(data_pre["ave_close_" + aves[i]]);
+            ctx.strokeStyle = avecolors[i];
+            
+            ctx.beginPath();
+            ctx.moveTo(xp, avy);
+            ctx.lineTo(xp-this.core.unitWidth, avpy);
+
+            if (this.hasDrawCache(idx+1)) {
+                let data_next = dataArr[idx + 1];
+                let avny = this.getPriceY(data_next["ave_close_" + aves[i]]);
+                ctx.moveTo(xp+this.core.unitWidth, avny);
+                ctx.lineTo(xp, avy);
+
+            }
+
+            ctx.stroke();
+        }
+
 
     }
 
     getPriceY(price) {
-        let y = Math.round(this.canvas.height - this.bottomPadding  - (price - this.core.priceLow) * 100 * this.heightPerUnit);
+        let y = Math.round(this.canvas.height - this.bottomPadding - (price - this.core.priceLow) * 100 * this.heightPerUnit);
         return y;
     }
 }

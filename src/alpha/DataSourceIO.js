@@ -1,12 +1,17 @@
 'use strict';
 let fetch = require('node-fetch');
-let fs = require("fs");
+let fs = require('fs');
+let TradingDate = require('./tradingdate')
+
 
 module.exports = class DataSourceIO {
     constructor(root) {
-        this.dataSourceRoot = root === undefined ? "../../data" : root;
+        this.dataSourceRoot = root === undefined ? "../data" : root;
         this.allStockIDArray = this.getAllStockIds();
-        this.historyPageParams = ""; //year=2016&jidu=2
+        this.historyPageParams = ""; //"year=2016&jidu=2";
+        let json = this.readJsonSync("SH999999");
+        json.reverse();
+        TradingDate.load(json);
     }
 
     getAllStockIds(match) {
@@ -19,7 +24,7 @@ module.exports = class DataSourceIO {
                 stockIds.push(sid);
             }
         });
-        console.log("stockIds", stockIds.length)
+        console.log("getAllStockIds stockIds", stockIds.length)
         return stockIds;
     }
 
@@ -63,7 +68,7 @@ module.exports = class DataSourceIO {
     }
 
     httpGetStockMoneyFlowHistory(sid, callback) {
-        let num = 20;
+        let num = 30;
         fetch("http://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/MoneyFlow.ssl_qsfx_zjlrqs?page=1&num=" + num + "&sort=opendate&asc=0&daima=" + sid.toLowerCase(), { method: 'GET', timeout: 5000 })
             .then(function(res) {
                 if (!res.ok || res.status != 200) {
@@ -80,7 +85,7 @@ module.exports = class DataSourceIO {
                 body = body.replace(/\{/g, "{\"");
                 body = body.replace(/\}-\{/g, "},{");
                 let json = JSON.parse(body);
-                if (json===null) json = [];
+                if (json === null) json = [];
                 for (let i = 0; i < json.length; i++) {
                     let obj = json[i];
                     for (let att in obj) {
@@ -128,7 +133,7 @@ module.exports = class DataSourceIO {
                         high: Number(subs[3]),
                         close: Number(subs[4]),
                         low: Number(subs[5]),
-                        volume: (sid === 'SH999999' || sid==='SZ399001')? Math.round(Number(subs[6])/100): Number(subs[6]),
+                        volume: (sid === 'SH999999' || sid === 'SZ399001') ? Math.round(Number(subs[6]) / 100) : Number(subs[6]),
                         amount: Number(subs[7])
                     };
                     // console.log(json)
@@ -149,12 +154,82 @@ module.exports = class DataSourceIO {
         fs.writeFileSync(this.dataSourceRoot + "/json/" + sid + ".json", data);
     }
 
+    readStockFullJsonSync(sid, fields) {
+        let jsonArr = this.readJsonSync(sid);
+        let mfArr = this.readMoneyFlowSync(sid);
+        let jlen = jsonArr.length;
+        let mlen = mfArr.length;
+        let len = Math.max(jlen, mlen);
+        let fullArr = [];
+        for (let i = 1; i < len; i++) {
+            let json = jsonArr[jlen - i];
+            let mf = mlen < i ? null : mfArr[mlen - i];
+            if (mf) {
+                if (json.date !== mf.date) {
+                    if (mf.date !== "03/01/2010") {
+                        console.error("readStockFullJsonSync date mismatch!", sid, json.date, mf.date);
+                        return null;
+                    }
+
+                }
+            }
+            Object.assign(json, mf)
+            for (let j=0; j<fields.length; j++) {
+                let v = this.getCompressedFieldValue(fields[j], json);
+                fullArr.push(v);
+            }
+            
+
+            // fields.map(function(field, idx, arr) {
+            //     let v = json[field];
+            //     v = v !== undefined ? v : (mf ? mf[field] : '');
+            //     if (field === 'date') {
+            //         let mdy = v.split("/");
+            //         mdy[2] = mdy[2].substr(2, 2);
+            //         v = Number(mdy.join(""));
+            //     } else if (field === 'amount') {
+            //         v = Math.round(v / 10000)
+            //     } else {
+            //         v = v % 1 === 0 ? v : Math.round(v * 100);
+            //     }
+
+            //     fullArr.push(v);
+            // })
+
+        }
+        return { fields: fields, data: fullArr };
+    }
+
+    getCompressedFieldValue(field, obj) {
+        let v = obj[field];
+        let open = obj['open'];
+        if (field === 'date') {
+            //let idx = TradingDate.getIndex(v);
+            let mdy = v.split("/");
+            mdy[2] = mdy[2].substr(2, 2);
+            v = Number(mdy.join(""));
+            //v = idx;
+        } else if (field === 'amount') {
+            v = Math.round(v / 10000)
+        } else if (field === "low") {
+            v = Math.round((open-obj['low'])*100);
+        } else if (field === "high") {
+            v = Math.round((obj['high']-open)*100);
+        }  else if (field === "close") {
+            v = Math.round((obj['close']-open)*100);
+        } else {
+            v = Math.round(v * 100);
+        }
+
+        return v;
+    }
+
     readJsonSync(sid) {
         let path = this.dataSourceRoot + "/json/" + sid + ".json";
         if (fs.existsSync(path)) {
-        let content = fs.readFileSync(path, "utf8");
-        let kLineJson = JSON.parse(content);
-        return kLineJson;
+            let content = fs.readFileSync(path, "utf8");
+            let kLineJson = JSON.parse(content);
+            return kLineJson;
         } else {
             return null;
         }
@@ -165,14 +240,8 @@ module.exports = class DataSourceIO {
         let path = this.dataSourceRoot + "/moneyflow/" + sid + ".json";
         if (fs.existsSync(path)) {
             let content = fs.readFileSync(path, "utf8");
-           // content = content.replace(/opendate/g, "date");
-            content = content.replace(/\r\n/g, ",");
-            // if (content.indexOf('[')  < 0) {
-            //     content = '[' + content + ']';    
-            // }
-            
             let json = JSON.parse(content);
-            
+
             return json;
         }
         return null;
@@ -182,4 +251,6 @@ module.exports = class DataSourceIO {
         let data = JSON.stringify(jsonData);
         fs.writeFileSync(this.dataSourceRoot + "/moneyflow/" + sid + ".json", data);
     }
+
+
 }

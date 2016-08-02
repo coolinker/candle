@@ -56,6 +56,7 @@ module.exports = class PointerPainter {
         if (this.lastPointerX !== x) {
             this.clear();
             let data = this.core.getDataByIndex(dataIndex);
+            let pdata = this.core.getDataByIndex(dataIndex-1);
             this.drawPointer(x);
             this.lastPointerX = x;
 
@@ -64,23 +65,32 @@ module.exports = class PointerPainter {
             let vol = data.volume;
             let voly = valueToY.volume;
             let xpos = x + this.core.unitWidth + 2;
-            this.drawNumber(vol , xpos, Ys.volume);
-            this.drawNumber(Math.round(data.amount / 10000), xpos, Ys.volume+10);
+            this.drawNumber(vol , xpos, Ys.volume, "rgba(255, 255, 255, 0.5)");
+            this.drawNumber(Math.round(data.amount / 10000)+"万", xpos, Ys.volume+10, "rgba(255, 255, 255, 0.5)");
             //this.drawNumberLine(x + this.core.unitWidth / 2, voly, xpos, Ys.volume);
 
-            this.drawNumber(data.open, xpos, Ys.open);
+            this.drawNumber(data.open, xpos, Ys.open, "rgba(255, 255, 255, 0.5)");
             //this.drawNumberLine(x + this.core.unitWidth / 2, valueToY.open, xpos, Ys.open);
-
-            this.drawNumber(data.close, xpos, Ys.close);
+            //f44336  4caf50
+            if (pdata) {
+                let cls = data.close;
+                 let inc = Math.round(10000*(cls-pdata.close)/pdata.close)/100;
+                let display = (inc === 0 ? cls : (cls + '('+inc+'%)'));
+                let clr = inc === 0 ? "rgba(255, 255, 255, 0.8)" : (inc > 0 ? "rgba(244, 67, 54, 0.8)" : "rgba(76, 175, 80, 0.8)")
+                this.drawNumber(display, xpos, Ys.close, clr);
+            } else {
+                this.drawNumber(data.close, xpos, Ys.close, "rgba(255, 255, 255, 1)");    
+            }
+            
             //this.drawNumberLine(x + this.core.unitWidth / 2, valueToY.close, xpos, Ys.close);
 
-            this.drawNumber(data.high, xpos, Ys.high);
+            this.drawNumber(data.high, xpos, Ys.high, "rgba(255, 255, 255, 0.5)");
             //this.drawNumberLine(x + this.core.unitWidth / 2, valueToY.high, xpos, Ys.high);
 
-            this.drawNumber(data.low, xpos, Ys.low);
+            this.drawNumber(data.low, xpos, Ys.low, "rgba(255, 255, 255, 0.5)");
             //this.drawNumberLine(x + this.core.unitWidth / 2, valueToY.low, xpos, Ys.low);
 
-            this.drawNumber(data.date, xpos, Ys.date);
+            this.drawNumber(data.date, xpos, Ys.date, "rgba(255, 255, 255, 0.5)");
             //this.drawNumberLine(x + this.core.unitWidth / 2, valueToY.date, xpos, Ys.date);
 
         }
@@ -97,22 +107,15 @@ drawNumberLine(x, y, tox, toy) {
     ctx.beginPath();
     ctx.moveTo(x, y);
     ctx.lineTo(tox, toy);
-    ctx.lineWidth = 0.5;
+    ctx.lineWidth = 1;
     ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
     ctx.stroke();
 }
 
-drawDate(date, x, y) {
+drawNumber(val, x, y, color) {
     let ctx = this.canvas2DCtx;
-    ctx.lineWidth = 0.5;
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
-    ctx.strokeText(date, x, y)
-}
-
-drawNumber(val, x, y) {
-    let ctx = this.canvas2DCtx;
-    ctx.lineWidth = 0.5;
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = color;
     ctx.strokeText(val, x, y)
 }
 

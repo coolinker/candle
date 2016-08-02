@@ -1,7 +1,7 @@
 'use strict';
 
 import React from "react";
-import FormInput from "./FormInput";
+import FormInput from "./forminput";
 
 class DateInput extends FormInput {
     constructor(props) {

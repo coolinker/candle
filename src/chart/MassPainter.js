@@ -23,8 +23,7 @@ module.exports = class MassPainter {
     doOnData() {
         if (!this.canvas) return;
         this.canvas.width = this.core.getCanvasWidth();
-        console.log("canvas width changed:", this.canvas.width)
-        //this.drawCache = [];
+        // console.log("canvas width changed:", this.canvas.width)
         this.clearDrawCache();
         this.draw(this.core.drawRangeStart, this.core.drawRangeEnd);
     }
@@ -33,14 +32,14 @@ module.exports = class MassPainter {
         if (!this.canvas) return;
         this.canvas.width = this.core.getCanvasWidth();
         this.clearDrawCache();
-        console.log("MassPainter doOnUnitWidth:", this.canvas.width)
+        // console.log("MassPainter doOnUnitWidth:", this.canvas.width)
         //this.draw(this.core.drawRangeStart, this.core.drawRangeEnd);
         // this.doOnRange();
     }
 
     doOnRange() {
         if (!this.canvas) return;
-        console.log("MassPainter doOnRange", this.core.unitWidth)
+        // console.log("MassPainter doOnRange", this.core.unitWidth)
         this.draw(this.core.drawRangeStart, this.core.drawRangeEnd);
     }
 
@@ -66,16 +65,22 @@ module.exports = class MassPainter {
         //console.log("draw", start, end, data.length, w)
         for (let i = start; i <= end && i>=0; i++) {
             let x = i  * w;
-            if (this.drawCache[i]) continue;
+            if (this.hasDrawCache(i)) continue;
             drawcount++;
-            this.drawSingle(x, data[i], i > 0 ? data[i - 1] : null);
+            //this.drawSingle(x, data[i], i > 0 ? data[i - 1] : null);
+            this.drawSingle(x, i, data, start, end);
             this.drawCache[i] = true;
         }
+
         if (drawcount>1)
             console.log("draw new signles", start, start*w, drawcount);
         this.lastDrawHeight = this.canvas.height;
     }
-    
+
+    hasDrawCache(i){
+        return this.drawCache[i];
+    }
+
     didDrawHeightChanged() {
         //console.log("changed", this.canvas.height,  this.lastDrawHeight)
         return this.canvas.height != this.lastDrawHeight;
@@ -107,7 +112,8 @@ module.exports = class MassPainter {
         }
 
     }
-    drawSingle(x, data, data_pre) {
+
+    drawSingle(x, idx, dataArr) {
 
     }
 
@@ -115,16 +121,16 @@ module.exports = class MassPainter {
         return true;
     }
 
-    getPriceByY(y) {
-        let low = this.core.priceLow;
-        return low + Math.round(y/this.heightPerUnit)/100;
-    }
+    // getPriceByY(y) {
+    //     let low = this.core.priceLow;
+    //     return low + Math.round(y/this.heightPerUnit)/100;
+    // }
 
-    getPriceY(price) {
-        return (this.core.priceHigh - price)*100*this.core.heightPerUnit;
-    }
+    // getPriceY(price) {
+    //     return (this.core.priceHigh - price)*100*this.core.heightPerUnit;
+    // }
     
-    getVolumeByY(y) {
+    // getVolumeByY(y) {
         
-    }
+    // }
 }

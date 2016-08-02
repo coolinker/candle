@@ -1,65 +1,73 @@
 'use strict';
-import React from "react";
+import React from 'react';
+import IO from './io';
+import work from 'webworkify';
 
-import IO  from "./io";
+var w = work(require('./worker.js'));
+w.addEventListener('message', function(ev) {
+    console.log(ev.data);
+});
 
-let PainterCore = require('../chart/PainterCore');
+w.postMessage(4);
+
+let PainterCore = require('../chart/paintercore');
 let painterCore = new PainterCore();
 
 
-let CandlePainter = require('../chart/CandlePainter');
+let CandlePainter = require('../chart/candlepainter');
 let candlePainter = new CandlePainter(painterCore);
-let VolumePainter = require('../chart/VolumePainter');
+let VolumePainter = require('../chart/volumepainter');
 let volPainter = new VolumePainter(painterCore);
 
-let PointerPainter = require('../chart/PointerPainter');
+let PointerPainter = require('../chart/pointerpainter');
 let pointerPainter = new PointerPainter(painterCore);
 
-pointerPainter.mouseMoveHandler = function(e){
+pointerPainter.mouseMoveHandler = function(e) {
     if (!painterCore.arrayData) return;
-    
+
     let x = e.x;
     let y = e.y;
     let candleCanvasX = parseInt(candlePainter.canvas.style.left, 10);
-    let dataindex = painterCore.getDataIndexByX(x-candleCanvasX);
+    let dataindex = painterCore.getDataIndexByX(x - candleCanvasX);
     let data = painterCore.getDataByIndex(dataindex);
     if (!data) return;
     let valuetoy = {};
-    let candlePainterTop = 0//parseInt(candlePainter.canvas.style.top);
+    let candlePainterTop = 0 //parseInt(candlePainter.canvas.style.top);
     valuetoy.open = candlePainterTop + candlePainter.getPriceY(data.open);
     valuetoy.close = candlePainterTop + candlePainter.getPriceY(data.close);
     valuetoy.high = candlePainterTop + candlePainter.getPriceY(data.high);
-    valuetoy.low = candlePainterTop + candlePainter.getPriceY(data.low) ;
-    valuetoy.date = candlePainterTop + candlePainter.canvas.height-5;
+    valuetoy.low = candlePainterTop + candlePainter.getPriceY(data.low);
+    valuetoy.date = candlePainterTop + candlePainter.canvas.height - 5;
 
     let top = parseInt(volPainter.canvas.style.top) - parseInt(candlePainter.canvas.style.top);
-    valuetoy.volume = top + Math.max(volPainter.getVolumeY(data.volume), 10) ;
+    valuetoy.volume = top + Math.max(volPainter.getVolumeY(data.volume), 10);
     valuetoy.volumeStart = top;
     // console.log("-----------", valuetoy)
     pointerPainter.updatePointer(x, dataindex, valuetoy);
 }
 
-import ChartCanvas from './ChartCanvas';
-import FormInput from './forms/FormInput';
-import DateInput from './forms/DateInput';
-import TradingDate from './TradingDate';
+import ChartCanvas from './chartcanvas';
+import FormInput from './forms/forminput';
+import DateInput from './forms/dateinput';
+import TradingDate from './tradingdate';
+import StockIDs from './stockids';
 
 class CandleApp extends React.Component {
     constructor(props) {
         super(props);
         this.state = { windowWidth: window.innerWidth, windowHeight: window.innerHeight };
-        this.handleSidChanged = this.handleSidChanged.bind(this);        
+        this.handleSidChanged = this.handleSidChanged.bind(this);
     }
 
     render() {
-        
+
         let divstyle = {
             width: "100%",
             height: "100%",
             overflow: "hidden"
         };
         let toolbarStyle = {
-             position: 'absolute',
+            position: 'absolute',
             top: '0px',
             width: '100%',
             padding: '5px'
@@ -74,24 +82,36 @@ class CandleApp extends React.Component {
         let ponterCanvasHeight = candleChartHeight + volChartHeight;
 
         let sidwidth = 70;
-        let sidinputleft = (this.state.windowWidth - sidwidth)/2;
-        return <div style = { divstyle }>
-                <div ref = "toolbar"  height = {toolbarHeight} style = {toolbarStyle}>
-                <span style = {{color: '#f0f0f0', 'paddingRight':'5px', 'paddingLeft':'5px'}}>Code:</span>
-                <span style = {{color: '#f0f0f0', 'paddingRight':'5px', 'paddingLeft':'5px'}}>&lt;</span>
-                <FormInput ref="sidInput"  width={70} regex={"^(S|s)$|^(SH|sh)$|^(SZ|sz)$|^(SH|SZ|sh|sz)\\d{1,6}$"} validRegex={"^(sh|sz|SH|SZ)\\d{6}$"} value="SH999999"
-                    handleInputCompleted={this.handleSidChanged}/>
-                <span style = {{color: '#f0f0f0', 'paddingRight':'5px', 'paddingLeft':'5px'}}>&gt;</span>
-                <span style = {{color: '#f0f0f0', 'paddingRight':'5px', 'paddingLeft':'10px'}}>Date:</span>
-                <DateInput ref="dateInput" value={'07/04/2016'} handleInputCompleted={this.handleDateChanged}/>
-             </div>
-            <ChartCanvas ref = "candleChart" width = "2000" height = { candleChartHeight } y={candleChartY}> </ChartCanvas> 
-            <ChartCanvas ref = "volChart" width = "2000" height = { volChartHeight } y={volChartY}> </ChartCanvas>
-            <ChartCanvas ref = "pointerCanvas" width = {this.state.windowWidth} height={ponterCanvasHeight} y = {pointerCanvasY}> </ChartCanvas> 
-        </div>
+        let sidinputleft = (this.state.windowWidth - sidwidth) / 2;
+        return <div style = { divstyle } >
+            < div ref = "toolbar"
+        height = { toolbarHeight }
+        style = { toolbarStyle } >
+
+            < FormInput ref = "sidInput"
+        width = { 65 }
+        regex = { "^(S|s)$|^(SH|sh)$|^(SZ|sz)$|^(SH|SZ|sh|sz)\\d{1,6}$" }
+        validRegex = { "^(sh|sz|SH|SZ)\\d{6}$" }
+        value = "SH600022"
+        handleInputCompleted = { this.handleSidChanged }
+        />
+
+        < DateInput ref = "dateInput"
+        value = { '07/04/2016' }
+        handleInputCompleted = { this.handleDateChanged }
+        /> < /div> < ChartCanvas ref = "candleChart"
+        width = "2000"
+        height = { candleChartHeight }
+        y = { candleChartY } > < /ChartCanvas>  < ChartCanvas ref = "volChart"
+        width = "2000"
+        height = { volChartHeight }
+        y = { volChartY } > < /ChartCanvas> < ChartCanvas ref = "pointerCanvas"
+        width = { this.state.windowWidth }
+        height = { ponterCanvasHeight }
+        y = { pointerCanvasY } > < /ChartCanvas>  < /div>
     }
 
-    componentDidMount (){
+    componentDidMount() {
         let domCanvas = this.refs.candleChart.getDomCanvas();
         candlePainter.setCanvas(domCanvas);
 
@@ -102,36 +122,47 @@ class CandleApp extends React.Component {
         pointerPainter.setCanvas(pointerDomCanvas);
 
         let me = this;
-        window.addEventListener('resize', function(e){
-            me.setState({windowHeight: window.innerHeight, windowWidth: window.innerWidth});
+        window.addEventListener('resize', function(e) {
+            me.setState({ windowHeight: window.innerHeight, windowWidth: window.innerWidth });
             //me.doOnRange(true);
             me.doOnResize(e);
-        });        
+        });
 
-        document.addEventListener('keydown', function(e){
-            if (e.keyCode === 37) {
+        document.addEventListener('keydown', function(e) {
+            if (e.keyCode === 39) {
                 painterCore.moveDrawPort(3, me.state.windowWidth);
-            } else if (e.keyCode === 39) {
+            } else if (e.keyCode === 37) {
                 painterCore.moveDrawPort(-3, me.state.windowWidth);
-            }  else if (e.keyCode === 38) {
+            } else if (e.keyCode === 38) {
                 painterCore.updateUnitWidth(1);
             } else if (e.keyCode === 40) {
                 painterCore.updateUnitWidth(-1);
+            } else if (e.keyCode === 34) {
+                let sid = me.refs.sidInput.state.value;
+                let nsid = StockIDs.getNext(sid);
+                if (nsid) me.refs.sidInput.updateState(nsid, true);
+                console.log("nsid", nsid)
+
+            } else if (e.keyCode === 33) {
+                let sid = me.refs.sidInput.state.value;
+                let psid = StockIDs.getPrevious(sid);
+                if (psid) me.refs.sidInput.updateState(psid, true);
+                console.log("psid", psid)
+
             }
             console.log("keyCode", e.keyCode)
-        });        
-
-        document.addEventListener('keyup', function(e){
         });
 
-        painterCore.on("range", function(){
-            me.updateCanvasPosition(painterCore.drawRangeStart * painterCore.unitWidth);    
+        document.addEventListener('keyup', function(e) {});
+
+        painterCore.on("range", function() {
+            me.updateCanvasPosition(painterCore.drawRangeStart * painterCore.unitWidth);
             let date = painterCore.getDateOfCurrentRange();
             console.log("on range:", painterCore.drawRangeStart, date)
-             me.refs.dateInput.updateState(date, false);
+            me.refs.dateInput.updateState(date, false);
         });
 
-        
+
         let sid = this.refs.sidInput.state.value;
         let date = this.refs.dateInput.state.value;
         this.loadDataBySid(sid, date);
@@ -143,13 +174,26 @@ class CandleApp extends React.Component {
             painterCore.loadData(json);
             //painterCore.setDrawRange(json.length-200, json.length-1);
             painterCore.updateDrawPort(date, window.innerWidth);
+
+            IO.httpGetStockMoneyFlowJson(sid, function(json) {
+                painterCore.updateMoneyFlow(json);
+                IO.httpGetStockFullJson(sid, 'date,open,close,high,low,amount', function(json) { console.log("get full") });
+            })
+
         });
+
     }
 
     handleSidChanged(sid) {
         let date = this.refs.dateInput.state.value;
         console.log("-----", sid)
-        this.loadDataBySid(sid, date)
+        clearTimeout(this.timeoutHandler);
+        let me = this;
+        this.timeoutHandler = setTimeout(function() {
+            console.log("-----loadDataBySid", sid, date)
+            me.loadDataBySid(sid, date)
+        }, 500);
+
     }
 
     handleDateChanged(date) {
@@ -164,11 +208,12 @@ class CandleApp extends React.Component {
         this.refs.volChart.updateX(x);
     }
 
-    doOnResize(){
+    doOnResize() {
         // console.log("doOnResize", e)
         let date = painterCore.getDateOfCurrentRange();
         painterCore.updateDrawPort(date, this.state.windowWidth);
     }
+
 }
 
-export default  CandleApp;
+export default CandleApp;

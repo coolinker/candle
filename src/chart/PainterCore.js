@@ -1,5 +1,7 @@
 'use strict';
-const EventEmitter = require('events');
+// const EventEmitter = require('events');
+import EventEmitter from "events";
+import MovingAverageUtil  from "../alpha/MovingAverageUtil";
 
 module.exports = class PainterCore extends EventEmitter {
     constructor() {
@@ -75,9 +77,9 @@ module.exports = class PainterCore extends EventEmitter {
             let low = kdata[i].low;
             if (mlow > low) mlow = low;
 
-            let vhigh = kdata[i].volume;
+            let vhigh = kdata[i].amount;
             if (mvhigh < vhigh) mvhigh = vhigh;
-            let vlow = kdata[i].volume;
+            let vlow = kdata[i].amount;
             if (mvlow > vlow) mvlow = vlow;
         }
 
@@ -96,7 +98,10 @@ module.exports = class PainterCore extends EventEmitter {
 
         this.drawRangeStart = start;
         this.drawRangeEnd = end;
-        //console.log("-----start/end", start, end)
+        console.log("-----start/end", start, end, this.arrayData.length-1)
+        MovingAverageUtil.buildFields(["close", "amount"], 8, start-1, end, this.arrayData);
+        MovingAverageUtil.buildFields(["close", "amount"], 13, start-1, end, this.arrayData);
+        MovingAverageUtil.buildFields(["close", "amount"], 21, start-1, end, this.arrayData);
         this.emit("range", true)
     }
 
@@ -122,11 +127,16 @@ module.exports = class PainterCore extends EventEmitter {
         this.reset();
         let len = kdata.length;
         let i = len>4500 ? len-4500 : 0;
-        this.arrayData = kdata.slice(i, len-1);
+        this.arrayData = kdata.slice(i, len);
         for (; i < len; i++) {
             this.dateIndexMap[kdata[i].date] = i;
         }
         this.emit("data");
+    }
+    
+    updateMoneyFlow(json){
+        console.log("updateMoneyFlow", json.length)
+        this.emit("moneyFlow")
     }
 
     getDataIndexByX(x) {
