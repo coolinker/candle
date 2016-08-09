@@ -1,17 +1,26 @@
 'use strict';
 let fetch = require('node-fetch');
 let fs = require('fs');
-let TradingDate = require('./tradingdate')
-
+let Zip = require('./zip');
 
 module.exports = class DataSourceIO {
     constructor(root) {
         this.dataSourceRoot = root === undefined ? "../data" : root;
         this.allStockIDArray = this.getAllStockIds();
-        this.historyPageParams = ""; //"year=2016&jidu=2";
-        let json = this.readJsonSync("SH999999");
-        json.reverse();
-        TradingDate.load(json);
+        this.historyPageParams = ""; //"year=2016&jidu=2"; 
+        this.stockCompressedCache = {};
+        this.stockCompressedCacheFields = ['date', 'open', 'close', 'high', 'low', 'amount', 'netamount', 'r0_net', 'changeratio'];
+        //this.loadToCache(this.stockCompressedCacheFields);
+    }
+
+    loadToCache(fields) {
+        let len = this.allStockIDArray.length;
+        for (let i = 0; i < len; i++) {
+            if (i % 100 === 0) console.log(i, new Date());
+            let sid = this.allStockIDArray[i];
+            this.stockCompressedCache[sid] = this.readStockCompressedJsonSync(sid, fields);
+        }
+
     }
 
     getAllStockIds(match) {
@@ -69,7 +78,10 @@ module.exports = class DataSourceIO {
 
     httpGetStockMoneyFlowHistory(sid, callback) {
         let num = 30;
-        fetch("http://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/MoneyFlow.ssl_qsfx_zjlrqs?page=1&num=" + num + "&sort=opendate&asc=0&daima=" + sid.toLowerCase(), { method: 'GET', timeout: 5000 })
+        fetch("http://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/MoneyFlow.ssl_qsfx_zjlrqs?page=1&num=" + num + "&sort=opendate&asc=0&daima=" + sid.toLowerCase(), {
+                method: 'GET',
+                timeout: 5000
+            })
             .then(function(res) {
                 if (!res.ok || res.status != 200) {
                     console.error("httpGetStockHistory error loading", sid, res.ok, res.status, res);
@@ -109,7 +121,10 @@ module.exports = class DataSourceIO {
         if (sid === "SH999999") code = '000001/type/S';
         else if (sid === "SZ399001") code = '399001/type/S';
         //http://vip.stock.finance.sina.com.cn/corp/go.php/vMS_MarketHistory/stockid/000001/type/S.phtml
-        fetch('http://vip.stock.finance.sina.com.cn/corp/go.php/vMS_MarketHistory/stockid/' + code + '.phtml' + (this.historyPageParams ? ("?" + this.historyPageParams) : ""), { method: 'GET', timeout: 1000 })
+        fetch('http://vip.stock.finance.sina.com.cn/corp/go.php/vMS_MarketHistory/stockid/' + code + '.phtml' + (this.historyPageParams ? ("?" + this.historyPageParams) : ""), {
+                method: 'GET',
+                timeout: 1000
+            })
             .then(function(res) {
                 if (!res.ok || res.status != 200) {
                     console.log("httpGetStockHistory error loading", sid, res.ok, res.status, res);
@@ -154,75 +169,90 @@ module.exports = class DataSourceIO {
         fs.writeFileSync(this.dataSourceRoot + "/json/" + sid + ".json", data);
     }
 
-    readStockFullJsonSync(sid, fields) {
-        let jsonArr = this.readJsonSync(sid);
-        let mfArr = this.readMoneyFlowSync(sid);
-        let jlen = jsonArr.length;
-        let mlen = mfArr.length;
-        let len = Math.max(jlen, mlen);
-        let fullArr = [];
-        for (let i = 1; i < len; i++) {
-            let json = jsonArr[jlen - i];
-            let mf = mlen < i ? null : mfArr[mlen - i];
-            if (mf) {
-                if (json.date !== mf.date) {
-                    if (mf.date !== "03/01/2010") {
-                        console.error("readStockFullJsonSync date mismatch!", sid, json.date, mf.date);
-                        return null;
-                    }
-
-                }
+    readStockCompressedJsonSync(sid, fields) {
+            let jsonArr = this.readJsonSync(sid);
+            if (!jsonArr) {
+                console.log("readStockCompressedJsonSync sid=", sid)
+                return null;
             }
-            Object.assign(json, mf)
-            for (let j=0; j<fields.length; j++) {
-                let v = this.getCompressedFieldValue(fields[j], json);
-                fullArr.push(v);
-            }
-            
-
-            // fields.map(function(field, idx, arr) {
-            //     let v = json[field];
-            //     v = v !== undefined ? v : (mf ? mf[field] : '');
-            //     if (field === 'date') {
-            //         let mdy = v.split("/");
-            //         mdy[2] = mdy[2].substr(2, 2);
-            //         v = Number(mdy.join(""));
-            //     } else if (field === 'amount') {
-            //         v = Math.round(v / 10000)
-            //     } else {
-            //         v = v % 1 === 0 ? v : Math.round(v * 100);
-            //     }
-
-            //     fullArr.push(v);
-            // })
-
+            let mfArr = this.readMoneyFlowSync(sid);
+            let zipobj = Zip.compressStockJson(fields, jsonArr, mfArr);
+            if (!zipobj) console.log("readStockCompressedJsonSync is null error", sid)
+            return zipobj
         }
-        return { fields: fields, data: fullArr };
-    }
+        // readStockCompressedJsonSync(sid, fields) {
+        //     let jsonArr = this.readJsonSync(sid);
+        //     if (!jsonArr) {
+        //         console.log("readStockCompressedJsonSync sid=", sid)
+        //         return null;
+        //     }
+        //     let mfArr = this.readMoneyFlowSync(sid);
+        //     let jlen = jsonArr.length;
+        //     let mlen = mfArr.length;
+        //     let len = Math.max(jlen, mlen);
+        //     let fullArr = [];
+        //     let lastObj = {
+        //         lastdate: 0,
+        //         lastclose: 0,
+        //         lastopen: 0,
+        //         lasthigh: 0,
+        //         lastlow: 0,
+        //         lastamout: 0
+        //     };
+        //     for (let i = 1; i < len; i++) {
+        //         let json = jsonArr[jlen - i];
+        //         let mf = mlen < i ? null : mfArr[mlen - i];
+        //         if (mf) {
+        //             if (json.date !== mf.date) {
+        //                 if (mf.date !== "03/01/2010") {
+        //                     console.error("readStockCompressedJsonSync date mismatch!", sid, json.date, mf.date);
+        //                     return null;
+        //                 }
 
-    getCompressedFieldValue(field, obj) {
-        let v = obj[field];
-        let open = obj['open'];
-        if (field === 'date') {
-            //let idx = TradingDate.getIndex(v);
-            let mdy = v.split("/");
-            mdy[2] = mdy[2].substr(2, 2);
-            v = Number(mdy.join(""));
-            //v = idx;
-        } else if (field === 'amount') {
-            v = Math.round(v / 10000)
-        } else if (field === "low") {
-            v = Math.round((open-obj['low'])*100);
-        } else if (field === "high") {
-            v = Math.round((obj['high']-open)*100);
-        }  else if (field === "close") {
-            v = Math.round((obj['close']-open)*100);
-        } else {
-            v = Math.round(v * 100);
-        }
+    //             }
+    //         }
+    //         Object.assign(json, mf)
+    //         let flen = fields.length;
 
-        return v;
-    }
+    //         for (let j = 0; j < flen; j++) {
+    //             let clen = fullArr.length;
+    //             let v = Zip.compressedFieldValue(fields[j], json, lastObj);
+    //             fullArr.push(v);
+    //         }
+
+    //     }
+    //     return {
+    //         fields: fields,
+    //         data: fullArr
+    //     };
+    // }
+
+    // getCompressedFieldValue(field, obj, last) {
+    //     let v = obj[field];
+
+    //     if (v === undefined) return null;
+
+    //     if (field === 'date') {
+    //         let mdy = v.split("/");
+    //         mdy[2] = mdy[2].substr(2, 2);
+    //         v = Number(mdy[2] + mdy[0] + mdy[1]);
+    //         let ld = last.lastdate;
+    //         last.lastdate = v;
+    //         v = Math.abs(v - ld);
+    //     } else if (field === 'amount' || field === 'netamount' || field === 'r0_net') {
+    //         v = Math.round(v / 10000);
+    //     } else if (field === "open" || field === "close" || field === "low" || field === "high") {
+    //         let lf = 'last' + field;
+    //         let lv = last[lf];
+    //         last[lf] = v;
+    //         v = v - lv;
+    //         v = Math.round(v * 100);
+    //     } else if (field === 'changeratio') {
+    //         v = Math.round(v * 10000);
+    //     }
+
+    //     return v;
+    // }
 
     readJsonSync(sid) {
         let path = this.dataSourceRoot + "/json/" + sid + ".json";

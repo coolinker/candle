@@ -2,8 +2,7 @@
 import IO from "./io";
 
 class TradingDate {
-    constructor() {
-    }
+    constructor() {}
 
     static load(kdata) {
         TradingDate.arrayData = kdata;
@@ -26,8 +25,8 @@ class TradingDate {
     }
 }
 
-
 IO.httpGetStockJson("SH999999", function(json) {
+    console.log("SH99999", json.length)
     TradingDate.load(json);
 });
 

@@ -1,14 +1,13 @@
 'use strict';
 import React from 'react';
 import IO from './io';
+
 import work from 'webworkify';
+import WorkerProxy from './workerproxy';
 
-var w = work(require('./worker.js'));
-w.addEventListener('message', function(ev) {
-    console.log(ev.data);
-});
+let w = work(require('./dataworker.js'));
+IO.dataWorkerProxy = new WorkerProxy(w);
 
-w.postMessage(4);
 
 let PainterCore = require('../chart/paintercore');
 let painterCore = new PainterCore();
@@ -55,7 +54,10 @@ import StockIDs from './stockids';
 class CandleApp extends React.Component {
     constructor(props) {
         super(props);
-        this.state = { windowWidth: window.innerWidth, windowHeight: window.innerHeight };
+        this.state = {
+            windowWidth: window.innerWidth,
+            windowHeight: window.innerHeight
+        };
         this.handleSidChanged = this.handleSidChanged.bind(this);
     }
 
@@ -84,31 +86,14 @@ class CandleApp extends React.Component {
         let sidwidth = 70;
         let sidinputleft = (this.state.windowWidth - sidwidth) / 2;
         return <div style = { divstyle } >
-            < div ref = "toolbar"
-        height = { toolbarHeight }
-        style = { toolbarStyle } >
-
-            < FormInput ref = "sidInput"
-        width = { 65 }
-        regex = { "^(S|s)$|^(SH|sh)$|^(SZ|sz)$|^(SH|SZ|sh|sz)\\d{1,6}$" }
-        validRegex = { "^(sh|sz|SH|SZ)\\d{6}$" }
-        value = "SH600022"
-        handleInputCompleted = { this.handleSidChanged }
-        />
-
-        < DateInput ref = "dateInput"
-        value = { '07/04/2016' }
-        handleInputCompleted = { this.handleDateChanged }
-        /> < /div> < ChartCanvas ref = "candleChart"
-        width = "2000"
-        height = { candleChartHeight }
-        y = { candleChartY } > < /ChartCanvas>  < ChartCanvas ref = "volChart"
-        width = "2000"
-        height = { volChartHeight }
-        y = { volChartY } > < /ChartCanvas> < ChartCanvas ref = "pointerCanvas"
-        width = { this.state.windowWidth }
-        height = { ponterCanvasHeight }
-        y = { pointerCanvasY } > < /ChartCanvas>  < /div>
+            <div ref = "toolbar" height = { toolbarHeight } style = { toolbarStyle } >
+                <FormInput ref = "sidInput" width = { 65 } regex = { "^(S|s)$|^(SH|sh)$|^(SZ|sz)$|^(SH|SZ|sh|sz)\\d{1,6}$" } validRegex = { "^(sh|sz|SH|SZ)\\d{6}$" } value = "SH600022" handleInputCompleted = { this.handleSidChanged }/>
+                <DateInput ref = "dateInput" value = { '07/04/2016' } handleInputCompleted = { this.handleDateChanged }/> 
+            </div > 
+            <ChartCanvas ref = "candleChart" width = "2000" height = { candleChartHeight } y = { candleChartY } > </ChartCanvas>  
+            <ChartCanvas ref = "volChart" width = "2000" height = { volChartHeight } y = { volChartY } > </ChartCanvas> 
+            <ChartCanvas ref = "pointerCanvas" width = { this.state.windowWidth } height = { ponterCanvasHeight } y = { pointerCanvasY } > </ChartCanvas>  
+        </div >
     }
 
     componentDidMount() {
@@ -123,7 +108,10 @@ class CandleApp extends React.Component {
 
         let me = this;
         window.addEventListener('resize', function(e) {
-            me.setState({ windowHeight: window.innerHeight, windowWidth: window.innerWidth });
+            me.setState({
+                windowHeight: window.innerHeight,
+                windowWidth: window.innerWidth
+            });
             //me.doOnRange(true);
             me.doOnResize(e);
         });
@@ -158,15 +146,20 @@ class CandleApp extends React.Component {
         painterCore.on("range", function() {
             me.updateCanvasPosition(painterCore.drawRangeStart * painterCore.unitWidth);
             let date = painterCore.getDateOfCurrentRange();
-            console.log("on range:", painterCore.drawRangeStart, date)
+            // console.log("on range:", painterCore.drawRangeStart, date)
             me.refs.dateInput.updateState(date, false);
+
         });
 
 
         let sid = this.refs.sidInput.state.value;
         let date = this.refs.dateInput.state.value;
         this.loadDataBySid(sid, date);
-
+        setTimeout(function() {
+            IO.workerLoadStocks(100, 100, function(re) {
+                console.log("----", re)
+            })
+        }, 3000);
     }
 
     loadDataBySid(sid, date) {
@@ -177,7 +170,9 @@ class CandleApp extends React.Component {
 
             IO.httpGetStockMoneyFlowJson(sid, function(json) {
                 painterCore.updateMoneyFlow(json);
-                IO.httpGetStockFullJson(sid, 'date,open,close,high,low,amount', function(json) { console.log("get full") });
+                // IO.httpGetStockFullJson(sid, 'date,open,close,high,low,amount,netamount,r0_net', function(json) {
+                //     console.log("get full")
+                // });
             })
 
         });
@@ -186,7 +181,6 @@ class CandleApp extends React.Component {
 
     handleSidChanged(sid) {
         let date = this.refs.dateInput.state.value;
-        console.log("-----", sid)
         clearTimeout(this.timeoutHandler);
         let me = this;
         this.timeoutHandler = setTimeout(function() {

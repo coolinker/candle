@@ -20579,6 +20579,183 @@ var _createClass = function () { function defineProperties(target, props) { for 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 module.exports = function () {
+    function Zip() {
+        _classCallCheck(this, Zip);
+    }
+
+    _createClass(Zip, null, [{
+        key: "decompressStockJson",
+        value: function decompressStockJson(cdata, fields) {
+            var stockFields = cdata.fields;
+            if (!fields) fields = stockFields;
+            var flen = stockFields.length;
+            var fm = {};
+            for (var i = 0; i < fields.length; i++) {
+                var f = fields[i];
+                for (var j = 0; j < flen; j++) {
+                    if (stockFields[j] === f) fm[j] = true;
+                }
+            }
+
+            var data = cdata.data;
+            var len = data.length;
+            var lastObj = {},
+                obj = {};
+            var jsonData = [];
+            for (var _i = 0; _i < len; _i++) {
+                var idx = _i % flen;
+                if (!fm[idx]) continue;
+                if (idx === 0 && _i > 0) {
+                    jsonData.push(obj);
+                    obj = {};
+                }
+                var field = stockFields[idx];
+                var v = data[_i];
+                obj[field] = Zip.decompressFieldValue(field, v, lastObj, jsonData.length);
+            }
+
+            return jsonData;
+        }
+    }, {
+        key: "compressStockJson",
+        value: function compressStockJson(fields, jsonArr, mfArr) {
+            if (!jsonArr) {
+                console.log("readStockCompressedJsonSync sid=", sid);
+                return null;
+            }
+
+            var jlen = jsonArr.length;
+            var mlen = mfArr.length;
+            var len = Math.max(jlen, mlen);
+            var fullArr = [];
+            var lastObj = {
+                lastdate: 0,
+                lastclose: 0,
+                lastopen: 0,
+                lasthigh: 0,
+                lastlow: 0,
+                lastamout: 0
+            };
+            for (var i = 1; i < len; i++) {
+                var json = jsonArr[jlen - i];
+                var mf = mlen < i ? null : mfArr[mlen - i];
+                if (mf) {
+                    if (json.date !== mf.date) {
+                        if (mf.date !== "03/01/2010") {
+                            // readStockFullJsonSync date mismatch! SH600568 11/20/2015 11/23/2015
+                            // readStockFullJsonSync date mismatch! SH600656 04/09/2015 03/31/2016
+                            // readStockFullJsonSync date mismatch! SH600832 04/09/2015 04/29/2015
+                            // readStockFullJsonSync date mismatch! SH601299 04/09/2015 05/06/2015
+                            // readStockFullJsonSync date mismatch! SZ000033 04/09/2015 04/29/2015
+                            console.error("compressedStockJson date mismatch!", json.date, mf.date);
+                            return null;
+                        }
+                        delete mf.date;
+                    }
+                }
+
+                Object.assign(json, mf);
+                var flen = fields.length;
+                for (var j = 0; j < flen; j++) {
+                    var clen = fullArr.length;
+                    var v = Zip.compressFieldValue(fields[j], json, lastObj, i);
+                    fullArr.push(v);
+                }
+            }
+
+            return {
+                fields: fields,
+                data: fullArr
+            };
+        }
+    }, {
+        key: "decompressFieldValue",
+        value: function decompressFieldValue(field, v, last, idx) {
+            if (v === undefined) return null;
+            if (field === 'date') {
+                var ll = last.lastdate;
+                var llv = v;
+                if (!last.lastdate) {
+                    last.lastdate = v;
+                } else {
+                    v = last.lastdate - v;
+                    last.lastdate = v;
+                }
+                v = '' + v;
+                var y = void 0,
+                    m = void 0,
+                    d = void 0;
+                if (v.length === 5) {
+                    y = '200' + v.substr(0, 1);
+                    m = v.substr(1, 2);
+                    d = v.substr(3, 2);
+                    v = m + "/" + d + "/" + y;
+                } else if (v.length === 6) {
+                    y = v.substr(0, 2);
+                    if (Number(y) < 50) y = "20" + y;
+                    m = v.substr(2, 2);
+                    d = v.substr(4, 2);
+                    v = m + "/" + d + "/" + y;
+                }
+                // if (ll > 150128 && ll < 150400 || ll > 100128 && ll < 100400)
+                //     console.log(idx, m, d, y, ll, llv, v)
+            } else if (field === 'amount' || field === 'netamount' || field === 'r0_net') {
+                v = v * 10000;
+            } else if (field === "open" || field === "close" || field === "low" || field === "high") {
+                var lf = 'last' + field;
+                var lv = last[lf];
+                if (lv) {
+                    v = v + lv;
+                }
+                last[lf] = v;
+                v = v / 100;
+            } else if (field === 'changeratio') {
+                v = v / 10000;
+            }
+            return v;
+        }
+    }, {
+        key: "compressFieldValue",
+        value: function compressFieldValue(field, obj, last, idx) {
+            var v = obj[field];
+            if (v === undefined) return null;
+            if (field === 'date') {
+                var mdy = v.split("/");
+                mdy[2] = mdy[2].substr(2, 2);
+                v = Number(mdy[2] + mdy[0] + mdy[1]);
+                var ld = last.lastdate;
+                last.lastdate = v;
+                // if ((mdy[2] === '10' || mdy[2] === '15') && (mdy[0] === '02' || mdy[0] === '03')) {
+                //     console.log(idx, v, ld, v - ld)
+                // }
+                v = Math.abs(v - ld);
+            } else if (field === 'amount' || field === 'netamount' || field === 'r0_net') {
+                v = Math.round(v / 10000);
+            } else if (field === "open" || field === "close" || field === "low" || field === "high") {
+                var lf = 'last' + field;
+                var lv = last[lf];
+                last[lf] = v;
+                v = v - lv;
+                v = Math.round(v * 100);
+            } else if (field === 'changeratio') {
+                v = Math.round(v * 10000);
+            }
+
+            return v;
+        }
+    }]);
+
+    return Zip;
+}();
+
+},{}],173:[function(require,module,exports){
+'use strict';
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+module.exports = function () {
     function MassPainter(painterCore, canvas) {
         _classCallCheck(this, MassPainter);
 
@@ -20726,7 +20903,7 @@ module.exports = function () {
     return MassPainter;
 }();
 
-},{}],173:[function(require,module,exports){
+},{}],174:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -20829,7 +21006,7 @@ module.exports = function (_MassPainter) {
     return CandlePainter;
 }(MassPainter);
 
-},{"./MassPainter":172}],174:[function(require,module,exports){
+},{"./MassPainter":173}],175:[function(require,module,exports){
 'use strict';
 // const EventEmitter = require('events');
 
@@ -21017,7 +21194,7 @@ module.exports = function (_EventEmitter) {
     return PainterCore;
 }(_events2.default);
 
-},{"../alpha/MovingAverageUtil":171,"events":1}],175:[function(require,module,exports){
+},{"../alpha/MovingAverageUtil":171,"events":1}],176:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -21182,7 +21359,7 @@ module.exports = function () {
     return PointerPainter;
 }();
 
-},{}],176:[function(require,module,exports){
+},{}],177:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -21308,7 +21485,7 @@ module.exports = function (_MassPainter) {
     return VolumePainter;
 }(MassPainter);
 
-},{"./MassPainter":172}],177:[function(require,module,exports){
+},{"./MassPainter":173}],178:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -21328,6 +21505,10 @@ var _io2 = _interopRequireDefault(_io);
 var _webworkify = require('webworkify');
 
 var _webworkify2 = _interopRequireDefault(_webworkify);
+
+var _workerproxy = require('./workerproxy');
+
+var _workerproxy2 = _interopRequireDefault(_workerproxy);
 
 var _chartcanvas = require('./chartcanvas');
 
@@ -21357,12 +21538,8 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-var w = (0, _webworkify2.default)(require('./worker.js'));
-w.addEventListener('message', function (ev) {
-    console.log(ev.data);
-});
-
-w.postMessage(4);
+var w = (0, _webworkify2.default)(require('./dataworker.js'));
+_io2.default.dataWorkerProxy = new _workerproxy2.default(w);
 
 var PainterCore = require('../chart/paintercore');
 var painterCore = new PainterCore();
@@ -21407,7 +21584,10 @@ var CandleApp = function (_React$Component) {
 
         var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(CandleApp).call(this, props));
 
-        _this.state = { windowWidth: window.innerWidth, windowHeight: window.innerHeight };
+        _this.state = {
+            windowWidth: window.innerWidth,
+            windowHeight: window.innerHeight
+        };
         _this.handleSidChanged = _this.handleSidChanged.bind(_this);
         return _this;
     }
@@ -21443,50 +21623,25 @@ var CandleApp = function (_React$Component) {
                 { style: divstyle },
                 _react2.default.createElement(
                     'div',
-                    { ref: 'toolbar',
-                        height: toolbarHeight,
-                        style: toolbarStyle },
-                    _react2.default.createElement(_forminput2.default, { ref: 'sidInput',
-                        width: 65,
-                        regex: "^(S|s)$|^(SH|sh)$|^(SZ|sz)$|^(SH|SZ|sh|sz)\\d{1,6}$",
-                        validRegex: "^(sh|sz|SH|SZ)\\d{6}$",
-                        value: 'SH600022',
-                        handleInputCompleted: this.handleSidChanged
-                    }),
-                    _react2.default.createElement(_dateinput2.default, { ref: 'dateInput',
-                        value: '07/04/2016',
-                        handleInputCompleted: this.handleDateChanged
-                    }),
-                    ' '
+                    { ref: 'toolbar', height: toolbarHeight, style: toolbarStyle },
+                    _react2.default.createElement(_forminput2.default, { ref: 'sidInput', width: 65, regex: "^(S|s)$|^(SH|sh)$|^(SZ|sz)$|^(SH|SZ|sh|sz)\\d{1,6}$", validRegex: "^(sh|sz|SH|SZ)\\d{6}$", value: 'SH600022', handleInputCompleted: this.handleSidChanged }),
+                    _react2.default.createElement(_dateinput2.default, { ref: 'dateInput', value: '07/04/2016', handleInputCompleted: this.handleDateChanged })
                 ),
-                ' ',
                 _react2.default.createElement(
                     _chartcanvas2.default,
-                    { ref: 'candleChart',
-                        width: '2000',
-                        height: candleChartHeight,
-                        y: candleChartY },
+                    { ref: 'candleChart', width: '2000', height: candleChartHeight, y: candleChartY },
                     ' '
                 ),
-                '  ',
                 _react2.default.createElement(
                     _chartcanvas2.default,
-                    { ref: 'volChart',
-                        width: '2000',
-                        height: volChartHeight,
-                        y: volChartY },
+                    { ref: 'volChart', width: '2000', height: volChartHeight, y: volChartY },
                     ' '
                 ),
-                ' ',
                 _react2.default.createElement(
                     _chartcanvas2.default,
-                    { ref: 'pointerCanvas',
-                        width: this.state.windowWidth,
-                        height: ponterCanvasHeight,
-                        y: pointerCanvasY },
+                    { ref: 'pointerCanvas', width: this.state.windowWidth, height: ponterCanvasHeight, y: pointerCanvasY },
                     ' '
-                ),
-                '  '
+                )
             );
         }
     }, {
@@ -21503,7 +21658,10 @@ var CandleApp = function (_React$Component) {
 
             var me = this;
             window.addEventListener('resize', function (e) {
-                me.setState({ windowHeight: window.innerHeight, windowWidth: window.innerWidth });
+                me.setState({
+                    windowHeight: window.innerHeight,
+                    windowWidth: window.innerWidth
+                });
                 //me.doOnRange(true);
                 me.doOnResize(e);
             });
@@ -21536,13 +21694,18 @@ var CandleApp = function (_React$Component) {
             painterCore.on("range", function () {
                 me.updateCanvasPosition(painterCore.drawRangeStart * painterCore.unitWidth);
                 var date = painterCore.getDateOfCurrentRange();
-                console.log("on range:", painterCore.drawRangeStart, date);
+                // console.log("on range:", painterCore.drawRangeStart, date)
                 me.refs.dateInput.updateState(date, false);
             });
 
             var sid = this.refs.sidInput.state.value;
             var date = this.refs.dateInput.state.value;
             this.loadDataBySid(sid, date);
+            setTimeout(function () {
+                _io2.default.workerLoadStocks(100, 100, function (re) {
+                    console.log("----", re);
+                });
+            }, 3000);
         }
     }, {
         key: 'loadDataBySid',
@@ -21554,9 +21717,9 @@ var CandleApp = function (_React$Component) {
 
                 _io2.default.httpGetStockMoneyFlowJson(sid, function (json) {
                     painterCore.updateMoneyFlow(json);
-                    _io2.default.httpGetStockFullJson(sid, 'date,open,close,high,low,amount', function (json) {
-                        console.log("get full");
-                    });
+                    // IO.httpGetStockFullJson(sid, 'date,open,close,high,low,amount,netamount,r0_net', function(json) {
+                    //     console.log("get full")
+                    // });
                 });
             });
         }
@@ -21564,7 +21727,6 @@ var CandleApp = function (_React$Component) {
         key: 'handleSidChanged',
         value: function handleSidChanged(sid) {
             var date = this.refs.dateInput.state.value;
-            console.log("-----", sid);
             clearTimeout(this.timeoutHandler);
             var me = this;
             this.timeoutHandler = setTimeout(function () {
@@ -21600,7 +21762,7 @@ var CandleApp = function (_React$Component) {
 
 exports.default = CandleApp;
 
-},{"../chart/candlepainter":173,"../chart/paintercore":174,"../chart/pointerpainter":175,"../chart/volumepainter":176,"./chartcanvas":178,"./forms/dateinput":179,"./forms/forminput":180,"./io":182,"./stockids":183,"./tradingdate":184,"./worker.js":185,"react":168,"webworkify":169}],178:[function(require,module,exports){
+},{"../chart/candlepainter":174,"../chart/paintercore":175,"../chart/pointerpainter":176,"../chart/volumepainter":177,"./chartcanvas":179,"./dataworker.js":180,"./forms/dateinput":181,"./forms/forminput":182,"./io":184,"./stockids":185,"./tradingdate":186,"./workerproxy":187,"react":168,"webworkify":169}],179:[function(require,module,exports){
 'use strict';
 
 // let sampleData = [{ open: 15.5, close: 16, high: 16.5, low: 15.2 }, { open: 15.8, close: 15, high: 16.8, low: 14.2 }, { open: 15.5, close: 16, high: 16.8, low: 15.2 }, { open: 10.5, close: 10, high: 10.8, low: 9.2 }];
@@ -21671,7 +21833,94 @@ var ChartCanvas = function (_React$Component) {
 
 exports.default = ChartCanvas;
 
-},{"react":168}],179:[function(require,module,exports){
+},{"react":168}],180:[function(require,module,exports){
+'use strict';
+
+var _io = require('./io');
+
+var _io2 = _interopRequireDefault(_io);
+
+var _stockids = require('./stockids');
+
+var _stockids2 = _interopRequireDefault(_stockids);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+var stockFields = ['date', 'open', 'close', 'high', 'low', 'amount', 'netamount', 'r0_net', 'changeratio'];
+var cacheMap = {};
+
+module.exports = function (self) {
+    var me = this;
+    self.addEventListener('message', function (ev) {
+        console.log("--------------------------worker", ev.data);
+        var mn = ev.data['methodName'];
+        //console.log("worker on message", mn, module[mn]);
+        var params = ev.data['params'];
+        params.push(function (result) {
+            self.postMessage({
+                mkey: ev.data.mkey,
+                result: result
+            });
+        });
+        module[mn].apply(me, params);
+        // IO.httpGetStockJson(sid, function(json) {
+        //     self.postMessage();
+        // });
+    });
+};
+
+module.loadStocksDataPage = function loadStocksDataPage(start, count, callback) {
+    var total = _stockids2.default.getTotalCount();
+    var pageSize = count;
+    count = Math.min(50, total - start);
+    loadStocksData(start, count, stockFields, function () {
+        if (start + count >= total) {
+            callback(start + count);
+        } else {
+            loadStocksDataPage(start + count, count, callback);
+        }
+    });
+};
+
+module.getStockData = function getStockData(sid, fields, callback) {
+    var fm = {};
+    for (var i = 0; i < fields.length; i++) {
+        var f = fields[i];
+        for (var j = 0; j < stockFields.length; j++) {
+            if (stockFields[j] === f) fm[j] = true;
+        }
+    }
+    var fulldata = cacheMap[sid];
+    var data = [];
+    var r = stockFields.length;
+    for (var _i = 0; _i < fulldata.length; _i++) {
+        var idx = _i % r;
+        if (fm[idx]) {
+            data.push(fulldata[_i]);
+        }
+    }
+
+    callback({
+        fields: fields,
+        data: data
+    });
+};
+
+module.loadStocksData = function loadStocksData(start, count, callback) {
+    var sids = _stockids2.default.getIDsByIndex(start, count);
+    _io2.default.httpGetStocksCompressedJson(sids, stockFields.join(), function (json) {
+        //console.log("loadStocksData", sids.length, sids[0], sids[sids.length - 1])
+        for (var sid in json.data) {
+            cacheMap[sid] = json.data[sid];
+        }
+
+        if (callback) {
+            callback(sids);
+        }
+    });
+};
+
+},{"./io":184,"./stockids":185}],181:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -21767,7 +22016,7 @@ DateInput.defaultProps = { type: "date", width: 130 };
 
 exports.default = DateInput;
 
-},{"./forminput":180,"react":168}],180:[function(require,module,exports){
+},{"./forminput":182,"react":168}],182:[function(require,module,exports){
 'use strict';
 
 // let sampleData = [{ open: 15.5, close: 16, high: 16.5, low: 15.2 }, { open: 15.8, close: 15, high: 16.8, low: 14.2 }, { open: 15.5, close: 16, high: 16.8, low: 15.2 }, { open: 10.5, close: 10, high: 10.8, low: 9.2 }];
@@ -21863,7 +22112,7 @@ FormInput.defaultProps = { type: "text", value: "" };
 
 exports.default = FormInput;
 
-},{"react":168}],181:[function(require,module,exports){
+},{"react":168}],183:[function(require,module,exports){
 'use strict';
 
 var _react = require("react");
@@ -21882,8 +22131,9 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 var candleApp = _reactDom2.default.render(_react2.default.createElement(_CandleApp2.default, null), document.getElementById('app'));
 
-},{"./CandleApp":177,"react":168,"react-dom":30}],182:[function(require,module,exports){
+},{"./CandleApp":178,"react":168,"react-dom":30}],184:[function(require,module,exports){
 'use strict';
+// import fetch from 'whatwg-fetch';
 
 Object.defineProperty(exports, "__esModule", {
     value: true
@@ -21891,7 +22141,11 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-require('whatwg-fetch');
+var _zip = require('../alpha/zip');
+
+var _zip2 = _interopRequireDefault(_zip);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -21907,6 +22161,20 @@ var IO = function () {
         key: 'cacheGetStockJson',
         value: function cacheGetStockJson(sid) {
             return this.cacheMap[sid];
+        }
+    }, {
+        key: 'workerLoadStocks',
+        value: function workerLoadStocks(start, count, callback) {
+            IO.dataWorkerProxy.callMethod("loadStocksData", [start, count], function (result) {
+                console.log("workerLoadStocks----", result);
+                if (result.length === 0) return;
+                var params = [result[0], ['date', 'open', 'close', 'high', 'low', 'amount']];
+
+                IO.dataWorkerProxy.callMethod("getStockData", params, function (re) {
+                    var dcp = _zip2.default.decompressStockJson(re);
+                    console.log("callmethod", dcp);
+                });
+            });
         }
     }, {
         key: 'httpGetStockIdsJson',
@@ -21926,6 +22194,23 @@ var IO = function () {
             });
         }
     }, {
+        key: 'httpGetStocksCompressedJson',
+        value: function httpGetStocksCompressedJson(sids, fields, callback) {
+            console.log("--------------httpGetStocksCompressedJson", sids);
+            fetch(IO.baseUrl, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                body: '{"sids":"' + sids + '", "action":"stocksCompressed", "fields":"' + fields + '"}'
+            }).then(function (res) {
+                return res.json();
+            }).then(function (json) {
+                callback(json);
+            });
+        }
+    }, {
         key: 'httpGetStockFullJson',
         value: function httpGetStockFullJson(sid, fields, callback) {
             console.log("--------------httpGetStockFullJson", sid);
@@ -21935,7 +22220,7 @@ var IO = function () {
                     'Accept': 'application/json',
                     'Content-Type': 'application/json'
                 },
-                body: '{"sid":"' + sid + '", "action":"stockFull", "fields":"' + fields + '"}'
+                body: '{"sid":"' + sid + '", "action":"stockCompressed", "fields":"' + fields + '"}'
             }).then(function (res) {
                 return res.json();
             }).then(function (json) {
@@ -22006,7 +22291,7 @@ IO.cacheMap = {};
 
 exports.default = IO;
 
-},{"whatwg-fetch":170}],183:[function(require,module,exports){
+},{"../alpha/zip":172}],185:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -22051,6 +22336,17 @@ var StockIDs = function () {
             if (idx === 0) return null;
             return StockIDs.arrayData[idx - 1];
         }
+    }, {
+        key: "getIDsByIndex",
+        value: function getIDsByIndex(start, count) {
+            if (StockIDs.arrayData === null) return [];
+            return StockIDs.arrayData.slice(start, start + count);
+        }
+    }, {
+        key: "getTotalCount",
+        value: function getTotalCount() {
+            return StockIDs.arrayData.length;
+        }
     }]);
 
     return StockIDs;
@@ -22065,7 +22361,7 @@ StockIDs.idIndexMap = {};
 
 exports.default = StockIDs;
 
-},{"./io":182}],184:[function(require,module,exports){
+},{"./io":184}],186:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -22115,43 +22411,75 @@ var TradingDate = function () {
     return TradingDate;
 }();
 
-// IO.httpGetStockJson("SH999999", function(json) {
-//     TradingDate.load(json);
-// });
+_io2.default.httpGetStockJson("SH999999", function (json) {
+    console.log("SH99999", json.length);
+    TradingDate.load(json);
+});
 
 TradingDate.arrayData = null;
 TradingDate.dateIndexMap = {};
 
 exports.default = TradingDate;
 
-},{"./io":182}],185:[function(require,module,exports){
+},{"./io":184}],187:[function(require,module,exports){
 'use strict';
 
-var _io = require('./io');
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
 
-var _io2 = _interopRequireDefault(_io);
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+require('whatwg-fetch');
 
-module.exports = function (self) {
-    self.addEventListener('message', function (ev) {
-        // var startNum = parseInt(ev.data); // ev.data=4 from main.js
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-        // setInterval(function () {
-        //     var r = startNum / Math.random() - 1;
-        //     self.postMessage([ startNum, r]);
-        // }, 2000);
-        var sid = ev.data;
-        _io2.default.httpGetStockJson(sid, function (json) {
-            painterCore.loadData(json);
-            //painterCore.setDrawRange(json.length-200, json.length-1);
-            painterCore.updateDrawPort(date, window.innerWidth);
+var WorkerProxy = function () {
+    function WorkerProxy(worker) {
+        _classCallCheck(this, WorkerProxy);
 
-            _io2.default.httpGetStockMoneyFlowJson(sid, function (json) {
-                painterCore.updateMoneyFlow(json);
-            });
+        var me = this;
+        worker.addEventListener('message', function (ev) {
+            console.log("app on message", ev.data);
+            me.doOnMessage(ev);
         });
-    });
-};
+        this.worker = worker;
+        this.penddingCalls = {};
+    }
 
-},{"./io":182}]},{},[181]);
+    _createClass(WorkerProxy, [{
+        key: 'callMethod',
+        value: function callMethod(methodName, params, callback) {
+            var mkey = this.getMethodKey(methodName);
+            this.penddingCalls[mkey] = callback;
+            this.worker.postMessage({
+                methodName: methodName,
+                mkey: mkey,
+                params: params
+            });
+        }
+    }, {
+        key: 'doOnMessage',
+        value: function doOnMessage(ev) {
+            var mkey = ev.data.mkey;
+            var cb = this.penddingCalls[mkey];
+            delete this.penddingCalls[mkey];
+            cb(ev.data.result);
+        }
+    }, {
+        key: 'getMethodKey',
+        value: function getMethodKey(m) {
+            var key = m + "_" + Math.round(Math.random() * 100);
+            while (this.penddingCalls[key]) {
+                key = m + "_" + Math.round(Math.random() * 100);
+            }
+            return key;
+        }
+    }]);
+
+    return WorkerProxy;
+}();
+
+exports.default = WorkerProxy;
+
+},{"whatwg-fetch":170}]},{},[183]);

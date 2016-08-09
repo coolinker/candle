@@ -2,7 +2,7 @@
   "name": "candle",
   "version": "1.0.0",
   "description": "",
-  "main": "candle.js",
+  "main": "index.js",
   "dependencies": {
     "babel-preset-react": "^6.11.1",
     "babelify": "^7.3.0",

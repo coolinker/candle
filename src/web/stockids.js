@@ -2,8 +2,7 @@
 import IO from "./io";
 
 class StockIDs {
-    constructor() {
-    }
+    constructor() {}
 
     static load(ids) {
         StockIDs.arrayData = ids;
@@ -24,8 +23,16 @@ class StockIDs {
         if (idx === 0) return null;
         return StockIDs.arrayData[idx - 1];
     }
-}
 
+    static getIDsByIndex(start, count) {
+        if (StockIDs.arrayData === null) return [];
+        return StockIDs.arrayData.slice(start, start + count)
+    }
+    
+    static getTotalCount() {
+        return StockIDs.arrayData.length;
+    }
+}
 
 IO.httpGetStockIdsJson("", function(json) {
     StockIDs.load(json);
