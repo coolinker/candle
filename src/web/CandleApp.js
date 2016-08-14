@@ -27,7 +27,6 @@ pointerPainter.mouseDblclickHandler = function(e) {
     let dataindex = painterCore.getDataIndexByX(x - candleCanvasX);
     let data = painterCore.getDataByIndex(dataindex);
 
-    console.log('mouseDblclickHandler', data)
 }
 pointerPainter.mouseMoveHandler = function(e) {
     if (!painterCore.arrayData) return;
@@ -66,6 +65,7 @@ class CandleApp extends React.Component {
             windowHeight: window.innerHeight
         };
         this.handleSidChanged = this.handleSidChanged.bind(this);
+        this.handleSidInputChagned = this.handleSidInputChagned.bind(this);
     }
 
     render() {
@@ -94,7 +94,8 @@ class CandleApp extends React.Component {
         let sidinputleft = (this.state.windowWidth - sidwidth) / 2;
         return <div style = { divstyle } >
             <div ref = "toolbar" height = { toolbarHeight } style = { toolbarStyle } >
-                <FormInput ref = "sidInput" width = { 65 } regex = { "^(S|s)$|^(SH|sh)$|^(SZ|sz)$|^(SH|SZ|sh|sz)\\d{1,6}$" } validRegex = { "^(sh|sz|SH|SZ)\\d{6}$" } value = "SH600022" handleInputCompleted = { this.handleSidChanged }/>
+                <FormInput ref = "sidInput" width = { 65 } regex = { "^(S|s)$|^(SH|sh)$|^(SZ|sz)$|^(SH|SZ|sh|sz)\\d{1,6}$" } validRegex = { "^(sh|sz|SH|SZ)\\d{6}$" } value = "SH600022" 
+                    handleInputCompleted = {this.handleSidChanged} handleInputChanged = {this.handleSidInputChagned}/>
                 <DateInput ref = "dateInput" value = { '07/04/2016' } handleInputCompleted = { this.handleDateChanged }/> 
             </div > 
             <ChartCanvas ref = "candleChart" width = "2000" height = { candleChartHeight } y = { candleChartY } > </ChartCanvas>  
@@ -187,12 +188,26 @@ class CandleApp extends React.Component {
 
     }
 
+    handleSidInputChagned(value) {
+        if (this.timeoutHandleSidInputChagned) {
+            clearTimeout(this.timeoutHandleSidInputChagned);
+        }
+
+        let me = this;
+        this.timeoutHandleSidInputChagned = setTimeout(function() {
+            let sidin = me.refs.sidInput.state.value;
+            IO.sidSuggest(sidin, function(arr) {
+                console.log(arr)
+            })
+
+        }, 500);
+    }
+
     handleSidChanged(sid) {
         let date = this.refs.dateInput.state.value;
         clearTimeout(this.timeoutHandler);
         let me = this;
         this.timeoutHandler = setTimeout(function() {
-            console.log("-----loadDataBySid", sid, date)
             me.loadDataBySid(sid, date)
         }, 500);
 

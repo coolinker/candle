@@ -63,7 +63,7 @@ function handleApiRequest(request, response) {
                     outputZipResponse(response, output, cacheKey);
                 } else {
                     response.writeHead(200, {
-                        "Content-Type": "application/text",
+                        "Content-Type": "application/json",
                         "Access-Control-Allow-Origin": "http://" + serverIp
                     });
                     response.end(output);
@@ -132,7 +132,7 @@ let apiDispatcher = {
         let content = dataSourceIO.readStockFullJsonSync(sid.toUpperCase(), fields);
         if (content) {
             let str = JSON.stringify(content);
-            outputCallback(str);
+            outputCallback(str, true);
         } else {
             outputCallback(errorMessage("Can not find stockFull:" + sid));
         }
@@ -165,7 +165,7 @@ let apiDispatcher = {
         let content = dataSourceIO.readJsonSync(sid.toUpperCase());
         if (content) {
             let str = JSON.stringify(content);
-            outputCallback(str);
+            outputCallback(str, true);
         } else {
             outputCallback(errorMessage("Can not find stock:" + sid));
         }
@@ -177,17 +177,18 @@ let apiDispatcher = {
         let content = dataSourceIO.readMoneyFlowSync(sid.toUpperCase());
         if (content) {
             let str = JSON.stringify(content);
-            outputCallback(str);
+            outputCallback(str, true);
         } else {
             outputCallback(errorMessage("Can not find money flow:" + sid));
         }
 
-    }
+    },
 
-        thirdPartyAjaxAPI: function(params, outputCallback) {
+    thirdPartyAjaxAPI: function(params, outputCallback) {
         let url = params.url;
-        let mtd = params.httpMethod;
+        let mtd = params.http;
         dataSourceIO.thirdPartyAjaxAPI(url, mtd, function(output) {
+
             outputCallback(output);
         });
     }

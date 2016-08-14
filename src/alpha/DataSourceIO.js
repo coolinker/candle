@@ -224,21 +224,22 @@ module.exports = class DataSourceIO {
     }
 
     thirdPartyAjaxAPI(url, getpost, callback) {
-            fetch(url), {
-                method: getpost,
-                timeout: 1000
-            })
-        .then(function(res) {
+        console.log("thirdPartyAjaxAPI", url, getpost)
+        fetch(url, {
+            method: getpost,
+            timeout: 1000
+        }).then(function(res) {
             if (!res.ok || res.status != 200) {
                 console.log("httpGetStockHistory error loading", sid, res.ok, res.status, res);
             }
             return res.text();
         }).then(function(body) {
+            console.log("----------body", body)
             callback(body);
         }).catch(function(error) {
             //console.log('request failed', error)
             callback(null);
         });
-}
+    }
 
 }

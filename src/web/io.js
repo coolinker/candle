@@ -3,12 +3,36 @@
 import Zip from '../alpha/zip';
 import NetSumUtil from '../alpha/netsumutil';
 class IO {
-    constructor() {
+    constructor() {}
+    static sidSuggest(v, callback) {
+        let url = 'http://suggest3.sinajs.cn/suggest/type=&key=' + v.toLowerCase() + '&name=suggestdata_' + (new Date().getTime())
+        fetch(IO.baseUrl, {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            body: '{"url":"' + url + '", "http": "GET", "action":"thirdPartyAjaxAPI"}'
+        }).then(function(res) {
+            return res.text();
+        }).then(function(text) {
 
+            let result = text.split('"')[1];
+            let secs = result.split(';');
+            let stocks = [];
+            for (let i = 0; i < secs.length; i++) {
+                let arr = secs[i].split(',')
+                stocks.push({
+                    sid: arr[3],
+                    name: arr[4]
+                });
 
+            }
+            console.log("sidSuggest =>", stocks);
+            callback(stocks);
+        });
     }
 
-    // exports.cacheGetStockJson = cacheGetStockJson;
     static cacheGetStockJson(sid) {
         return this.cacheMap[sid]
     }

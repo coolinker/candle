@@ -21819,8 +21819,6 @@ pointerPainter.mouseDblclickHandler = function (e) {
     var candleCanvasX = parseInt(candlePainter.canvas.style.left, 10);
     var dataindex = painterCore.getDataIndexByX(x - candleCanvasX);
     var data = painterCore.getDataByIndex(dataindex);
-
-    console.log('mouseDblclickHandler', data);
 };
 pointerPainter.mouseMoveHandler = function (e) {
     if (!painterCore.arrayData) return;
@@ -21858,6 +21856,7 @@ var CandleApp = function (_React$Component) {
             windowHeight: window.innerHeight
         };
         _this.handleSidChanged = _this.handleSidChanged.bind(_this);
+        _this.handleSidInputChagned = _this.handleSidInputChagned.bind(_this);
         return _this;
     }
 
@@ -21893,7 +21892,8 @@ var CandleApp = function (_React$Component) {
                 _react2.default.createElement(
                     'div',
                     { ref: 'toolbar', height: toolbarHeight, style: toolbarStyle },
-                    _react2.default.createElement(_forminput2.default, { ref: 'sidInput', width: 65, regex: "^(S|s)$|^(SH|sh)$|^(SZ|sz)$|^(SH|SZ|sh|sz)\\d{1,6}$", validRegex: "^(sh|sz|SH|SZ)\\d{6}$", value: 'SH600022', handleInputCompleted: this.handleSidChanged }),
+                    _react2.default.createElement(_forminput2.default, { ref: 'sidInput', width: 65, regex: "^(S|s)$|^(SH|sh)$|^(SZ|sz)$|^(SH|SZ|sh|sz)\\d{1,6}$", validRegex: "^(sh|sz|SH|SZ)\\d{6}$", value: 'SH600022',
+                        handleInputCompleted: this.handleSidChanged, handleInputChanged: this.handleSidInputChagned }),
                     _react2.default.createElement(_dateinput2.default, { ref: 'dateInput', value: '07/04/2016', handleInputCompleted: this.handleDateChanged })
                 ),
                 _react2.default.createElement(
@@ -21994,13 +21994,27 @@ var CandleApp = function (_React$Component) {
             });
         }
     }, {
+        key: 'handleSidInputChagned',
+        value: function handleSidInputChagned(value) {
+            if (this.timeoutHandleSidInputChagned) {
+                clearTimeout(this.timeoutHandleSidInputChagned);
+            }
+
+            var me = this;
+            this.timeoutHandleSidInputChagned = setTimeout(function () {
+                var sidin = me.refs.sidInput.state.value;
+                _io2.default.sidSuggest(sidin, function (arr) {
+                    console.log(arr);
+                });
+            }, 500);
+        }
+    }, {
         key: 'handleSidChanged',
         value: function handleSidChanged(sid) {
             var date = this.refs.dateInput.state.value;
             clearTimeout(this.timeoutHandler);
             var me = this;
             this.timeoutHandler = setTimeout(function () {
-                console.log("-----loadDataBySid", sid, date);
                 me.loadDataBySid(sid, date);
             }, 500);
         }
@@ -22325,7 +22339,9 @@ var FormInput = function (_React$Component) {
         var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(FormInput).call(this, props));
 
         _this.handleChange = _this.handleChange.bind(_this);
-        _this.state = { value: _this.props.value };
+        _this.state = {
+            value: _this.props.value
+        };
         return _this;
     }
 
@@ -22345,11 +22361,16 @@ var FormInput = function (_React$Component) {
         key: 'updateState',
         value: function updateState(v, needHandleInputComplete) {
             var me = this;
-            this.setState({ value: v }, function () {
+            this.setState({
+                value: v
+            }, function () {
                 if (needHandleInputComplete && me.props.handleInputCompleted) {
                     if (!me.props.validRegex || v.match(me.props.validRegex)) {
                         me.props.handleInputCompleted(me.state.value);
                     }
+                }
+                if (me.props.handleInputChanged) {
+                    me.props.handleInputChanged(me.state.value);
                 }
             });
         }
@@ -22384,8 +22405,14 @@ var FormInput = function (_React$Component) {
     return FormInput;
 }(_react2.default.Component);
 
-FormInput.propTypes = { type: _react2.default.PropTypes.string, value: _react2.default.PropTypes.string };
-FormInput.defaultProps = { type: "text", value: "" };
+FormInput.propTypes = {
+    type: _react2.default.PropTypes.string,
+    value: _react2.default.PropTypes.string
+};
+FormInput.defaultProps = {
+    type: "text",
+    value: ""
+};
 
 exports.default = FormInput;
 
@@ -22435,10 +22462,36 @@ var IO = function () {
         _classCallCheck(this, IO);
     }
 
-    // exports.cacheGetStockJson = cacheGetStockJson;
-
-
     _createClass(IO, null, [{
+        key: 'sidSuggest',
+        value: function sidSuggest(v, callback) {
+            var url = 'http://suggest3.sinajs.cn/suggest/type=&key=' + v.toLowerCase() + '&name=suggestdata_' + new Date().getTime();
+            fetch(IO.baseUrl, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                body: '{"url":"' + url + '", "http": "GET", "action":"thirdPartyAjaxAPI"}'
+            }).then(function (res) {
+                return res.text();
+            }).then(function (text) {
+
+                var result = text.split('"')[1];
+                var secs = result.split(';');
+                var stocks = [];
+                for (var i = 0; i < secs.length; i++) {
+                    var arr = secs[i].split(',');
+                    stocks.push({
+                        sid: arr[3],
+                        name: arr[4]
+                    });
+                }
+                console.log("sidSuggest =>", stocks);
+                callback(stocks);
+            });
+        }
+    }, {
         key: 'cacheGetStockJson',
         value: function cacheGetStockJson(sid) {
             return this.cacheMap[sid];

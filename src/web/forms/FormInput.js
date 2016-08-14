@@ -7,31 +7,39 @@ class FormInput extends React.Component {
     constructor(props) {
         super(props);
         this.handleChange = this.handleChange.bind(this);
-        this.state = { value: this.props.value };
+        this.state = {
+            value: this.props.value
+        };
     }
 
     handleChange(event) {
         let v = event.target.value;
-        let regex = this.props.regex; 
+        let regex = this.props.regex;
         // console.log(v, v.length, v.match(regex), this.refs.ele.selectionStart)
         let cursorPosition = this.refs.ele.selectionStart;
         if (v !== '' && !v.match(regex)) {
-            v = v.substr(0, cursorPosition-1)  + v.substr(cursorPosition);
+            v = v.substr(0, cursorPosition - 1) + v.substr(cursorPosition);
         }
         this.updateState(this.formatStateValue(v), true);
     }
 
-    updateState(v, needHandleInputComplete){
+    updateState(v, needHandleInputComplete) {
         let me = this;
-        this.setState({ value: v }, function(){
+        this.setState({
+            value: v
+        }, function() {
             if (needHandleInputComplete && me.props.handleInputCompleted) {
                 if (!me.props.validRegex || v.match(me.props.validRegex)) {
                     me.props.handleInputCompleted(me.state.value);
-                } 
+                }
             }
-        
+            if (me.props.handleInputChanged) {
+                me.props.handleInputChanged(me.state.value);
+
+            }
+
         });
-        
+
     }
 
     formatStateValue(v) {
@@ -60,7 +68,13 @@ class FormInput extends React.Component {
 
 }
 
-FormInput.propTypes = { type: React.PropTypes.string, value: React.PropTypes.string };
-FormInput.defaultProps = { type: "text", value: "" };
+FormInput.propTypes = {
+    type: React.PropTypes.string,
+    value: React.PropTypes.string
+};
+FormInput.defaultProps = {
+    type: "text",
+    value: ""
+};
 
 export default FormInput;
