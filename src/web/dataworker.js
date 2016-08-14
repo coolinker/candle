@@ -2,13 +2,13 @@
 import IO from './io';
 import StockIDs from './stockids';
 
-let stockFields = ['date', 'open', 'close', 'high', 'low', 'amount', 'netamount', 'r0_net', 'changeratio'];
+let stockFields = ['date', 'open', 'close', 'high', 'low', 'amount', 'netamount', 'r0_net', 'changeratio', 'turnover'];
 let cacheMap = {};
 
 module.exports = function(self) {
     let me = this;
     self.addEventListener('message', function(ev) {
-        console.log("--------------------------worker", ev.data)
+        //console.log("--------------------------worker", ev.data)
         let mn = ev.data['methodName'];
         //console.log("worker on message", mn, module[mn]);
         let params = ev.data['params'];
@@ -29,12 +29,14 @@ module.exports = function(self) {
 module.loadStocksDataPage = function loadStocksDataPage(start, count, callback) {
     let total = StockIDs.getTotalCount();
     let pageSize = count;
-    count = Math.min(50, total - start);
-    loadStocksData(start, count, stockFields, function() {
+    count = Math.min(count, total - start);
+    //console.log("loadStocksDataPage", start, count)
+    module.loadStocksData(start, count, stockFields, function(sids) {
+
         if (start + count >= total) {
             callback(start + count);
         } else {
-            loadStocksDataPage(start + count, count, callback);
+            module.loadStocksDataPage(start + count, count, callback);
         }
     })
 }
@@ -48,6 +50,11 @@ module.getStockData = function getStockData(sid, fields, callback) {
         }
     }
     let fulldata = cacheMap[sid];
+    if (!fulldata) {
+        callback(null);
+        return;
+    }
+
     let data = [];
     let r = stockFields.length;
     for (let i = 0; i < fulldata.length; i++) {
@@ -64,9 +71,9 @@ module.getStockData = function getStockData(sid, fields, callback) {
     });
 }
 
-module.loadStocksData = function loadStocksData(start, count, callback) {
+module.loadStocksData = function loadStocksData(start, count, fields, callback) {
     let sids = StockIDs.getIDsByIndex(start, count);
-    IO.httpGetStocksCompressedJson(sids, stockFields.join(), function(json) {
+    IO.httpGetStocksCompressedJson(sids, fields.join(), function(json) {
         //console.log("loadStocksData", sids.length, sids[0], sids[sids.length - 1])
         for (let sid in json.data) {
             cacheMap[sid] = json.data[sid];

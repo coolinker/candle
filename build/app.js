@@ -20506,6 +20506,43 @@ var _createClass = function () { function defineProperties(target, props) { for 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 module.exports = function () {
+    function EXDateUtil() {
+        _classCallCheck(this, EXDateUtil);
+    }
+
+    _createClass(EXDateUtil, null, [{
+        key: 'build',
+        value: function build(start, end, data) {
+            for (var i = start; i <= end; i++) {
+                EXDateUtil.buildSingle(i, data);
+            }
+            return data;
+        }
+    }, {
+        key: 'buildSingle',
+        value: function buildSingle(idx, data) {
+            var obj = data[idx];
+            if (obj['ex'] !== undefined || obj['changeratio'] === undefined) return;
+            var preclose = data[idx - 1].close;
+            var close = obj.close;
+            var inc = Math.round(10000 * obj.changeratio);
+            var cinc = Math.round(10000 * (close - preclose) / preclose);
+            obj.ex = Math.abs(cinc - inc) > 50;
+            if (obj.ex) console.log("-------------------------------ex", cinc, inc, obj.changeratio, (close - preclose) / preclose, data[idx]);
+        }
+    }]);
+
+    return EXDateUtil;
+}();
+
+},{}],172:[function(require,module,exports){
+'use strict';
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+module.exports = function () {
     function MovingAverageUtil() {
         _classCallCheck(this, MovingAverageUtil);
     }
@@ -20560,18 +20597,146 @@ module.exports = function () {
                 ave = ave + (data[_i2][field] - data[_i2 - period][field]) / period;
                 data[_i2]["ave_" + field + "_" + period] = MovingAverageUtil.formatFloat(ave);
             }
+
+            return data;
         }
     }, {
         key: "formatFloat",
         value: function formatFloat(f) {
-            return Math.round(f * 100) / 100;
+            return f; //Math.round(f * 100) / 100;
+        }
+    }, {
+        key: "buildSingle",
+        value: function buildSingle(idx, period, data, field) {
+            var fieldAveName = 'ave_' + field + '_' + period;
+            if (idx < period - 1 || data[idx][fieldAveName]) return;
+
+            var preobj = data[idx - 1];
+            var prevalue = preobj[fieldAveName];
+            if (!isNaN(prevalue)) {
+                var v = MovingAverageUtil.formatFloat((prevalue * period - data[idx - period][field] + data[idx][field]) / period);
+                data[idx][fieldAveName] = v;
+            } else {
+                var sum = 0;
+                for (var i = 0; i < period; i++) {
+                    sum += data[idx - i][field];
+                }
+                var _v = MovingAverageUtil.formatFloat(sum / period);
+                data[idx][fieldAveName] = _v;
+            }
         }
     }]);
 
     return MovingAverageUtil;
 }();
 
-},{}],172:[function(require,module,exports){
+},{}],173:[function(require,module,exports){
+'use strict';
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+module.exports = function () {
+    function NetSumUtil() {
+        _classCallCheck(this, NetSumUtil);
+    }
+
+    _createClass(NetSumUtil, null, [{
+        key: 'build',
+        value: function build(start, end, period, data) {
+            for (var i = start; i <= end; i++) {
+                NetSumUtil.buildSingle(i, period, data);
+            }
+
+            return data;
+        }
+    }, {
+        key: 'buildSingle',
+        value: function buildSingle(idx, period, data) {
+            if (data[idx]['marketCap'] !== undefined || data[idx]['netamount'] === undefined) return;
+
+            var netsum_r0 = 0,
+                netsummax_r0 = -100000000000,
+                netsum_r0x = 0,
+                netsummax = -100000000000,
+                netsummax_r0_netsum_r0x = -100000000000,
+                netsummax_idx = -1,
+                netsummax_idx_r0 = -1;
+            for (var j = idx; j >= 0 && idx - j <= period; j--) {
+                var klj = data[j];
+                var r0x_net = klj.netamount - klj.r0_net;
+
+                netsum_r0 += klj.r0_net;
+                netsum_r0x += r0x_net;
+
+                if (netsum_r0 + netsum_r0x > netsummax) {
+                    netsummax = netsum_r0 + netsum_r0x;
+                    netsummax_idx = j;
+                }
+
+                if (netsum_r0 > netsummax_r0) {
+                    netsummax_r0 = netsum_r0;
+                    netsummax_idx_r0 = j;
+                    netsummax_r0_netsum_r0x = netsum_r0x;
+                }
+            }
+
+            var obj = data[idx];
+            obj.marketCap = obj.close * (2 * obj.amount / (obj.high + obj.low)) / (obj.turnover / 10000);
+            obj.netsummax_r0 = netsummax_r0;
+            obj.netsummax = netsummax;
+            obj.netsummax_duration = idx - netsummax_idx;
+
+            obj.netsummax_r0_duration = idx - netsummax_idx_r0;
+            obj.netsummax_r0_netsum_r0x = netsummax_r0_netsum_r0x;
+        }
+    }]);
+
+    return NetSumUtil;
+}();
+
+},{}],174:[function(require,module,exports){
+'use strict';
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var EXDateUtil = require('./exdateutil');
+var MovingAverageUtil = require('./movingaverageutil');
+var NetSumUtil = require('./netsumutil');
+module.exports = function () {
+    function UtilsPipe() {
+        _classCallCheck(this, UtilsPipe);
+    }
+
+    _createClass(UtilsPipe, null, [{
+        key: 'build',
+        value: function build(start, end, data) {
+
+            for (var i = start; i <= end; i++) {
+                NetSumUtil.buildSingle(i, 150, data);
+                EXDateUtil.buildSingle(i, data);
+                MovingAverageUtil.buildSingle(i, 8, data, 'close');
+                MovingAverageUtil.buildSingle(i, 13, data, 'close');
+                MovingAverageUtil.buildSingle(i, 21, data, 'close');
+                MovingAverageUtil.buildSingle(i, 55, data, 'close');
+                MovingAverageUtil.buildSingle(i, 8, data, 'amount');
+                MovingAverageUtil.buildSingle(i, 13, data, 'amount');
+                MovingAverageUtil.buildSingle(i, 21, data, 'amount');
+                MovingAverageUtil.buildSingle(i, 55, data, 'amount');
+                if (data[i].date === '07/21/2016') console.log("-------------------", data[i]);
+            }
+
+            return data;
+        }
+    }]);
+
+    return UtilsPipe;
+}();
+
+},{"./exdateutil":171,"./movingaverageutil":172,"./netsumutil":173}],175:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -20613,7 +20778,7 @@ module.exports = function () {
                 var v = data[_i];
                 obj[field] = Zip.decompressFieldValue(field, v, lastObj, jsonData.length);
             }
-
+            jsonData.reverse();
             return jsonData;
         }
     }, {
@@ -20711,7 +20876,10 @@ module.exports = function () {
                 v = v / 100;
             } else if (field === 'changeratio') {
                 v = v / 10000;
+            } else if (field === 'turnover') {
+                v = v / 100;
             }
+
             return v;
         }
     }, {
@@ -20739,6 +20907,8 @@ module.exports = function () {
                 v = Math.round(v * 100);
             } else if (field === 'changeratio') {
                 v = Math.round(v * 10000);
+            } else if (field === 'turnover') {
+                v = Math.round(v * 100);
             }
 
             return v;
@@ -20748,7 +20918,7 @@ module.exports = function () {
     return Zip;
 }();
 
-},{}],173:[function(require,module,exports){
+},{}],176:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -20834,7 +21004,8 @@ module.exports = function () {
                 this.drawCache[i] = true;
             }
 
-            if (drawcount > 1) console.log("draw new signles", start, start * w, drawcount);
+            // if (drawcount>1)
+            //     console.log("draw new signles", start, start*w, drawcount);
             this.lastDrawHeight = this.canvas.height;
         }
     }, {
@@ -20903,7 +21074,7 @@ module.exports = function () {
     return MassPainter;
 }();
 
-},{}],174:[function(require,module,exports){
+},{}],177:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -20972,10 +21143,16 @@ module.exports = function (_MassPainter) {
 
             ctx.fillRect(x, openY, w - 1, openY === closeY ? 1 : closeY - openY);
 
+            if (data.ex) {
+                ctx.lineWidth = 1;
+                ctx.strokeStyle = '#424242';
+                ctx.strokeText('E', xp - 5, this.canvas.height - 3);
+            }
+
             if (idx === 0) return;
             var data_pre = dataArr[idx - 1];
-            var aves = [8, 13, 21];
-            var avecolors = ["#FFEB3B", "#00BCD4", "#9C27B0"];
+            var aves = this.core.aves; //[8, 13, 21, 55];
+            var avecolors = this.core.avecolors; //["#FFEB3B", "#00BCD4", "#9C27B0", "#DBDBDB"];
             for (var i = 0; i < aves.length; i++) {
                 var avy = this.getPriceY(data["ave_close_" + aves[i]]);
                 var avpy = this.getPriceY(data_pre["ave_close_" + aves[i]]);
@@ -21006,7 +21183,7 @@ module.exports = function (_MassPainter) {
     return CandlePainter;
 }(MassPainter);
 
-},{"./MassPainter":173}],175:[function(require,module,exports){
+},{"./MassPainter":176}],178:[function(require,module,exports){
 'use strict';
 // const EventEmitter = require('events');
 
@@ -21016,9 +21193,9 @@ var _events = require("events");
 
 var _events2 = _interopRequireDefault(_events);
 
-var _MovingAverageUtil = require("../alpha/MovingAverageUtil");
+var _utilspipe = require("../alpha/utilspipe");
 
-var _MovingAverageUtil2 = _interopRequireDefault(_MovingAverageUtil);
+var _utilspipe2 = _interopRequireDefault(_utilspipe);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -21028,6 +21205,7 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
+//import MovingAverageUtil from "../alpha/movingaverageutil";
 module.exports = function (_EventEmitter) {
     _inherits(PainterCore, _EventEmitter);
 
@@ -21037,6 +21215,9 @@ module.exports = function (_EventEmitter) {
         var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(PainterCore).call(this));
 
         _this.reset();
+        _this.aves = [8, 13, 21, 55];
+        _this.avecolors = ["#FFEB3B", "#00BCD4", "#9C27B0", "#DBDBDB"];
+
         return _this;
     }
 
@@ -21047,13 +21228,33 @@ module.exports = function (_EventEmitter) {
             this.unitWidth = 7;
             this.priceHigh = 0;
             this.priceLow = 10000;
-            this.volumeHigh = -1;
-            this.volumeLow = Number.MAX_SAFE_INTEGER;
+            // this.volumeHigh = -1;
+            // this.volumeLow = Number.MAX_SAFE_INTEGER;
             this.dateIndexMap = {};
             this.drawRangeStart = -1;
             this.drawRangeEnd = -1;
             this.reservedSpaces = 10;
             this.drawPortWidth = null;
+
+            this.rangeFields = this.getDefaultRangeFields();
+        }
+    }, {
+        key: "getDefaultRangeFields",
+        value: function getDefaultRangeFields() {
+            return {
+                'amount': {
+                    high: Number.MIN_SAFE_INTEGER,
+                    low: Number.MAX_SAFE_INTEGER
+                },
+                'netsummax_r0': {
+                    high: Number.MIN_SAFE_INTEGER,
+                    low: Number.MAX_SAFE_INTEGER
+                },
+                'netsummax_r0_duration': {
+                    high: Number.MIN_SAFE_INTEGER,
+                    low: Number.MAX_SAFE_INTEGER
+                }
+            };
         }
     }, {
         key: "updateUnitWidth",
@@ -21074,12 +21275,24 @@ module.exports = function (_EventEmitter) {
             return this.unitWidth * this.arrayData.length;
         }
     }, {
+        key: "getNextDate",
+        value: function getNextDate(date) {
+            var len = this.arrayData.length;
+            for (var i = 0; i < len; i++) {
+                var d = this.arrayData[i].date;
+                if (new Date(d) >= date) return d;
+            }
+        }
+    }, {
         key: "updateDrawPort",
         value: function updateDrawPort(dateStr, w) {
             if (!this.arrayData) return;
             var max = this.arrayData.length;
             var idx = this.dateIndexMap[dateStr];
-            if (idx === undefined) return;
+            if (idx === undefined) {
+                dateStr = this.getNextDate(new Date(dateStr));
+                idx = this.dateIndexMap[dateStr];
+            }
             this.drawPortWidth = w;
             var showtotal = Math.ceil(this.drawPortWidth / this.unitWidth);
             var start = -1;
@@ -21092,7 +21305,7 @@ module.exports = function (_EventEmitter) {
                 start = idx - half;
                 end = Math.min(idx + half, max - 1);
             }
-            console.log("------------", start, idx, end, half, dateStr, max);
+            //console.log("------------", start, idx, end, half, dateStr, max)
 
             this.setDrawRange(start, end);
         }
@@ -21100,24 +21313,31 @@ module.exports = function (_EventEmitter) {
         key: "setDrawRange",
         value: function setDrawRange(start, end) {
             if (!this.arrayData) return;
-            //let changed = this.drawRangeStart !== start || this.drawRangeEnd !== end;
-            //if (!changed) return;
-
             var kdata = this.arrayData;
+
+            _utilspipe2.default.build(start - 1, end, this.arrayData);
+
             var mlow = Number.MAX_SAFE_INTEGER;
             var mhigh = -1;
             var mvlow = Number.MAX_SAFE_INTEGER;
             var mvhigh = -1;
+            var rfds = this.getDefaultRangeFields();
             for (var i = start; i <= end; i++) {
-                var high = kdata[i].high;
+                var data = kdata[i];
+                var high = data.high;
                 if (mhigh < high) mhigh = high;
-                var low = kdata[i].low;
+                var low = data.low;
                 if (mlow > low) mlow = low;
 
-                var vhigh = kdata[i].amount;
-                if (mvhigh < vhigh) mvhigh = vhigh;
-                var vlow = kdata[i].amount;
-                if (mvlow > vlow) mvlow = vlow;
+                // let vhigh = data.amount;
+                // if (mvhigh < vhigh) mvhigh = vhigh;
+                // let vlow = data.amount;
+                // if (mvlow > vlow) mvlow = vlow;
+                for (var att in rfds) {
+                    var hl = rfds[att];
+                    if (data[att] > hl.high) hl.high = data[att];
+                    if (data[att] < hl.low) hl.low = data[att];
+                }
             }
 
             if (this.priceHigh !== mhigh || this.priceLow !== mlow) {
@@ -21127,23 +21347,34 @@ module.exports = function (_EventEmitter) {
                 this.emit("priceRange", true);
             }
 
-            if (this.volumeHigh !== mvhigh || this.volumeLow !== mvlow) {
-                this.volumeHigh = mvhigh;
-                this.volumeLow = mvlow;
-                this.emit("volumeRange", true);
+            for (var _att in this.rangeFields) {
+                if (this.rangeFields[_att].high !== rfds[_att].high || this.rangeFields[_att].low !== rfds[_att].low) {
+                    this.rangeFields[_att].high = rfds[_att].high;
+                    this.rangeFields[_att].low = rfds[_att].low;
+                    this.emit(_att + "Range", true);
+                    console.log("event-----", _att + "Range", rfds[_att]);
+                }
             }
+
+            // if (this.volumeHigh !== mvhigh || this.volumeLow !== mvlow) {
+            //     this.volumeHigh = mvhigh;
+            //     this.volumeLow = mvlow;
+            //     this.emit("volumeRange", true);
+            // }
 
             this.drawRangeStart = start;
             this.drawRangeEnd = end;
-            console.log("-----start/end", start, end, this.arrayData.length - 1);
-            _MovingAverageUtil2.default.buildFields(["close", "amount"], 8, start - 1, end, this.arrayData);
-            _MovingAverageUtil2.default.buildFields(["close", "amount"], 13, start - 1, end, this.arrayData);
-            _MovingAverageUtil2.default.buildFields(["close", "amount"], 21, start - 1, end, this.arrayData);
+            //console.log("-----start/end", start, end, this.arrayData.length-1)
+            // MovingAverageUtil.buildFields(["close", "amount"], 8, start - 1, end, this.arrayData);
+            // MovingAverageUtil.buildFields(["close", "amount"], 13, start - 1, end, this.arrayData);
+            // MovingAverageUtil.buildFields(["close", "amount"], 21, start - 1, end, this.arrayData);
+
             this.emit("range", true);
         }
     }, {
         key: "getDateOfCurrentRange",
         value: function getDateOfCurrentRange() {
+            if (!this.arrayData) return;
             var idx = this.drawRangeStart + Math.round((this.drawRangeEnd - this.drawRangeStart) / 2);
             //console.log(this.drawRangeStart, this.arrayData[this.drawRangeStart].date, idx, this.arrayData[idx].date, this.drawRangeEnd, this.arrayData[this.drawRangeEnd].date)
             return this.arrayData[idx].date;
@@ -21194,7 +21425,7 @@ module.exports = function (_EventEmitter) {
     return PainterCore;
 }(_events2.default);
 
-},{"../alpha/MovingAverageUtil":171,"events":1}],176:[function(require,module,exports){
+},{"../alpha/utilspipe":174,"events":1}],179:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -21253,7 +21484,7 @@ module.exports = function () {
             Ys.close = data.close < data.open ? Ys.low - lineh : Ys.low - lineh * 2;
             Ys.open = data.open <= data.close ? Ys.low - lineh : Ys.low - lineh * 2;
             Ys.high = Ys.low - lineh * 3;
-            Ys.volume = valueToY.volumeStart + lineh - 2;
+            Ys.amount = valueToY.amountStart + lineh - 2;
             return Ys;
         }
     }, {
@@ -21269,11 +21500,11 @@ module.exports = function () {
 
                 var Ys = this.getDisplayYs(data, valueToY);
 
-                var vol = data.volume;
-                var voly = valueToY.volume;
+                var vol = data.amount;
+                var voly = valueToY.amount;
                 var xpos = x + this.core.unitWidth + 2;
-                this.drawNumber(vol, xpos, Ys.volume, "rgba(255, 255, 255, 0.5)");
-                this.drawNumber(Math.round(data.amount / 10000) + "万", xpos, Ys.volume + 10, "rgba(255, 255, 255, 0.5)");
+                //this.drawNumber(vol , xpos, Ys.volume, "rgba(255, 255, 255, 0.5)");
+                this.drawNumber(Math.round(data.amount / 10000) + "万", xpos, Ys.amount, "rgba(255, 255, 255, 0.5)");
                 //this.drawNumberLine(x + this.core.unitWidth / 2, voly, xpos, Ys.volume);
 
                 this.drawNumber(data.open, xpos, Ys.open, "rgba(255, 255, 255, 0.5)");
@@ -21348,10 +21579,16 @@ module.exports = function () {
         key: "setCanvas",
         value: function setCanvas(canvas) {
             this.canvas = canvas;
-            if (this.canvas && this.mouseMoveHandler) {
-                this.canvas2DCtx = canvas.getContext('2d');
-                // this.mouseMoveHandler = this.mouseMoveHandler.bind(this);
+            if (!this.canvas) return;
+
+            this.canvas2DCtx = canvas.getContext('2d');
+
+            if (this.mouseMoveHandler) {
                 canvas.addEventListener('mousemove', this.mouseMoveHandler, false);
+            }
+
+            if (this.mouseDblclickHandler) {
+                canvas.addEventListener('dblclick', this.mouseDblclickHandler, false);
             }
         }
     }]);
@@ -21359,7 +21596,7 @@ module.exports = function () {
     return PointerPainter;
 }();
 
-},{}],177:[function(require,module,exports){
+},{}],180:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -21379,8 +21616,8 @@ module.exports = function (_MassPainter) {
 
         var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(VolumePainter).call(this, painterCore, canvas));
 
-        _this.doOnVolumeRange = _this.doOnVolumeRange.bind(_this);
-        _this.core.on("volumeRange", _this.doOnVolumeRange);
+        _this.doOnAmountRange = _this.doOnAmountRange.bind(_this);
+        _this.core.on("netsummax_r0_durationRange", _this.doOnAmountRange);
 
         _this.doOnMoneyFlow = _this.doOnMoneyFlow.bind(_this);
         _this.core.on("moneyFlow", _this.doOnMoneyFlow);
@@ -21393,8 +21630,8 @@ module.exports = function (_MassPainter) {
             this.doOnData();
         }
     }, {
-        key: 'doOnVolumeRange',
-        value: function doOnVolumeRange() {
+        key: 'doOnAmountRange',
+        value: function doOnAmountRange() {
             this.updateHeightPerUnit();
             this.clearDrawCache();
         }
@@ -21412,13 +21649,18 @@ module.exports = function (_MassPainter) {
             if (!this.canvas) return;
             var h = this.canvas.height;
             var lastv = this.heightPerUnit;
-            this.heightPerUnit = h / this.core.volumeHigh;
-            return lastv != this.heightPerUnit;
+            this.heightPerUnit = h / this.core.rangeFields.amount.high;
+
+            var r = Math.max(this.core.rangeFields.netsummax_r0.high, -this.core.rangeFields.netsummax_r0.low);
+            this.heightPerNetSumMax_r0Unit = 0.5 * h / r;
+
+            var dh = this.core.rangeFields.netsummax_r0_duration.high;
+            this.heightPerNetSumMax_r0_DurationUnit = 0.5 * h / dh;
         }
     }, {
-        key: 'getVolumeY',
-        value: function getVolumeY(volume) {
-            var y = Math.round(this.canvas.height - volume * this.heightPerUnit);
+        key: 'getAmountY',
+        value: function getAmountY(amount) {
+            var y = Math.round(this.canvas.height - amount * this.heightPerUnit);
             return y;
         }
     }, {
@@ -21426,18 +21668,41 @@ module.exports = function (_MassPainter) {
         value: function drawSingle(x, idx, dataArr) {
             var data = dataArr[idx];
             var data_pre = idx > 0 ? dataArr[idx - 1] : null;
+            var ctx = this.canvas2DCtx;
+            var w = this.core.unitWidth;
+
+            if (data.netsummax_r0 !== undefined) {
+                var nsmr0h = Math.round(data.netsummax_r0 * this.heightPerNetSumMax_r0Unit);
+                var grd = ctx.createLinearGradient(0, nsmr0h, 0, 0);
+                grd.addColorStop(0, 'rgba(66, 66, 66, 0.5)');
+                grd.addColorStop(1, 'rgba(66, 66,66, 0)');
+                ctx.fillStyle = grd;
+                ctx.fillRect(x, 0, w - 1, nsmr0h);
+
+                var nsmh = Math.round(data.netsummax * this.heightPerNetSumMax_r0Unit);
+                ctx.beginPath();
+                ctx.moveTo(x, nsmh);
+                ctx.lineTo(x + w, nsmh);
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+                var nsmr0dh = Math.round(data.netsummax_r0_duration * this.heightPerNetSumMax_r0_DurationUnit);
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, nsmr0dh);
+                ctx.strokeStyle = 'rgba(66, 66, 66, 0.8)';
+                ctx.lineWidth = 0.5;
+                ctx.stroke();
+            }
 
             var open = data.open;
             var close = data.close;
-
             var preclose = data_pre.close;
             var vol = data.amount;
 
-            var ctx = this.canvas2DCtx;
             var color = close < open ? '#4caf50' : close > open ? '#f44336' : preclose > close ? '#4caf50' : '#f44336';
             ctx.strokeStyle = color;
-
-            var w = this.core.unitWidth;
             ctx.fillStyle = color;
 
             ctx.fillRect(x, this.canvas.height, w - 1, -Math.round(vol * this.heightPerUnit));
@@ -21456,11 +21721,13 @@ module.exports = function (_MassPainter) {
 
             if (idx === 0) return;
             var unitWidth = this.core.unitWidth;
-            var aves = [8, 13, 21];
-            var avecolors = ["#FFEB3B", "#00BCD4", "#9C27B0"];
+            var aves = this.core.aves; //[8, 13, 21, 55];
+            var avecolors = this.core.avecolors; //["#FFEB3B", "#00BCD4", "#9C27B0", "#DBDBDB"];
+
             for (var i = 0; i < aves.length; i++) {
-                var avy = this.getVolumeY(data["ave_amount_" + aves[i]]);
-                var avpy = this.getVolumeY(data_pre["ave_amount_" + aves[i]]);
+                var avy = this.getAmountY(data["ave_amount_" + aves[i]]);
+                var avpy = this.getAmountY(data_pre["ave_amount_" + aves[i]]);
+
                 ctx.strokeStyle = avecolors[i];
                 ctx.beginPath();
                 ctx.moveTo(x + unitWidth / 2, avy);
@@ -21468,24 +21735,19 @@ module.exports = function (_MassPainter) {
 
                 if (this.hasDrawCache(idx + 1)) {
                     var data_next = dataArr[idx + 1];
-                    var avny = this.getVolumeY(data_next["ave_amount_" + aves[i]]);
+                    var avny = this.getAmountY(data_next["ave_amount_" + aves[i]]);
                     ctx.moveTo(x + this.core.unitWidth, avny);
                     ctx.lineTo(x, avy);
                 }
                 ctx.stroke();
             }
         }
-
-        // getVolumeY(vol) {
-        //    return this.canvas.height -Math.round(vol * this.heightPerUnit);
-        // }
-
     }]);
 
     return VolumePainter;
 }(MassPainter);
 
-},{"./MassPainter":173}],178:[function(require,module,exports){
+},{"./MassPainter":176}],181:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -21551,7 +21813,15 @@ var volPainter = new VolumePainter(painterCore);
 
 var PointerPainter = require('../chart/pointerpainter');
 var pointerPainter = new PointerPainter(painterCore);
+pointerPainter.mouseDblclickHandler = function (e) {
+    var x = e.x;
+    var y = e.y;
+    var candleCanvasX = parseInt(candlePainter.canvas.style.left, 10);
+    var dataindex = painterCore.getDataIndexByX(x - candleCanvasX);
+    var data = painterCore.getDataByIndex(dataindex);
 
+    console.log('mouseDblclickHandler', data);
+};
 pointerPainter.mouseMoveHandler = function (e) {
     if (!painterCore.arrayData) return;
 
@@ -21570,9 +21840,8 @@ pointerPainter.mouseMoveHandler = function (e) {
     valuetoy.date = candlePainterTop + candlePainter.canvas.height - 5;
 
     var top = parseInt(volPainter.canvas.style.top) - parseInt(candlePainter.canvas.style.top);
-    valuetoy.volume = top + Math.max(volPainter.getVolumeY(data.volume), 10);
-    valuetoy.volumeStart = top;
-    // console.log("-----------", valuetoy)
+    valuetoy.amount = top + Math.max(volPainter.getAmountY(data.amount), 10);
+    valuetoy.amountStart = top;
     pointerPainter.updatePointer(x, dataindex, valuetoy);
 };
 
@@ -21609,10 +21878,10 @@ var CandleApp = function (_React$Component) {
             };
 
             var toolbarHeight = 50;
-            var candleChartHeight = this.state.windowHeight - 180 - toolbarHeight;
+            var candleChartHeight = this.state.windowHeight - 250 - toolbarHeight;
             var candleChartY = toolbarHeight;
             var volChartY = candleChartY + candleChartHeight;
-            var volChartHeight = 180;
+            var volChartHeight = 250;
             var pointerCanvasY = candleChartY;
             var ponterCanvasHeight = candleChartHeight + volChartHeight;
 
@@ -21702,7 +21971,7 @@ var CandleApp = function (_React$Component) {
             var date = this.refs.dateInput.state.value;
             this.loadDataBySid(sid, date);
             setTimeout(function () {
-                _io2.default.workerLoadStocks(100, 100, function (re) {
+                _io2.default.workerStartLoadStocks(0, 100, function (re) {
                     console.log("----", re);
                 });
             }, 3000);
@@ -21710,17 +21979,18 @@ var CandleApp = function (_React$Component) {
     }, {
         key: 'loadDataBySid',
         value: function loadDataBySid(sid, date) {
-            _io2.default.httpGetStockJson(sid, function (json) {
+            var start = new Date();
+            _io2.default.workerGetStockJson(sid, function (json) {
+                if (!json) return;
+                console.log("workerGetStockJson time", new Date() - start, sid, json.length);
                 painterCore.loadData(json);
-                //painterCore.setDrawRange(json.length-200, json.length-1);
                 painterCore.updateDrawPort(date, window.innerWidth);
-
-                _io2.default.httpGetStockMoneyFlowJson(sid, function (json) {
-                    painterCore.updateMoneyFlow(json);
-                    // IO.httpGetStockFullJson(sid, 'date,open,close,high,low,amount,netamount,r0_net', function(json) {
-                    //     console.log("get full")
-                    // });
-                });
+                // IO.httpGetStockMoneyFlowJson(sid, function(json) {
+                //     painterCore.updateMoneyFlow(json);
+                //     // IO.httpGetStockFullJson(sid, 'date,open,close,high,low,amount,netamount,r0_net', function(json) {
+                //     //     console.log("get full")
+                //     // });
+                // })
             });
         }
     }, {
@@ -21737,14 +22007,14 @@ var CandleApp = function (_React$Component) {
     }, {
         key: 'handleDateChanged',
         value: function handleDateChanged(date) {
-            console.log("-----", date);
+            console.log("handleDateChanged", date);
             painterCore.updateDrawPort(date, window.innerWidth);
         }
     }, {
         key: 'updateCanvasPosition',
         value: function updateCanvasPosition(x) {
             //var core = this.props.painterCore;
-            console.log("updateCanvasPosition", painterCore.drawRangeStart, painterCore.unitWidth, x);
+            //console.log("updateCanvasPosition", painterCore.drawRangeStart, painterCore.unitWidth, x)
             this.refs.candleChart.updateX(x);
             this.refs.volChart.updateX(x);
         }
@@ -21762,7 +22032,7 @@ var CandleApp = function (_React$Component) {
 
 exports.default = CandleApp;
 
-},{"../chart/candlepainter":174,"../chart/paintercore":175,"../chart/pointerpainter":176,"../chart/volumepainter":177,"./chartcanvas":179,"./dataworker.js":180,"./forms/dateinput":181,"./forms/forminput":182,"./io":184,"./stockids":185,"./tradingdate":186,"./workerproxy":187,"react":168,"webworkify":169}],179:[function(require,module,exports){
+},{"../chart/candlepainter":177,"../chart/paintercore":178,"../chart/pointerpainter":179,"../chart/volumepainter":180,"./chartcanvas":182,"./dataworker.js":183,"./forms/dateinput":184,"./forms/forminput":185,"./io":187,"./stockids":188,"./tradingdate":189,"./workerproxy":190,"react":168,"webworkify":169}],182:[function(require,module,exports){
 'use strict';
 
 // let sampleData = [{ open: 15.5, close: 16, high: 16.5, low: 15.2 }, { open: 15.8, close: 15, high: 16.8, low: 14.2 }, { open: 15.5, close: 16, high: 16.8, low: 15.2 }, { open: 10.5, close: 10, high: 10.8, low: 9.2 }];
@@ -21833,7 +22103,7 @@ var ChartCanvas = function (_React$Component) {
 
 exports.default = ChartCanvas;
 
-},{"react":168}],180:[function(require,module,exports){
+},{"react":168}],183:[function(require,module,exports){
 'use strict';
 
 var _io = require('./io');
@@ -21846,13 +22116,13 @@ var _stockids2 = _interopRequireDefault(_stockids);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-var stockFields = ['date', 'open', 'close', 'high', 'low', 'amount', 'netamount', 'r0_net', 'changeratio'];
+var stockFields = ['date', 'open', 'close', 'high', 'low', 'amount', 'netamount', 'r0_net', 'changeratio', 'turnover'];
 var cacheMap = {};
 
 module.exports = function (self) {
     var me = this;
     self.addEventListener('message', function (ev) {
-        console.log("--------------------------worker", ev.data);
+        //console.log("--------------------------worker", ev.data)
         var mn = ev.data['methodName'];
         //console.log("worker on message", mn, module[mn]);
         var params = ev.data['params'];
@@ -21872,12 +22142,14 @@ module.exports = function (self) {
 module.loadStocksDataPage = function loadStocksDataPage(start, count, callback) {
     var total = _stockids2.default.getTotalCount();
     var pageSize = count;
-    count = Math.min(50, total - start);
-    loadStocksData(start, count, stockFields, function () {
+    count = Math.min(count, total - start);
+    //console.log("loadStocksDataPage", start, count)
+    module.loadStocksData(start, count, stockFields, function (sids) {
+
         if (start + count >= total) {
             callback(start + count);
         } else {
-            loadStocksDataPage(start + count, count, callback);
+            module.loadStocksDataPage(start + count, count, callback);
         }
     });
 };
@@ -21891,6 +22163,11 @@ module.getStockData = function getStockData(sid, fields, callback) {
         }
     }
     var fulldata = cacheMap[sid];
+    if (!fulldata) {
+        callback(null);
+        return;
+    }
+
     var data = [];
     var r = stockFields.length;
     for (var _i = 0; _i < fulldata.length; _i++) {
@@ -21906,9 +22183,9 @@ module.getStockData = function getStockData(sid, fields, callback) {
     });
 };
 
-module.loadStocksData = function loadStocksData(start, count, callback) {
+module.loadStocksData = function loadStocksData(start, count, fields, callback) {
     var sids = _stockids2.default.getIDsByIndex(start, count);
-    _io2.default.httpGetStocksCompressedJson(sids, stockFields.join(), function (json) {
+    _io2.default.httpGetStocksCompressedJson(sids, fields.join(), function (json) {
         //console.log("loadStocksData", sids.length, sids[0], sids[sids.length - 1])
         for (var sid in json.data) {
             cacheMap[sid] = json.data[sid];
@@ -21920,7 +22197,7 @@ module.loadStocksData = function loadStocksData(start, count, callback) {
     });
 };
 
-},{"./io":184,"./stockids":185}],181:[function(require,module,exports){
+},{"./io":187,"./stockids":188}],184:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -22016,7 +22293,7 @@ DateInput.defaultProps = { type: "date", width: 130 };
 
 exports.default = DateInput;
 
-},{"./forminput":182,"react":168}],182:[function(require,module,exports){
+},{"./forminput":185,"react":168}],185:[function(require,module,exports){
 'use strict';
 
 // let sampleData = [{ open: 15.5, close: 16, high: 16.5, low: 15.2 }, { open: 15.8, close: 15, high: 16.8, low: 14.2 }, { open: 15.5, close: 16, high: 16.8, low: 15.2 }, { open: 10.5, close: 10, high: 10.8, low: 9.2 }];
@@ -22112,7 +22389,7 @@ FormInput.defaultProps = { type: "text", value: "" };
 
 exports.default = FormInput;
 
-},{"react":168}],183:[function(require,module,exports){
+},{"react":168}],186:[function(require,module,exports){
 'use strict';
 
 var _react = require("react");
@@ -22131,7 +22408,7 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 var candleApp = _reactDom2.default.render(_react2.default.createElement(_CandleApp2.default, null), document.getElementById('app'));
 
-},{"./CandleApp":178,"react":168,"react-dom":30}],184:[function(require,module,exports){
+},{"./CandleApp":181,"react":168,"react-dom":30}],187:[function(require,module,exports){
 'use strict';
 // import fetch from 'whatwg-fetch';
 
@@ -22144,6 +22421,10 @@ var _createClass = function () { function defineProperties(target, props) { for 
 var _zip = require('../alpha/zip');
 
 var _zip2 = _interopRequireDefault(_zip);
+
+var _netsumutil = require('../alpha/netsumutil');
+
+var _netsumutil2 = _interopRequireDefault(_netsumutil);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -22163,17 +22444,34 @@ var IO = function () {
             return this.cacheMap[sid];
         }
     }, {
-        key: 'workerLoadStocks',
-        value: function workerLoadStocks(start, count, callback) {
-            IO.dataWorkerProxy.callMethod("loadStocksData", [start, count], function (result) {
-                console.log("workerLoadStocks----", result);
-                if (result.length === 0) return;
-                var params = [result[0], ['date', 'open', 'close', 'high', 'low', 'amount']];
-
-                IO.dataWorkerProxy.callMethod("getStockData", params, function (re) {
+        key: 'workerGetStockJson',
+        value: function workerGetStockJson(sid, callback) {
+            var params = [sid, ['date', 'open', 'close', 'high', 'low', 'amount', 'netamount', 'r0_net', 'changeratio', 'turnover']];
+            IO.dataWorkerProxy.callMethod("getStockData", params, function (re) {
+                if (re) {
                     var dcp = _zip2.default.decompressStockJson(re);
-                    console.log("callmethod", dcp);
-                });
+                    callback(dcp);
+                } else {
+                    IO.httpGetStockJson(sid, function (json) {
+                        callback(json);
+                    });
+                }
+            });
+        }
+    }, {
+        key: 'workerStartLoadStocks',
+        value: function workerStartLoadStocks(start, count, callback) {
+            IO.dataWorkerProxy.callMethod("loadStocksDataPage", [start, count], function (result) {
+                console.log("loadStocksDataPage----", result);
+                // if (result.length === 0) return;
+                // let params = [result[0],
+                //     ['date', 'open', 'close', 'high', 'low', 'amount']
+                // ];
+                // IO.dataWorkerProxy.callMethod("getStockData", params, function(re) {
+                //     let dcp = Zip.decompressStockJson(re);
+                //     console.log("callmethod", dcp)
+
+                // });
             });
         }
     }, {
@@ -22196,7 +22494,7 @@ var IO = function () {
     }, {
         key: 'httpGetStocksCompressedJson',
         value: function httpGetStocksCompressedJson(sids, fields, callback) {
-            console.log("--------------httpGetStocksCompressedJson", sids);
+            //console.log("--------------httpGetStocksCompressedJson", sids[0], sids.length)
             fetch(IO.baseUrl, {
                 method: 'POST',
                 headers: {
@@ -22210,25 +22508,25 @@ var IO = function () {
                 callback(json);
             });
         }
-    }, {
-        key: 'httpGetStockFullJson',
-        value: function httpGetStockFullJson(sid, fields, callback) {
-            console.log("--------------httpGetStockFullJson", sid);
-            fetch(IO.baseUrl, {
-                method: 'POST',
-                headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json'
-                },
-                body: '{"sid":"' + sid + '", "action":"stockCompressed", "fields":"' + fields + '"}'
-            }).then(function (res) {
-                return res.json();
-            }).then(function (json) {
 
-                IO.cacheMap[sid] = json;
-                callback(json);
-            });
-        }
+        // static httpGetStockFullJson(sid, fields, callback) {
+        //     console.log("--------------httpGetStockFullJson", sid)
+        //     fetch(IO.baseUrl, {
+        //         method: 'POST',
+        //         headers: {
+        //             'Accept': 'application/json',
+        //             'Content-Type': 'application/json'
+        //         },
+        //         body: '{"sid":"' + sid + '", "action":"stockCompressed", "fields":"' + fields + '"}'
+        //     }).then(function(res) {
+        //         return res.json();
+        //     }).then(function(json) {
+
+        //         IO.cacheMap[sid] = json;
+        //         callback(json);
+        //     });
+        // }
+
     }, {
         key: 'httpGetStockJson',
         value: function httpGetStockJson(sid, callback) {
@@ -22291,7 +22589,7 @@ IO.cacheMap = {};
 
 exports.default = IO;
 
-},{"../alpha/zip":172}],185:[function(require,module,exports){
+},{"../alpha/netsumutil":173,"../alpha/zip":175}],188:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -22361,7 +22659,7 @@ StockIDs.idIndexMap = {};
 
 exports.default = StockIDs;
 
-},{"./io":184}],186:[function(require,module,exports){
+},{"./io":187}],189:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -22421,7 +22719,7 @@ TradingDate.dateIndexMap = {};
 
 exports.default = TradingDate;
 
-},{"./io":184}],187:[function(require,module,exports){
+},{"./io":187}],190:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -22482,4 +22780,4 @@ var WorkerProxy = function () {
 
 exports.default = WorkerProxy;
 
-},{"whatwg-fetch":170}]},{},[183]);
+},{"whatwg-fetch":170}]},{},[186]);

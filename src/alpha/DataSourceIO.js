@@ -9,7 +9,7 @@ module.exports = class DataSourceIO {
         this.allStockIDArray = this.getAllStockIds();
         this.historyPageParams = ""; //"year=2016&jidu=2"; 
         this.stockCompressedCache = {};
-        this.stockCompressedCacheFields = ['date', 'open', 'close', 'high', 'low', 'amount', 'netamount', 'r0_net', 'changeratio'];
+        this.stockCompressedCacheFields = ['date', 'open', 'close', 'high', 'low', 'amount', 'netamount', 'r0_net', 'changeratio', 'turnover'];
         //this.loadToCache(this.stockCompressedCacheFields);
     }
 
@@ -18,7 +18,7 @@ module.exports = class DataSourceIO {
         for (let i = 0; i < len; i++) {
             if (i % 100 === 0) console.log(i, new Date());
             let sid = this.allStockIDArray[i];
-            this.stockCompressedCache[sid] = this.readStockCompressedJsonSync(sid, fields);
+            this.readStockCompressedJsonSync(sid, fields);
         }
 
     }
@@ -170,89 +170,30 @@ module.exports = class DataSourceIO {
     }
 
     readStockCompressedJsonSync(sid, fields) {
-            let jsonArr = this.readJsonSync(sid);
-            if (!jsonArr) {
-                console.log("readStockCompressedJsonSync sid=", sid)
-                return null;
-            }
-            let mfArr = this.readMoneyFlowSync(sid);
-            let zipobj = Zip.compressStockJson(fields, jsonArr, mfArr);
-            if (!zipobj) console.log("readStockCompressedJsonSync is null error", sid)
-            return zipobj
+        let cache = this.getFromCache(sid, fields);
+        if (cache) return cache;
+
+        let jsonArr = this.readJsonSync(sid);
+        if (!jsonArr) {
+            console.log("readStockCompressedJsonSync sid=", sid)
+            return null;
         }
-        // readStockCompressedJsonSync(sid, fields) {
-        //     let jsonArr = this.readJsonSync(sid);
-        //     if (!jsonArr) {
-        //         console.log("readStockCompressedJsonSync sid=", sid)
-        //         return null;
-        //     }
-        //     let mfArr = this.readMoneyFlowSync(sid);
-        //     let jlen = jsonArr.length;
-        //     let mlen = mfArr.length;
-        //     let len = Math.max(jlen, mlen);
-        //     let fullArr = [];
-        //     let lastObj = {
-        //         lastdate: 0,
-        //         lastclose: 0,
-        //         lastopen: 0,
-        //         lasthigh: 0,
-        //         lastlow: 0,
-        //         lastamout: 0
-        //     };
-        //     for (let i = 1; i < len; i++) {
-        //         let json = jsonArr[jlen - i];
-        //         let mf = mlen < i ? null : mfArr[mlen - i];
-        //         if (mf) {
-        //             if (json.date !== mf.date) {
-        //                 if (mf.date !== "03/01/2010") {
-        //                     console.error("readStockCompressedJsonSync date mismatch!", sid, json.date, mf.date);
-        //                     return null;
-        //                 }
+        let mfArr = this.readMoneyFlowSync(sid);
+        let zipobj = Zip.compressStockJson(fields, jsonArr, mfArr);
+        if (!zipobj) console.log("readStockCompressedJsonSync is null error", sid)
+        else this.putToCache(sid, fields, zipobj);
+        return zipobj
+    }
 
-    //             }
-    //         }
-    //         Object.assign(json, mf)
-    //         let flen = fields.length;
+    putToCache(sid, fields, zipobj) {
+        let key = sid + "_" + fields.join();
+        this.stockCompressedCache[key] = zipobj;
+    }
 
-    //         for (let j = 0; j < flen; j++) {
-    //             let clen = fullArr.length;
-    //             let v = Zip.compressedFieldValue(fields[j], json, lastObj);
-    //             fullArr.push(v);
-    //         }
-
-    //     }
-    //     return {
-    //         fields: fields,
-    //         data: fullArr
-    //     };
-    // }
-
-    // getCompressedFieldValue(field, obj, last) {
-    //     let v = obj[field];
-
-    //     if (v === undefined) return null;
-
-    //     if (field === 'date') {
-    //         let mdy = v.split("/");
-    //         mdy[2] = mdy[2].substr(2, 2);
-    //         v = Number(mdy[2] + mdy[0] + mdy[1]);
-    //         let ld = last.lastdate;
-    //         last.lastdate = v;
-    //         v = Math.abs(v - ld);
-    //     } else if (field === 'amount' || field === 'netamount' || field === 'r0_net') {
-    //         v = Math.round(v / 10000);
-    //     } else if (field === "open" || field === "close" || field === "low" || field === "high") {
-    //         let lf = 'last' + field;
-    //         let lv = last[lf];
-    //         last[lf] = v;
-    //         v = v - lv;
-    //         v = Math.round(v * 100);
-    //     } else if (field === 'changeratio') {
-    //         v = Math.round(v * 10000);
-    //     }
-
-    //     return v;
-    // }
+    getFromCache(sid, fields) {
+        let key = sid + "_" + fields.join();
+        return this.stockCompressedCache[key];
+    }
 
     readJsonSync(sid) {
         let path = this.dataSourceRoot + "/json/" + sid + ".json";
@@ -282,5 +223,22 @@ module.exports = class DataSourceIO {
         fs.writeFileSync(this.dataSourceRoot + "/moneyflow/" + sid + ".json", data);
     }
 
+    thirdPartyAjaxAPI(url, getpost, callback) {
+            fetch(url), {
+                method: getpost,
+                timeout: 1000
+            })
+        .then(function(res) {
+            if (!res.ok || res.status != 200) {
+                console.log("httpGetStockHistory error loading", sid, res.ok, res.status, res);
+            }
+            return res.text();
+        }).then(function(body) {
+            callback(body);
+        }).catch(function(error) {
+            //console.log('request failed', error)
+            callback(null);
+        });
+}
 
 }

@@ -48,23 +48,29 @@ module.exports = class CandlePainter extends MassPainter {
 
         ctx.fillRect(x, openY, w - 1, openY === closeY ? 1 : (closeY - openY));
 
+        if (data.ex) {
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = '#424242';
+            ctx.strokeText('E', xp - 5, this.canvas.height - 3);
+        }
+
         if (idx === 0) return;
         let data_pre = dataArr[idx - 1];
-        let aves = [8, 13, 21];
-        let avecolors = ["#FFEB3B", "#00BCD4", "#9C27B0"];
+        let aves = this.core.aves; //[8, 13, 21, 55];
+        let avecolors = this.core.avecolors; //["#FFEB3B", "#00BCD4", "#9C27B0", "#DBDBDB"];
         for (let i = 0; i < aves.length; i++) {
             let avy = this.getPriceY(data["ave_close_" + aves[i]]);
             let avpy = this.getPriceY(data_pre["ave_close_" + aves[i]]);
             ctx.strokeStyle = avecolors[i];
-            
+
             ctx.beginPath();
             ctx.moveTo(xp, avy);
-            ctx.lineTo(xp-this.core.unitWidth, avpy);
+            ctx.lineTo(xp - this.core.unitWidth, avpy);
 
-            if (this.hasDrawCache(idx+1)) {
+            if (this.hasDrawCache(idx + 1)) {
                 let data_next = dataArr[idx + 1];
                 let avny = this.getPriceY(data_next["ave_close_" + aves[i]]);
-                ctx.moveTo(xp+this.core.unitWidth, avny);
+                ctx.moveTo(xp + this.core.unitWidth, avny);
                 ctx.lineTo(xp, avy);
 
             }

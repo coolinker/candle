@@ -44,9 +44,31 @@ module.exports = class MovingAverageUtil {
             ave = ave + (data[i][field] - data[i - period][field]) / period;
             data[i]["ave_" + field + "_" + period] = MovingAverageUtil.formatFloat(ave);
         }
-    }
-    static formatFloat(f) {
-        return Math.round(f * 100) / 100;
+
+        return data;
     }
 
+    static formatFloat(f) {
+        return f //Math.round(f * 100) / 100;
+    }
+
+    static buildSingle(idx, period, data, field) {
+        let fieldAveName = 'ave_' + field + '_' + period;
+        if (idx < period - 1 || data[idx][fieldAveName]) return;
+
+        let preobj = data[idx - 1];
+        let prevalue = preobj[fieldAveName];
+        if (!isNaN(prevalue)) {
+            let v = MovingAverageUtil.formatFloat((prevalue * period - data[idx - period][field] + data[idx][field]) / period);
+            data[idx][fieldAveName] = v;
+        } else {
+            let sum = 0;
+            for (let i = 0; i < period; i++) {
+                sum += data[idx - i][field];
+            }
+            let v = MovingAverageUtil.formatFloat((sum / period));
+            data[idx][fieldAveName] = v;
+        }
+
+    }
 }

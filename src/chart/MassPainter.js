@@ -72,8 +72,8 @@ module.exports = class MassPainter {
             this.drawCache[i] = true;
         }
 
-        if (drawcount>1)
-            console.log("draw new signles", start, start*w, drawcount);
+        // if (drawcount>1)
+        //     console.log("draw new signles", start, start*w, drawcount);
         this.lastDrawHeight = this.canvas.height;
     }
 

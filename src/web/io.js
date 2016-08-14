@@ -1,6 +1,7 @@
 'use strict';
 // import fetch from 'whatwg-fetch';
 import Zip from '../alpha/zip';
+import NetSumUtil from '../alpha/netsumutil';
 class IO {
     constructor() {
 
@@ -12,19 +13,33 @@ class IO {
         return this.cacheMap[sid]
     }
 
-    static workerLoadStocks(start, count, callback) {
-        IO.dataWorkerProxy.callMethod("loadStocksData", [start, count], function(result) {
-            console.log("workerLoadStocks----", result)
-            if (result.length === 0) return;
-            let params = [result[0],
-                ['date', 'open', 'close', 'high', 'low', 'amount']
-            ];
-
-            IO.dataWorkerProxy.callMethod("getStockData", params, function(re) {
+    static workerGetStockJson(sid, callback) {
+        let params = [sid, ['date', 'open', 'close', 'high', 'low', 'amount', 'netamount', 'r0_net', 'changeratio', 'turnover']];
+        IO.dataWorkerProxy.callMethod("getStockData", params, function(re) {
+            if (re) {
                 let dcp = Zip.decompressStockJson(re);
-                console.log("callmethod", dcp)
+                callback(dcp);
+            } else {
+                IO.httpGetStockJson(sid, function(json) {
+                    callback(json);
+                })
+            }
 
-            });
+        });
+    }
+
+    static workerStartLoadStocks(start, count, callback) {
+        IO.dataWorkerProxy.callMethod("loadStocksDataPage", [start, count], function(result) {
+            console.log("loadStocksDataPage----", result)
+                // if (result.length === 0) return;
+                // let params = [result[0],
+                //     ['date', 'open', 'close', 'high', 'low', 'amount']
+                // ];
+                // IO.dataWorkerProxy.callMethod("getStockData", params, function(re) {
+                //     let dcp = Zip.decompressStockJson(re);
+                //     console.log("callmethod", dcp)
+
+            // });
 
         })
     }
@@ -46,7 +61,7 @@ class IO {
     }
 
     static httpGetStocksCompressedJson(sids, fields, callback) {
-        console.log("--------------httpGetStocksCompressedJson", sids)
+        //console.log("--------------httpGetStocksCompressedJson", sids[0], sids.length)
         fetch(IO.baseUrl, {
             method: 'POST',
             headers: {
@@ -61,23 +76,23 @@ class IO {
         });
     }
 
-    static httpGetStockFullJson(sid, fields, callback) {
-        console.log("--------------httpGetStockFullJson", sid)
-        fetch(IO.baseUrl, {
-            method: 'POST',
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-            },
-            body: '{"sid":"' + sid + '", "action":"stockCompressed", "fields":"' + fields + '"}'
-        }).then(function(res) {
-            return res.json();
-        }).then(function(json) {
+    // static httpGetStockFullJson(sid, fields, callback) {
+    //     console.log("--------------httpGetStockFullJson", sid)
+    //     fetch(IO.baseUrl, {
+    //         method: 'POST',
+    //         headers: {
+    //             'Accept': 'application/json',
+    //             'Content-Type': 'application/json'
+    //         },
+    //         body: '{"sid":"' + sid + '", "action":"stockCompressed", "fields":"' + fields + '"}'
+    //     }).then(function(res) {
+    //         return res.json();
+    //     }).then(function(json) {
 
-            IO.cacheMap[sid] = json;
-            callback(json);
-        });
-    }
+    //         IO.cacheMap[sid] = json;
+    //         callback(json);
+    //     });
+    // }
 
     static httpGetStockJson(sid, callback) {
         console.log("--------------httpGetStockJson", sid)

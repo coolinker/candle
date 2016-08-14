@@ -20,7 +20,15 @@ let volPainter = new VolumePainter(painterCore);
 
 let PointerPainter = require('../chart/pointerpainter');
 let pointerPainter = new PointerPainter(painterCore);
+pointerPainter.mouseDblclickHandler = function(e) {
+    let x = e.x;
+    let y = e.y;
+    let candleCanvasX = parseInt(candlePainter.canvas.style.left, 10);
+    let dataindex = painterCore.getDataIndexByX(x - candleCanvasX);
+    let data = painterCore.getDataByIndex(dataindex);
 
+    console.log('mouseDblclickHandler', data)
+}
 pointerPainter.mouseMoveHandler = function(e) {
     if (!painterCore.arrayData) return;
 
@@ -39,9 +47,8 @@ pointerPainter.mouseMoveHandler = function(e) {
     valuetoy.date = candlePainterTop + candlePainter.canvas.height - 5;
 
     let top = parseInt(volPainter.canvas.style.top) - parseInt(candlePainter.canvas.style.top);
-    valuetoy.volume = top + Math.max(volPainter.getVolumeY(data.volume), 10);
-    valuetoy.volumeStart = top;
-    // console.log("-----------", valuetoy)
+    valuetoy.amount = top + Math.max(volPainter.getAmountY(data.amount), 10);
+    valuetoy.amountStart = top;
     pointerPainter.updatePointer(x, dataindex, valuetoy);
 }
 
@@ -76,10 +83,10 @@ class CandleApp extends React.Component {
         };
 
         let toolbarHeight = 50;
-        let candleChartHeight = this.state.windowHeight - 180 - toolbarHeight;
+        let candleChartHeight = this.state.windowHeight - 250 - toolbarHeight;
         let candleChartY = toolbarHeight;
         let volChartY = candleChartY + candleChartHeight;
-        let volChartHeight = 180;
+        let volChartHeight = 250;
         let pointerCanvasY = candleChartY;
         let ponterCanvasHeight = candleChartHeight + volChartHeight;
 
@@ -156,24 +163,25 @@ class CandleApp extends React.Component {
         let date = this.refs.dateInput.state.value;
         this.loadDataBySid(sid, date);
         setTimeout(function() {
-            IO.workerLoadStocks(100, 100, function(re) {
+            IO.workerStartLoadStocks(0, 100, function(re) {
                 console.log("----", re)
             })
         }, 3000);
     }
 
     loadDataBySid(sid, date) {
-        IO.httpGetStockJson(sid, function(json) {
+        let start = new Date();
+        IO.workerGetStockJson(sid, function(json) {
+            if (!json) return;
+            console.log("workerGetStockJson time", new Date() - start, sid, json.length)
             painterCore.loadData(json);
-            //painterCore.setDrawRange(json.length-200, json.length-1);
             painterCore.updateDrawPort(date, window.innerWidth);
-
-            IO.httpGetStockMoneyFlowJson(sid, function(json) {
-                painterCore.updateMoneyFlow(json);
-                // IO.httpGetStockFullJson(sid, 'date,open,close,high,low,amount,netamount,r0_net', function(json) {
-                //     console.log("get full")
-                // });
-            })
+            // IO.httpGetStockMoneyFlowJson(sid, function(json) {
+            //     painterCore.updateMoneyFlow(json);
+            //     // IO.httpGetStockFullJson(sid, 'date,open,close,high,low,amount,netamount,r0_net', function(json) {
+            //     //     console.log("get full")
+            //     // });
+            // })
 
         });
 
@@ -191,13 +199,13 @@ class CandleApp extends React.Component {
     }
 
     handleDateChanged(date) {
-        console.log("-----", date)
+        console.log("handleDateChanged", date)
         painterCore.updateDrawPort(date, window.innerWidth);
     }
 
     updateCanvasPosition(x) {
         //var core = this.props.painterCore;
-        console.log("updateCanvasPosition", painterCore.drawRangeStart, painterCore.unitWidth, x)
+        //console.log("updateCanvasPosition", painterCore.drawRangeStart, painterCore.unitWidth, x)
         this.refs.candleChart.updateX(x);
         this.refs.volChart.updateX(x);
     }

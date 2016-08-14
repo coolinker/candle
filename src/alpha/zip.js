@@ -34,7 +34,7 @@ module.exports = class Zip {
             obj[field] = Zip.decompressFieldValue(field, v, lastObj, jsonData.length);
 
         }
-
+        jsonData.reverse();
         return jsonData;
     }
 
@@ -131,7 +131,10 @@ module.exports = class Zip {
             v = v / 100;
         } else if (field === 'changeratio') {
             v = v / 10000;
+        } else if (field === 'turnover') {
+            v = v / 100;
         }
+
         return v;
     }
 
@@ -159,6 +162,8 @@ module.exports = class Zip {
             v = Math.round(v * 100);
         } else if (field === 'changeratio') {
             v = Math.round(v * 10000);
+        } else if (field === 'turnover') {
+            v = Math.round(v * 100);
         }
 
         return v;

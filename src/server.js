@@ -5,9 +5,10 @@ let http = require("http"),
     path = require("path"),
     fs = require('fs'),
     zlib = require('zlib'),
-
     port = process.argv[3] || 80,
     serverIp = process.argv[2] || "localhost";
+
+let cacheMap = {};
 
 let server = http.createServer(function(req, res) {
     let uri = url.parse(req.url).pathname;
@@ -55,10 +56,19 @@ function handleApiRequest(request, response) {
             let action = postJson.action;
             if (!apiDispatcher[action]) return false;
             let startTime = new Date();
-            apiDispatcher[action](postJson, function(output) {
+            apiDispatcher[action](postJson, function(output, gzip, cacheKey) {
                 let endTime = new Date();
                 console.log("Action", action, "takes", endTime - startTime, "ms");
-                outputResponse(response, output);
+                if (gzip) {
+                    outputZipResponse(response, output, cacheKey);
+                } else {
+                    response.writeHead(200, {
+                        "Content-Type": "application/text",
+                        "Access-Control-Allow-Origin": "http://" + serverIp
+                    });
+                    response.end(output);
+                }
+
             });
         });
     }
@@ -66,19 +76,37 @@ function handleApiRequest(request, response) {
     return true;
 }
 
-function outputResponse(response, output) {
-    response.writeHead(200, {
+function outputZipResponse(response, output, cacheKey) {
+
+    let headers = {
         "Content-Type": "application/json",
         "Content-Encoding": "gzip",
         "Access-Control-Allow-Origin": "http://" + serverIp
-    });
+    }
+
+    let needZip = true;
+    if (cacheKey && cacheMap[cacheKey]) {
+        needZip = false;
+        output = cacheMap[cacheKey];
+    }
+
+    response.writeHead(200, headers);
     let startTime = new Date();
-    zlib.gzip(output, function(error, result) { // The callback will give you the 
-        //response.write(result);
-        let endTime = new Date();
-        console.log("gzip takes", endTime - startTime, "ms");
-        response.end(result); // result, so just send it.
-    });
+
+    if (needZip) {
+        zlib.gzip(output, function(error, result) { // The callback will give you the 
+            //response.write(result);
+            if (cacheKey) cacheMap[cacheKey] = result;
+            let endTime = new Date();
+            console.log("gzip takes", endTime - startTime, "ms");
+            response.end(result); // result, so just send it.
+        });
+    } else {
+        response.end(output);
+    }
+
+
+
 }
 
 function errorMessage(msg) {
@@ -129,7 +157,7 @@ let apiDispatcher = {
         }
 
         let str = JSON.stringify(obj);
-        outputCallback(str);
+        outputCallback(str, true, params.fields + params.sids);
     },
 
     stock: function(params, outputCallback) {
@@ -154,6 +182,14 @@ let apiDispatcher = {
             outputCallback(errorMessage("Can not find money flow:" + sid));
         }
 
+    }
+
+        thirdPartyAjaxAPI: function(params, outputCallback) {
+        let url = params.url;
+        let mtd = params.httpMethod;
+        dataSourceIO.thirdPartyAjaxAPI(url, mtd, function(output) {
+            outputCallback(output);
+        });
     }
 
 }
