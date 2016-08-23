@@ -17,7 +17,7 @@ class FormInput extends React.Component {
         let regex = this.props.regex;
         // console.log(v, v.length, v.match(regex), this.refs.ele.selectionStart)
         let cursorPosition = this.refs.ele.selectionStart;
-        if (v !== '' && !v.match(regex)) {
+        if (v !== '' && regex && !v.match(regex)) {
             v = v.substr(0, cursorPosition - 1) + v.substr(cursorPosition);
         }
         this.updateState(this.formatStateValue(v), true);
@@ -51,18 +51,8 @@ class FormInput extends React.Component {
     }
 
     render() {
-        let style = {
-            color: '#f0f0f0',
-            width: this.props.width + 'px',
-            'borderStyle': 'groove',
-            'borderColor': '#424242',
-            'backgroundColor': 'transparent',
-        };
-        return <input ref="ele" type = { this.props.type }
-        value = { this.formatValue(this.state.value) }
-        onChange = { this.handleChange }
-        style = { style }
-        />
+
+        return <input ref="ele" type = { this.props.type } value = { this.formatValue(this.state.value) } onChange = { this.handleChange } style = { this.props.style }/>
 
     }
 
@@ -70,11 +60,19 @@ class FormInput extends React.Component {
 
 FormInput.propTypes = {
     type: React.PropTypes.string,
-    value: React.PropTypes.string
+    value: React.PropTypes.string,
+    style: React.PropTypes.object
 };
 FormInput.defaultProps = {
     type: "text",
-    value: ""
+    value: "",
+    style: {
+        color: '#f0f0f0',
+        width: '100px',
+        borderStyle: 'groove',
+        borderColor: '#424242',
+        backgroundColor: 'transparent'
+    }
 };
 
 export default FormInput;

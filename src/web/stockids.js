@@ -11,6 +11,10 @@ class StockIDs {
         }
     }
 
+    static validSid(sid) {
+        return StockIDs.idIndexMap[sid] !== undefined;
+    }
+
     static getNext(id) {
         let idx = StockIDs.idIndexMap[id];
         if (idx === StockIDs.arrayData.length - 1) return null;
@@ -28,9 +32,13 @@ class StockIDs {
         if (StockIDs.arrayData === null) return [];
         return StockIDs.arrayData.slice(start, start + count)
     }
-    
+
     static getTotalCount() {
         return StockIDs.arrayData.length;
+    }
+
+    static getSidByIndex(idx) {
+        return StockIDs.arrayData[idx];
     }
 }
 

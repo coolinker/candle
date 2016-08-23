@@ -5,7 +5,7 @@ class WorkerProxy {
     constructor(worker) {
         let me = this;
         worker.addEventListener('message', function(ev) {
-            console.log("app on message", ev.data);
+            //console.log("app on message", ev.data);
             me.doOnMessage(ev);
         });
         this.worker = worker;
@@ -25,7 +25,9 @@ class WorkerProxy {
     doOnMessage(ev) {
         let mkey = ev.data.mkey;
         let cb = this.penddingCalls[mkey];
-        delete this.penddingCalls[mkey];
+        if (ev.data.finished) {
+            delete this.penddingCalls[mkey];
+        }
         cb(ev.data.result);
     }
 

@@ -20,7 +20,7 @@ module.exports = class UtilsPipe {
             MovingAverageUtil.buildSingle(i, 13, data, 'amount');
             MovingAverageUtil.buildSingle(i, 21, data, 'amount');
             MovingAverageUtil.buildSingle(i, 55, data, 'amount');
-            if (data[i].date === '07/21/2016') console.log("-------------------", data[i])
+            // if (data[i].date === '07/21/2016') console.log("-------------------", data[i])
         }
 
         return data;

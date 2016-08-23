@@ -60,12 +60,14 @@ import StockIDs from './stockids';
 class CandleApp extends React.Component {
     constructor(props) {
         super(props);
-        this.state = {
-            windowWidth: window.innerWidth,
-            windowHeight: window.innerHeight
-        };
         this.handleSidChanged = this.handleSidChanged.bind(this);
         this.handleSidInputChagned = this.handleSidInputChagned.bind(this);
+        this.handleMatchTextAreaChange = this.handleMatchTextAreaChange.bind(this);
+        this.state = {
+            windowWidth: window.innerWidth,
+            windowHeight: window.innerHeight,
+            matchStr: '(data[n].close  - data[n].ave_close_8)/data[n].ave_close_8 >0.05 && data[n-1].low > data[n-1].ave_close_8 && data[n].low > data[n].ave_close_8 && data[n].ave_close_8 > data[n].ave_close_13&&  data[n].ave_close_13 > data[n].ave_close_21 && data[n].ave_close_8 > data[n-1].ave_close_8 '
+        };
     }
 
     render() {
@@ -94,9 +96,16 @@ class CandleApp extends React.Component {
         let sidinputleft = (this.state.windowWidth - sidwidth) / 2;
         return <div style = { divstyle } >
             <div ref = "toolbar" height = { toolbarHeight } style = { toolbarStyle } >
-                <FormInput ref = "sidInput" width = { 65 } regex = { "^(S|s)$|^(SH|sh)$|^(SZ|sz)$|^(SH|SZ|sh|sz)\\d{1,6}$" } validRegex = { "^(sh|sz|SH|SZ)\\d{6}$" } value = "SH600022" 
-                    handleInputCompleted = {this.handleSidChanged} handleInputChanged = {this.handleSidInputChagned}/>
-                <DateInput ref = "dateInput" value = { '07/04/2016' } handleInputCompleted = { this.handleDateChanged }/> 
+                <FormInput ref = "sidInput" style={{color: '#c0c0c0', width: '65px', borderStyle: 'groove', borderColor: '#424242', backgroundColor: 'transparent',}} 
+                    validRegex = {"^(sh|sz|SH|SZ)\\d{6}$"} value = "SH600022"
+                    handleInputChanged = {this.handleSidInputChagned} onKeyDown ={function(e){e.nativeEvent.stopImmediatePropagation()}}/>
+                <div style = {{position: 'absolute', top: '30px', color: '#c0c0c0', zIndex: 100}} ref={(ref) => this.suggest = ref}/>
+                <DateInput ref = "dateInput" value = { '07/04/2016' } style={{color: '#c0c0c0', width: '130px', borderStyle: 'groove', borderColor: '#424242', backgroundColor: 'transparent',}} 
+                    handleInputCompleted = { this.handleDateChanged } onKeyDown ={function(e){e.nativeEvent.stopImmediatePropagation()}}/> 
+                <div style = {{position: 'absolute', right: '20px',  color: '#f0f0f0', top:'10px'}} ref={(ref) => this.info = ref}>Loading...</div>
+                <div style = {{position: 'absolute', right: '20px',  color: '#f0f0f0', top:'30px'}} ref={(ref) => this.detailinfo = ref}>0/0/0</div>
+                <textarea value={this.state.matchStr} style = {{position: 'absolute', right: '20px',  color: '#c0c0c0', top:'50px', zIndex: 100, width: '200px', height: '50px', background: 'transparent'}} 
+                    ref={(ref) => this.matchTexArea = ref} onChange={this.handleMatchTextAreaChange} onKeyDown ={function(e){e.nativeEvent.stopImmediatePropagation()}}></textarea>
             </div > 
             <ChartCanvas ref = "candleChart" width = "2000" height = { candleChartHeight } y = { candleChartY } > </ChartCanvas>  
             <ChartCanvas ref = "volChart" width = "2000" height = { volChartHeight } y = { volChartY } > </ChartCanvas> 
@@ -149,7 +158,7 @@ class CandleApp extends React.Component {
             console.log("keyCode", e.keyCode)
         });
 
-        document.addEventListener('keyup', function(e) {});
+        //document.addEventListener('keyup', function(e) {});
 
         painterCore.on("range", function() {
             me.updateCanvasPosition(painterCore.drawRangeStart * painterCore.unitWidth);
@@ -159,15 +168,35 @@ class CandleApp extends React.Component {
 
         });
 
-
+        let count = 0,
+            match = 0,
+            cases = 0;
         let sid = this.refs.sidInput.state.value;
         let date = this.refs.dateInput.state.value;
+        let matchStr = this.matchTexArea.value;
+        console.log("matchStr", matchStr)
         this.loadDataBySid(sid, date);
+
         setTimeout(function() {
-            IO.workerStartLoadStocks(0, 100, function(re) {
-                console.log("----", re)
+            IO.workerStartLoadStocks(function(re) {
+                me.info.innerHTML = re;
+                if (re >= 30000) //2886
+                    IO.workerScanAll(matchStr, function(cnts) { // && data[n].ave_close_8 > data[n-2].ave_close_8 && data[n].ave_close_8 > data[n-3].ave_close_8
+                    count = cnts.count,
+                        match += cnts.match,
+                        cases += cnts.cases;
+                    me.detailinfo.innerHTML = Math.round(100 * match / cases) + '%/' + cases + '/' + count;
+                })
             })
         }, 3000);
+    }
+
+    handleMatchTextAreaChange(e) {
+        this.setState({
+            matchStr: e.target.value
+        });
+        e.stopPropagation();
+        painterCore.scanData(this.state.matchStr);
     }
 
     loadDataBySid(sid, date) {
@@ -196,8 +225,23 @@ class CandleApp extends React.Component {
         let me = this;
         this.timeoutHandleSidInputChagned = setTimeout(function() {
             let sidin = me.refs.sidInput.state.value;
+
             IO.sidSuggest(sidin, function(arr) {
-                console.log(arr)
+                //console.log(arr)
+                let list = "",
+                    count = 0,
+                    ssid;
+                for (let i = 0; i < arr.length; i++) {
+                    let sid = arr[i].sid.toUpperCase();
+                    if (StockIDs.validSid(sid)) {
+                        list += sid + ' ' + arr[i].name + '<br/>';
+                        count++;
+                        ssid = sid;
+                    }
+                }
+                console.log("count", count, ssid)
+                if (count === 1) me.handleSidChanged(ssid);
+                me.suggest.innerHTML = list;
             })
 
         }, 500);

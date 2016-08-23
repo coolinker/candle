@@ -20522,13 +20522,13 @@ module.exports = function () {
         key: 'buildSingle',
         value: function buildSingle(idx, data) {
             var obj = data[idx];
-            if (obj['ex'] !== undefined || obj['changeratio'] === undefined) return;
+            if (obj['ex'] !== undefined || obj['changeratio'] === undefined || idx === 0) return;
             var preclose = data[idx - 1].close;
             var close = obj.close;
             var inc = Math.round(10000 * obj.changeratio);
             var cinc = Math.round(10000 * (close - preclose) / preclose);
             obj.ex = Math.abs(cinc - inc) > 50;
-            if (obj.ex) console.log("-------------------------------ex", cinc, inc, obj.changeratio, (close - preclose) / preclose, data[idx]);
+            // if (obj.ex) console.log("-------------------------------ex", cinc, inc, obj.changeratio, (close - preclose) / preclose, data[idx])
         }
     }]);
 
@@ -20536,6 +20536,78 @@ module.exports = function () {
 }();
 
 },{}],172:[function(require,module,exports){
+'use strict';
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+module.exports = function () {
+    function MatchFunctionUtil() {
+        _classCallCheck(this, MatchFunctionUtil);
+    }
+
+    _createClass(MatchFunctionUtil, null, [{
+        key: 'composeFunction',
+        value: function composeFunction(returnStr) {
+            try {
+                var matchFun = new Function('data', 'n', 'return ' + returnStr);
+                return matchFun;
+            } catch (e) {
+                console.log("e", e);
+                return null;
+            }
+        }
+    }, {
+        key: 'scan',
+        value: function scan(data, functionStr) {
+            var matchFun = MatchFunctionUtil.composeFunction(functionStr);
+            var cases = 0,
+                match = 0;
+            for (var i = 0; i < data.length; i++) {
+                if (matchFun(data, i)) {
+                    data[i].match = {
+                        fun: matchFun,
+                        result: 0
+                    };
+                    cases++;
+                    var re = MatchFunctionUtil.isBullCase(data, i);
+                    if (re === 1) {
+                        match++;
+                    }
+
+                    data[i].match.result = re;
+                } else {
+                    delete data[i].match;
+                }
+            }
+
+            return {
+                cases: cases,
+                match: match
+            };
+        }
+    }, {
+        key: 'isBullCase',
+        value: function isBullCase(data, idx) {
+            //let re = Math.round(100 * Math.random()) % 2 === 0;
+            var inc = 0.1,
+                dec = -0.05,
+                price = data[idx].close;
+
+            for (var i = idx + 1; i < data.length; i++) {
+                var d = data[i];
+                if ((d.low - price) / price < dec) return -1;
+                if ((d.high - price) / price > inc) return 1;
+            }
+            return 0;
+        }
+    }]);
+
+    return MatchFunctionUtil;
+}();
+
+},{}],173:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -20630,7 +20702,7 @@ module.exports = function () {
     return MovingAverageUtil;
 }();
 
-},{}],173:[function(require,module,exports){
+},{}],174:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -20654,7 +20726,7 @@ module.exports = function () {
     }, {
         key: 'buildSingle',
         value: function buildSingle(idx, period, data) {
-            if (data[idx]['marketCap'] !== undefined || data[idx]['netamount'] === undefined) return;
+            if (data[idx]['marketCap'] !== undefined || data[idx]['turnover'] === undefined) return;
 
             var netsum_r0 = 0,
                 netsummax_r0 = -100000000000,
@@ -20696,7 +20768,7 @@ module.exports = function () {
     return NetSumUtil;
 }();
 
-},{}],174:[function(require,module,exports){
+},{}],175:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -20726,7 +20798,7 @@ module.exports = function () {
                 MovingAverageUtil.buildSingle(i, 13, data, 'amount');
                 MovingAverageUtil.buildSingle(i, 21, data, 'amount');
                 MovingAverageUtil.buildSingle(i, 55, data, 'amount');
-                if (data[i].date === '07/21/2016') console.log("-------------------", data[i]);
+                // if (data[i].date === '07/21/2016') console.log("-------------------", data[i])
             }
 
             return data;
@@ -20736,7 +20808,7 @@ module.exports = function () {
     return UtilsPipe;
 }();
 
-},{"./exdateutil":171,"./movingaverageutil":172,"./netsumutil":173}],175:[function(require,module,exports){
+},{"./exdateutil":171,"./movingaverageutil":173,"./netsumutil":174}],176:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -20918,7 +20990,7 @@ module.exports = function () {
     return Zip;
 }();
 
-},{}],176:[function(require,module,exports){
+},{}],177:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -21074,7 +21146,7 @@ module.exports = function () {
     return MassPainter;
 }();
 
-},{}],177:[function(require,module,exports){
+},{}],178:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -21183,19 +21255,23 @@ module.exports = function (_MassPainter) {
     return CandlePainter;
 }(MassPainter);
 
-},{"./MassPainter":176}],178:[function(require,module,exports){
+},{"./MassPainter":177}],179:[function(require,module,exports){
 'use strict';
 // const EventEmitter = require('events');
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _events = require("events");
+var _events = require('events');
 
 var _events2 = _interopRequireDefault(_events);
 
-var _utilspipe = require("../alpha/utilspipe");
+var _utilspipe = require('../alpha/utilspipe');
 
 var _utilspipe2 = _interopRequireDefault(_utilspipe);
+
+var _matchfunctionutil = require('../alpha/matchfunctionutil');
+
+var _matchfunctionutil2 = _interopRequireDefault(_matchfunctionutil);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -21222,7 +21298,7 @@ module.exports = function (_EventEmitter) {
     }
 
     _createClass(PainterCore, [{
-        key: "reset",
+        key: 'reset',
         value: function reset() {
             this.arrayData = null;
             this.unitWidth = 7;
@@ -21239,7 +21315,13 @@ module.exports = function (_EventEmitter) {
             this.rangeFields = this.getDefaultRangeFields();
         }
     }, {
-        key: "getDefaultRangeFields",
+        key: 'scanData',
+        value: function scanData(str) {
+            var re = _matchfunctionutil2.default.scan(this.arrayData, str);
+            this.emit('scan', re);
+        }
+    }, {
+        key: 'getDefaultRangeFields',
         value: function getDefaultRangeFields() {
             return {
                 'amount': {
@@ -21257,7 +21339,7 @@ module.exports = function (_EventEmitter) {
             };
         }
     }, {
-        key: "updateUnitWidth",
+        key: 'updateUnitWidth',
         value: function updateUnitWidth(n) {
             var neww = this.unitWidth + n * 2;
 
@@ -21270,12 +21352,12 @@ module.exports = function (_EventEmitter) {
             this.updateDrawPort(this.getDateOfCurrentRange(), this.drawPortWidth);
         }
     }, {
-        key: "getCanvasWidth",
+        key: 'getCanvasWidth',
         value: function getCanvasWidth() {
             return this.unitWidth * this.arrayData.length;
         }
     }, {
-        key: "getNextDate",
+        key: 'getNextDate',
         value: function getNextDate(date) {
             var len = this.arrayData.length;
             for (var i = 0; i < len; i++) {
@@ -21284,7 +21366,7 @@ module.exports = function (_EventEmitter) {
             }
         }
     }, {
-        key: "updateDrawPort",
+        key: 'updateDrawPort',
         value: function updateDrawPort(dateStr, w) {
             if (!this.arrayData) return;
             var max = this.arrayData.length;
@@ -21310,7 +21392,7 @@ module.exports = function (_EventEmitter) {
             this.setDrawRange(start, end);
         }
     }, {
-        key: "setDrawRange",
+        key: 'setDrawRange',
         value: function setDrawRange(start, end) {
             if (!this.arrayData) return;
             var kdata = this.arrayData;
@@ -21372,7 +21454,7 @@ module.exports = function (_EventEmitter) {
             this.emit("range", true);
         }
     }, {
-        key: "getDateOfCurrentRange",
+        key: 'getDateOfCurrentRange',
         value: function getDateOfCurrentRange() {
             if (!this.arrayData) return;
             var idx = this.drawRangeStart + Math.round((this.drawRangeEnd - this.drawRangeStart) / 2);
@@ -21380,7 +21462,7 @@ module.exports = function (_EventEmitter) {
             return this.arrayData[idx].date;
         }
     }, {
-        key: "moveDrawPort",
+        key: 'moveDrawPort',
         value: function moveDrawPort(n, w) {
             var len = this.arrayData.length;
             var showtotal = Math.ceil(w / this.unitWidth);
@@ -21393,7 +21475,7 @@ module.exports = function (_EventEmitter) {
             this.setDrawRange(start, end);
         }
     }, {
-        key: "loadData",
+        key: 'loadData',
         value: function loadData(kdata) {
             this.reset();
             var len = kdata.length;
@@ -21405,18 +21487,18 @@ module.exports = function (_EventEmitter) {
             this.emit("data");
         }
     }, {
-        key: "updateMoneyFlow",
+        key: 'updateMoneyFlow',
         value: function updateMoneyFlow(json) {
             console.log("updateMoneyFlow", json.length);
             this.emit("moneyFlow");
         }
     }, {
-        key: "getDataIndexByX",
+        key: 'getDataIndexByX',
         value: function getDataIndexByX(x) {
             return Math.floor(x / this.unitWidth);
         }
     }, {
-        key: "getDataByIndex",
+        key: 'getDataByIndex',
         value: function getDataByIndex(idx) {
             return this.arrayData[idx];
         }
@@ -21425,7 +21507,7 @@ module.exports = function (_EventEmitter) {
     return PainterCore;
 }(_events2.default);
 
-},{"../alpha/utilspipe":174,"events":1}],179:[function(require,module,exports){
+},{"../alpha/matchfunctionutil":172,"../alpha/utilspipe":175,"events":1}],180:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -21596,7 +21678,7 @@ module.exports = function () {
     return PointerPainter;
 }();
 
-},{}],180:[function(require,module,exports){
+},{}],181:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -21747,7 +21829,7 @@ module.exports = function (_MassPainter) {
     return VolumePainter;
 }(MassPainter);
 
-},{"./MassPainter":176}],181:[function(require,module,exports){
+},{"./MassPainter":177}],182:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -21851,18 +21933,21 @@ var CandleApp = function (_React$Component) {
 
         var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(CandleApp).call(this, props));
 
-        _this.state = {
-            windowWidth: window.innerWidth,
-            windowHeight: window.innerHeight
-        };
         _this.handleSidChanged = _this.handleSidChanged.bind(_this);
         _this.handleSidInputChagned = _this.handleSidInputChagned.bind(_this);
+        _this.handleMatchTextAreaChange = _this.handleMatchTextAreaChange.bind(_this);
+        _this.state = {
+            windowWidth: window.innerWidth,
+            windowHeight: window.innerHeight,
+            matchStr: '(data[n].close  - data[n].ave_close_8)/data[n].ave_close_8 >0.05 && data[n-1].low > data[n-1].ave_close_8 && data[n].low > data[n].ave_close_8 && data[n].ave_close_8 > data[n].ave_close_13&&  data[n].ave_close_13 > data[n].ave_close_21 && data[n].ave_close_8 > data[n-1].ave_close_8 '
+        };
         return _this;
     }
 
     _createClass(CandleApp, [{
         key: 'render',
         value: function render() {
+            var _this2 = this;
 
             var divstyle = {
                 width: "100%",
@@ -21892,9 +21977,38 @@ var CandleApp = function (_React$Component) {
                 _react2.default.createElement(
                     'div',
                     { ref: 'toolbar', height: toolbarHeight, style: toolbarStyle },
-                    _react2.default.createElement(_forminput2.default, { ref: 'sidInput', width: 65, regex: "^(S|s)$|^(SH|sh)$|^(SZ|sz)$|^(SH|SZ|sh|sz)\\d{1,6}$", validRegex: "^(sh|sz|SH|SZ)\\d{6}$", value: 'SH600022',
-                        handleInputCompleted: this.handleSidChanged, handleInputChanged: this.handleSidInputChagned }),
-                    _react2.default.createElement(_dateinput2.default, { ref: 'dateInput', value: '07/04/2016', handleInputCompleted: this.handleDateChanged })
+                    _react2.default.createElement(_forminput2.default, { ref: 'sidInput', style: { color: '#c0c0c0', width: '65px', borderStyle: 'groove', borderColor: '#424242', backgroundColor: 'transparent' },
+                        validRegex: "^(sh|sz|SH|SZ)\\d{6}$", value: 'SH600022',
+                        handleInputChanged: this.handleSidInputChagned, onKeyDown: function onKeyDown(e) {
+                            e.nativeEvent.stopImmediatePropagation();
+                        } }),
+                    _react2.default.createElement('div', { style: { position: 'absolute', top: '30px', color: '#c0c0c0', zIndex: 100 }, ref: function ref(_ref) {
+                            return _this2.suggest = _ref;
+                        } }),
+                    _react2.default.createElement(_dateinput2.default, { ref: 'dateInput', value: '07/04/2016', style: { color: '#c0c0c0', width: '130px', borderStyle: 'groove', borderColor: '#424242', backgroundColor: 'transparent' },
+                        handleInputCompleted: this.handleDateChanged, onKeyDown: function onKeyDown(e) {
+                            e.nativeEvent.stopImmediatePropagation();
+                        } }),
+                    _react2.default.createElement(
+                        'div',
+                        { style: { position: 'absolute', right: '20px', color: '#f0f0f0', top: '10px' }, ref: function ref(_ref2) {
+                                return _this2.info = _ref2;
+                            } },
+                        'Loading...'
+                    ),
+                    _react2.default.createElement(
+                        'div',
+                        { style: { position: 'absolute', right: '20px', color: '#f0f0f0', top: '30px' }, ref: function ref(_ref3) {
+                                return _this2.detailinfo = _ref3;
+                            } },
+                        '0/0/0'
+                    ),
+                    _react2.default.createElement('textarea', { value: this.state.matchStr, style: { position: 'absolute', right: '20px', color: '#c0c0c0', top: '50px', zIndex: 100, width: '200px', height: '50px', background: 'transparent' },
+                        ref: function ref(_ref4) {
+                            return _this2.matchTexArea = _ref4;
+                        }, onChange: this.handleMatchTextAreaChange, onKeyDown: function onKeyDown(e) {
+                            e.nativeEvent.stopImmediatePropagation();
+                        } })
                 ),
                 _react2.default.createElement(
                     _chartcanvas2.default,
@@ -21958,7 +22072,7 @@ var CandleApp = function (_React$Component) {
                 console.log("keyCode", e.keyCode);
             });
 
-            document.addEventListener('keyup', function (e) {});
+            //document.addEventListener('keyup', function(e) {});
 
             painterCore.on("range", function () {
                 me.updateCanvasPosition(painterCore.drawRangeStart * painterCore.unitWidth);
@@ -21967,14 +22081,35 @@ var CandleApp = function (_React$Component) {
                 me.refs.dateInput.updateState(date, false);
             });
 
+            var count = 0,
+                match = 0,
+                cases = 0;
             var sid = this.refs.sidInput.state.value;
             var date = this.refs.dateInput.state.value;
+            var matchStr = this.matchTexArea.value;
+            console.log("matchStr", matchStr);
             this.loadDataBySid(sid, date);
+
             setTimeout(function () {
-                _io2.default.workerStartLoadStocks(0, 100, function (re) {
-                    console.log("----", re);
+                _io2.default.workerStartLoadStocks(function (re) {
+                    me.info.innerHTML = re;
+                    if (re >= 30000) //2886
+                        _io2.default.workerScanAll(matchStr, function (cnts) {
+                            // && data[n].ave_close_8 > data[n-2].ave_close_8 && data[n].ave_close_8 > data[n-3].ave_close_8
+                            count = cnts.count, match += cnts.match, cases += cnts.cases;
+                            me.detailinfo.innerHTML = Math.round(100 * match / cases) + '%/' + cases + '/' + count;
+                        });
                 });
             }, 3000);
+        }
+    }, {
+        key: 'handleMatchTextAreaChange',
+        value: function handleMatchTextAreaChange(e) {
+            this.setState({
+                matchStr: e.target.value
+            });
+            e.stopPropagation();
+            painterCore.scanData(this.state.matchStr);
         }
     }, {
         key: 'loadDataBySid',
@@ -22003,8 +22138,23 @@ var CandleApp = function (_React$Component) {
             var me = this;
             this.timeoutHandleSidInputChagned = setTimeout(function () {
                 var sidin = me.refs.sidInput.state.value;
+
                 _io2.default.sidSuggest(sidin, function (arr) {
-                    console.log(arr);
+                    //console.log(arr)
+                    var list = "",
+                        count = 0,
+                        ssid = void 0;
+                    for (var i = 0; i < arr.length; i++) {
+                        var sid = arr[i].sid.toUpperCase();
+                        if (_stockids2.default.validSid(sid)) {
+                            list += sid + ' ' + arr[i].name + '<br/>';
+                            count++;
+                            ssid = sid;
+                        }
+                    }
+                    console.log("count", count, ssid);
+                    if (count === 1) me.handleSidChanged(ssid);
+                    me.suggest.innerHTML = list;
                 });
             }, 500);
         }
@@ -22046,7 +22196,7 @@ var CandleApp = function (_React$Component) {
 
 exports.default = CandleApp;
 
-},{"../chart/candlepainter":177,"../chart/paintercore":178,"../chart/pointerpainter":179,"../chart/volumepainter":180,"./chartcanvas":182,"./dataworker.js":183,"./forms/dateinput":184,"./forms/forminput":185,"./io":187,"./stockids":188,"./tradingdate":189,"./workerproxy":190,"react":168,"webworkify":169}],182:[function(require,module,exports){
+},{"../chart/candlepainter":178,"../chart/paintercore":179,"../chart/pointerpainter":180,"../chart/volumepainter":181,"./chartcanvas":183,"./dataworker.js":184,"./forms/dateinput":185,"./forms/forminput":186,"./io":188,"./stockids":189,"./tradingdate":190,"./workerproxy":191,"react":168,"webworkify":169}],183:[function(require,module,exports){
 'use strict';
 
 // let sampleData = [{ open: 15.5, close: 16, high: 16.5, low: 15.2 }, { open: 15.8, close: 15, high: 16.8, low: 14.2 }, { open: 15.5, close: 16, high: 16.8, low: 15.2 }, { open: 10.5, close: 10, high: 10.8, low: 9.2 }];
@@ -22117,7 +22267,7 @@ var ChartCanvas = function (_React$Component) {
 
 exports.default = ChartCanvas;
 
-},{"react":168}],183:[function(require,module,exports){
+},{"react":168}],184:[function(require,module,exports){
 'use strict';
 
 var _io = require('./io');
@@ -22128,6 +22278,18 @@ var _stockids = require('./stockids');
 
 var _stockids2 = _interopRequireDefault(_stockids);
 
+var _zip = require('../alpha/zip');
+
+var _zip2 = _interopRequireDefault(_zip);
+
+var _matchfunctionutil = require('../alpha/matchfunctionutil');
+
+var _matchfunctionutil2 = _interopRequireDefault(_matchfunctionutil);
+
+var _utilspipe = require('../alpha/utilspipe');
+
+var _utilspipe2 = _interopRequireDefault(_utilspipe);
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 var stockFields = ['date', 'open', 'close', 'high', 'low', 'amount', 'netamount', 'r0_net', 'changeratio', 'turnover'];
@@ -22136,14 +22298,15 @@ var cacheMap = {};
 module.exports = function (self) {
     var me = this;
     self.addEventListener('message', function (ev) {
-        //console.log("--------------------------worker", ev.data)
         var mn = ev.data['methodName'];
         //console.log("worker on message", mn, module[mn]);
         var params = ev.data['params'];
-        params.push(function (result) {
+        params.push(function (result, finished) {
+            if (finished === undefined) finished = true;
             self.postMessage({
                 mkey: ev.data.mkey,
-                result: result
+                result: result,
+                finished: finished
             });
         });
         module[mn].apply(me, params);
@@ -22153,22 +22316,88 @@ module.exports = function (self) {
     });
 };
 
+module.scanAll = function scanAll(patternStr, callback) {
+    //let patternFun = new Function('data', 'n', 'return ' + patternStr);
+    var total = _stockids2.default.getTotalCount();
+    for (var i = 0; i < total; i++) {
+        var sid = _stockids2.default.getSidByIndex(i);
+        var cmpdata = module.getStockDataSync(sid, stockFields);
+        if (!cmpdata) {
+            console.log("data is null", sid, cmpdata);
+            continue;
+        }
+        var decmpdata = _zip2.default.decompressStockJson(cmpdata);
+        _utilspipe2.default.build(0, decmpdata.length - 1, decmpdata);
+        var m = _matchfunctionutil2.default.scan(decmpdata, patternStr);
+        //module.matchPattern(decmpdata, patternFun);
+        // console.log(sid, decmpdata.length, m)
+        callback({
+            count: i,
+            match: m.match,
+            cases: m.cases,
+            finished: i === total
+        }, i === total);
+    }
+};
+
+// module.matchPattern = function matchPattern(data, patternFun) {
+//     let cases = 0,
+//         match = 0;
+//     for (let i = 0; i < data.length; i++) {
+//         if (patternFun(data, i)) {
+//             data[i].patternFun = patternFun;
+//             cases++;
+//             if (module.isBullCase(data, i)) {
+//                 match++;
+//             }
+
+//         } else {
+//             delete data[i].patternFun;
+//         }
+
+//     }
+
+//     return {
+//         cases: cases,
+//         match: match
+//     };
+// }
+
+// module.isBullCase = function isBullCase(data, idx) {
+//     //let re = Math.round(100 * Math.random()) % 2 === 0;
+//     let inc = 0.1,
+//         dec = -0.05,
+//         price = data[idx].close;
+
+//     for (let i = idx + 1; i < data.length; i++) {
+//         let d = data[i];
+//         if ((d.low - price) / price < dec) return false;
+//         if ((d.high - price) / price > inc) return true;
+//     }
+//     return false;
+// }
+
 module.loadStocksDataPage = function loadStocksDataPage(start, count, callback) {
     var total = _stockids2.default.getTotalCount();
     var pageSize = count;
     count = Math.min(count, total - start);
     //console.log("loadStocksDataPage", start, count)
-    module.loadStocksData(start, count, stockFields, function (sids) {
+    module.loadStockIds(start, count, stockFields, function (sids) {
 
         if (start + count >= total) {
             callback(start + count);
         } else {
+            callback(start + count, false);
             module.loadStocksDataPage(start + count, count, callback);
         }
     });
 };
 
 module.getStockData = function getStockData(sid, fields, callback) {
+    callback(module.getStockDataSync(sid, fields));
+};
+
+module.getStockDataSync = function getStockDataSync(sid, fields) {
     var fm = {};
     for (var i = 0; i < fields.length; i++) {
         var f = fields[i];
@@ -22178,8 +22407,7 @@ module.getStockData = function getStockData(sid, fields, callback) {
     }
     var fulldata = cacheMap[sid];
     if (!fulldata) {
-        callback(null);
-        return;
+        return null;
     }
 
     var data = [];
@@ -22191,16 +22419,16 @@ module.getStockData = function getStockData(sid, fields, callback) {
         }
     }
 
-    callback({
+    return {
         fields: fields,
         data: data
-    });
+    };
 };
 
-module.loadStocksData = function loadStocksData(start, count, fields, callback) {
+module.loadStockIds = function loadStockIds(start, count, fields, callback) {
     var sids = _stockids2.default.getIDsByIndex(start, count);
     _io2.default.httpGetStocksCompressedJson(sids, fields.join(), function (json) {
-        //console.log("loadStocksData", sids.length, sids[0], sids[sids.length - 1])
+        //console.log("loadStockIds", sids.length, sids[0], sids[sids.length - 1])
         for (var sid in json.data) {
             cacheMap[sid] = json.data[sid];
         }
@@ -22211,7 +22439,7 @@ module.loadStocksData = function loadStocksData(start, count, fields, callback) 
     });
 };
 
-},{"./io":187,"./stockids":188}],184:[function(require,module,exports){
+},{"../alpha/matchfunctionutil":172,"../alpha/utilspipe":175,"../alpha/zip":176,"./io":188,"./stockids":189}],185:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -22307,7 +22535,7 @@ DateInput.defaultProps = { type: "date", width: 130 };
 
 exports.default = DateInput;
 
-},{"./forminput":185,"react":168}],185:[function(require,module,exports){
+},{"./forminput":186,"react":168}],186:[function(require,module,exports){
 'use strict';
 
 // let sampleData = [{ open: 15.5, close: 16, high: 16.5, low: 15.2 }, { open: 15.8, close: 15, high: 16.8, low: 14.2 }, { open: 15.5, close: 16, high: 16.8, low: 15.2 }, { open: 10.5, close: 10, high: 10.8, low: 9.2 }];
@@ -22352,7 +22580,7 @@ var FormInput = function (_React$Component) {
             var regex = this.props.regex;
             // console.log(v, v.length, v.match(regex), this.refs.ele.selectionStart)
             var cursorPosition = this.refs.ele.selectionStart;
-            if (v !== '' && !v.match(regex)) {
+            if (v !== '' && regex && !v.match(regex)) {
                 v = v.substr(0, cursorPosition - 1) + v.substr(cursorPosition);
             }
             this.updateState(this.formatStateValue(v), true);
@@ -22387,18 +22615,8 @@ var FormInput = function (_React$Component) {
     }, {
         key: 'render',
         value: function render() {
-            var style = {
-                color: '#f0f0f0',
-                width: this.props.width + 'px',
-                'borderStyle': 'groove',
-                'borderColor': '#424242',
-                'backgroundColor': 'transparent'
-            };
-            return _react2.default.createElement('input', { ref: 'ele', type: this.props.type,
-                value: this.formatValue(this.state.value),
-                onChange: this.handleChange,
-                style: style
-            });
+
+            return _react2.default.createElement('input', { ref: 'ele', type: this.props.type, value: this.formatValue(this.state.value), onChange: this.handleChange, style: this.props.style });
         }
     }]);
 
@@ -22407,16 +22625,24 @@ var FormInput = function (_React$Component) {
 
 FormInput.propTypes = {
     type: _react2.default.PropTypes.string,
-    value: _react2.default.PropTypes.string
+    value: _react2.default.PropTypes.string,
+    style: _react2.default.PropTypes.object
 };
 FormInput.defaultProps = {
     type: "text",
-    value: ""
+    value: "",
+    style: {
+        color: '#f0f0f0',
+        width: '100px',
+        borderStyle: 'groove',
+        borderColor: '#424242',
+        backgroundColor: 'transparent'
+    }
 };
 
 exports.default = FormInput;
 
-},{"react":168}],186:[function(require,module,exports){
+},{"react":168}],187:[function(require,module,exports){
 'use strict';
 
 var _react = require("react");
@@ -22435,7 +22661,7 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 var candleApp = _reactDom2.default.render(_react2.default.createElement(_CandleApp2.default, null), document.getElementById('app'));
 
-},{"./CandleApp":181,"react":168,"react-dom":30}],187:[function(require,module,exports){
+},{"./CandleApp":182,"react":168,"react-dom":30}],188:[function(require,module,exports){
 'use strict';
 // import fetch from 'whatwg-fetch';
 
@@ -22476,7 +22702,10 @@ var IO = function () {
             }).then(function (res) {
                 return res.text();
             }).then(function (text) {
-
+                if (text === '') {
+                    callback([]);
+                    return;
+                }
                 var result = text.split('"')[1];
                 var secs = result.split(';');
                 var stocks = [];
@@ -22497,6 +22726,14 @@ var IO = function () {
             return this.cacheMap[sid];
         }
     }, {
+        key: 'workerScanAll',
+        value: function workerScanAll(patternStr, callback) {
+            var params = [patternStr];
+            IO.dataWorkerProxy.callMethod("scanAll", params, function (re) {
+                callback(re);
+            });
+        }
+    }, {
         key: 'workerGetStockJson',
         value: function workerGetStockJson(sid, callback) {
             var params = [sid, ['date', 'open', 'close', 'high', 'low', 'amount', 'netamount', 'r0_net', 'changeratio', 'turnover']];
@@ -22513,9 +22750,10 @@ var IO = function () {
         }
     }, {
         key: 'workerStartLoadStocks',
-        value: function workerStartLoadStocks(start, count, callback) {
-            IO.dataWorkerProxy.callMethod("loadStocksDataPage", [start, count], function (result) {
-                console.log("loadStocksDataPage----", result);
+        value: function workerStartLoadStocks(callback) {
+            IO.dataWorkerProxy.callMethod("loadStocksDataPage", [0, 100], function (result) {
+                //console.log("loadStocksDataPage----", result);
+                callback(result);
                 // if (result.length === 0) return;
                 // let params = [result[0],
                 //     ['date', 'open', 'close', 'high', 'low', 'amount']
@@ -22642,7 +22880,7 @@ IO.cacheMap = {};
 
 exports.default = IO;
 
-},{"../alpha/netsumutil":173,"../alpha/zip":175}],188:[function(require,module,exports){
+},{"../alpha/netsumutil":174,"../alpha/zip":176}],189:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -22673,6 +22911,11 @@ var StockIDs = function () {
             }
         }
     }, {
+        key: "validSid",
+        value: function validSid(sid) {
+            return StockIDs.idIndexMap[sid] !== undefined;
+        }
+    }, {
         key: "getNext",
         value: function getNext(id) {
             var idx = StockIDs.idIndexMap[id];
@@ -22698,6 +22941,11 @@ var StockIDs = function () {
         value: function getTotalCount() {
             return StockIDs.arrayData.length;
         }
+    }, {
+        key: "getSidByIndex",
+        value: function getSidByIndex(idx) {
+            return StockIDs.arrayData[idx];
+        }
     }]);
 
     return StockIDs;
@@ -22712,7 +22960,7 @@ StockIDs.idIndexMap = {};
 
 exports.default = StockIDs;
 
-},{"./io":187}],189:[function(require,module,exports){
+},{"./io":188}],190:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -22772,7 +23020,7 @@ TradingDate.dateIndexMap = {};
 
 exports.default = TradingDate;
 
-},{"./io":187}],190:[function(require,module,exports){
+},{"./io":188}],191:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -22791,7 +23039,7 @@ var WorkerProxy = function () {
 
         var me = this;
         worker.addEventListener('message', function (ev) {
-            console.log("app on message", ev.data);
+            //console.log("app on message", ev.data);
             me.doOnMessage(ev);
         });
         this.worker = worker;
@@ -22814,7 +23062,9 @@ var WorkerProxy = function () {
         value: function doOnMessage(ev) {
             var mkey = ev.data.mkey;
             var cb = this.penddingCalls[mkey];
-            delete this.penddingCalls[mkey];
+            if (ev.data.finished) {
+                delete this.penddingCalls[mkey];
+            }
             cb(ev.data.result);
         }
     }, {
@@ -22833,4 +23083,4 @@ var WorkerProxy = function () {
 
 exports.default = WorkerProxy;
 
-},{"whatwg-fetch":170}]},{},[186]);
+},{"whatwg-fetch":170}]},{},[187]);

@@ -1,7 +1,8 @@
 'use strict';
 // const EventEmitter = require('events');
-import EventEmitter from "events";
-import UtilsPipe from "../alpha/utilspipe";
+import EventEmitter from 'events';
+import UtilsPipe from '../alpha/utilspipe';
+import MatchFunctionUtil from '../alpha/matchfunctionutil';
 //import MovingAverageUtil from "../alpha/movingaverageutil";
 module.exports = class PainterCore extends EventEmitter {
     constructor() {
@@ -26,6 +27,11 @@ module.exports = class PainterCore extends EventEmitter {
         this.drawPortWidth = null;
 
         this.rangeFields = this.getDefaultRangeFields();
+    }
+
+    scanData(str) {
+        let re = MatchFunctionUtil.scan(this.arrayData, str);
+        this.emit('scan', re);
     }
 
     getDefaultRangeFields() {

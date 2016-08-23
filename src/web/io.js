@@ -16,7 +16,10 @@ class IO {
         }).then(function(res) {
             return res.text();
         }).then(function(text) {
-
+            if (text === '') {
+                callback([]);
+                return;
+            }
             let result = text.split('"')[1];
             let secs = result.split(';');
             let stocks = [];
@@ -37,6 +40,14 @@ class IO {
         return this.cacheMap[sid]
     }
 
+    static workerScanAll(patternStr, callback) {
+        let params = [patternStr];
+        IO.dataWorkerProxy.callMethod("scanAll", params, function(re) {
+            callback(re);
+
+        });
+    }
+
     static workerGetStockJson(sid, callback) {
         let params = [sid, ['date', 'open', 'close', 'high', 'low', 'amount', 'netamount', 'r0_net', 'changeratio', 'turnover']];
         IO.dataWorkerProxy.callMethod("getStockData", params, function(re) {
@@ -52,16 +63,17 @@ class IO {
         });
     }
 
-    static workerStartLoadStocks(start, count, callback) {
-        IO.dataWorkerProxy.callMethod("loadStocksDataPage", [start, count], function(result) {
-            console.log("loadStocksDataPage----", result)
-                // if (result.length === 0) return;
-                // let params = [result[0],
-                //     ['date', 'open', 'close', 'high', 'low', 'amount']
-                // ];
-                // IO.dataWorkerProxy.callMethod("getStockData", params, function(re) {
-                //     let dcp = Zip.decompressStockJson(re);
-                //     console.log("callmethod", dcp)
+    static workerStartLoadStocks(callback) {
+        IO.dataWorkerProxy.callMethod("loadStocksDataPage", [0, 100], function(result) {
+            //console.log("loadStocksDataPage----", result);
+            callback(result);
+            // if (result.length === 0) return;
+            // let params = [result[0],
+            //     ['date', 'open', 'close', 'high', 'low', 'amount']
+            // ];
+            // IO.dataWorkerProxy.callMethod("getStockData", params, function(re) {
+            //     let dcp = Zip.decompressStockJson(re);
+            //     console.log("callmethod", dcp)
 
             // });
 

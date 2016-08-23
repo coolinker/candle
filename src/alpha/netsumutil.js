@@ -14,7 +14,7 @@ module.exports = class NetSumUtil {
     }
 
     static buildSingle(idx, period, data) {
-        if (data[idx]['marketCap'] !== undefined || data[idx]['netamount'] === undefined) return;
+        if (data[idx]['marketCap'] !== undefined || data[idx]['turnover'] === undefined) return;
 
         let netsum_r0 = 0,
             netsummax_r0 = -100000000000,
@@ -50,5 +50,6 @@ module.exports = class NetSumUtil {
 
         obj.netsummax_r0_duration = idx - netsummax_idx_r0;
         obj.netsummax_r0_netsum_r0x = netsummax_r0_netsum_r0x;
+
     }
 }
