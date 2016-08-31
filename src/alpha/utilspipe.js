@@ -10,7 +10,7 @@ module.exports = class UtilsPipe {
     static build(start, end, data) {
 
         for (let i = start; i <= end; i++) {
-            NetSumUtil.buildSingle(i, 150, data);
+            NetSumUtil.buildSingle(i, 250, data);
             EXDateUtil.buildSingle(i, data);
             MovingAverageUtil.buildSingle(i, 8, data, 'close');
             MovingAverageUtil.buildSingle(i, 13, data, 'close');

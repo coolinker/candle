@@ -34,11 +34,23 @@ module.exports = class CandlePainter extends MassPainter {
         let high = data.high;
         let low = data.low;
         let ctx = this.canvas2DCtx;
+        let w = this.core.unitWidth;
+        let xp = Math.floor(x + w / 2);
+
+        if (data.match) {
+            ctx.setLineDash([2, 4]);
+            ctx.strokeStyle = 'rgba(130, 130, 130, 1)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(xp, 0);
+            ctx.lineTo(xp, this.canvas.height);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
         let color = (data.close === data.open ? '#ffffff' : (data.close < data.open ? '#4caf50' : '#f44336'));
         ctx.strokeStyle = color;
         ctx.beginPath();
-        let w = this.core.unitWidth;
-        let xp = Math.floor(x + w / 2);
         ctx.moveTo(xp, this.getPriceY(high));
         ctx.lineTo(xp, this.getPriceY(low));
         ctx.stroke();

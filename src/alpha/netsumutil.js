@@ -14,7 +14,7 @@ module.exports = class NetSumUtil {
     }
 
     static buildSingle(idx, period, data) {
-        if (data[idx]['marketCap'] !== undefined || data[idx]['turnover'] === undefined) return;
+        if (data[idx]['marketCap'] !== undefined || !data[idx]['turnover']) return;
 
         let netsum_r0 = 0,
             netsummax_r0 = -100000000000,

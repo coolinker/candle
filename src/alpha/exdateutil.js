@@ -12,7 +12,7 @@ module.exports = class EXDateUtil {
 
     static buildSingle(idx, data) {
         let obj = data[idx];
-        if (obj['ex'] !== undefined || obj['changeratio'] === undefined || idx === 0) return;
+        if (obj['ex'] !== undefined || obj['changeratio'] === undefined || idx === 0 || obj['changeratio'] === 0 && data[idx - 1]['changeratio'] === 0) return;
         let preclose = data[idx - 1].close;
         let close = obj.close;
         let inc = Math.round(10000 * obj.changeratio);

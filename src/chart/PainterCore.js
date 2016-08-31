@@ -30,8 +30,10 @@ module.exports = class PainterCore extends EventEmitter {
     }
 
     scanData(str) {
-        let re = MatchFunctionUtil.scan(this.arrayData, str);
+        let re = MatchFunctionUtil.scan(this.arrayData, str, {});
+        console.log("scanData", re)
         this.emit('scan', re);
+        return re;
     }
 
     getDefaultRangeFields() {
@@ -88,10 +90,10 @@ module.exports = class PainterCore extends EventEmitter {
         let end = -1;
         let half = Math.ceil(showtotal / 2)
         if (half + idx > max + this.reservedSpaces) {
-            start = max - showtotal + this.reservedSpaces;
+            start = Math.max(0, max - showtotal + this.reservedSpaces);
             end = max - 1;
         } else {
-            start = idx - half;
+            start = Math.max(0, idx - half);
             end = Math.min(idx + half, max - 1);
         }
         //console.log("------------", start, idx, end, half, dateStr, max)
@@ -103,13 +105,13 @@ module.exports = class PainterCore extends EventEmitter {
         if (!this.arrayData) return;
         let kdata = this.arrayData;
 
-        UtilsPipe.build(start - 1, end, this.arrayData);
 
         let mlow = Number.MAX_SAFE_INTEGER;
         let mhigh = -1;
         let mvlow = Number.MAX_SAFE_INTEGER;
         let mvhigh = -1;
         let rfds = this.getDefaultRangeFields();
+
         for (let i = start; i <= end; i++) {
             let data = kdata[i];
             let high = data.high;
@@ -126,23 +128,24 @@ module.exports = class PainterCore extends EventEmitter {
                 if (data[att] > hl.high) hl.high = data[att];
                 if (data[att] < hl.low) hl.low = data[att];
             }
-
         }
-
         if (this.priceHigh !== mhigh || this.priceLow !== mlow) {
             this.priceHigh = mhigh;
             this.priceLow = mlow;
 
             this.emit("priceRange", true);
         }
-
+        let chnagedRange;
         for (let att in this.rangeFields) {
             if (this.rangeFields[att].high !== rfds[att].high || this.rangeFields[att].low !== rfds[att].low) {
                 this.rangeFields[att].high = rfds[att].high;
                 this.rangeFields[att].low = rfds[att].low;
-                this.emit(att + "Range", true);
-                console.log("event-----", att + "Range", rfds[att])
+                chnagedRange = att;
             }
+        }
+        if (chnagedRange) {
+            this.emit(chnagedRange + "Range");
+            console.log("event-----", chnagedRange + "Range", rfds[chnagedRange])
         }
 
         // if (this.volumeHigh !== mvhigh || this.volumeLow !== mvlow) {
@@ -185,6 +188,7 @@ module.exports = class PainterCore extends EventEmitter {
         let len = kdata.length;
         let i = len > 4500 ? len - 4500 : 0;
         this.arrayData = kdata.slice(i, len);
+        UtilsPipe.build(0, this.arrayData.length - 1, this.arrayData);
         for (; i < len; i++) {
             this.dateIndexMap[kdata[i].date] = i;
         }

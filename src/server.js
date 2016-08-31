@@ -66,6 +66,7 @@ function handleApiRequest(request, response) {
                         "Content-Type": "application/json",
                         "Access-Control-Allow-Origin": "http://" + serverIp
                     });
+                    if (output.error) output = JSON.stringify(output);
                     response.end(output);
                 }
 
@@ -188,7 +189,7 @@ let apiDispatcher = {
         let url = params.url;
         let mtd = params.http;
         dataSourceIO.thirdPartyAjaxAPI(url, mtd, function(output) {
-
+            console.log("---===", output)
             outputCallback(output);
         });
     }

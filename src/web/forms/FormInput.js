@@ -52,7 +52,7 @@ class FormInput extends React.Component {
 
     render() {
 
-        return <input ref="ele" type = { this.props.type } value = { this.formatValue(this.state.value) } onChange = { this.handleChange } style = { this.props.style }/>
+        return <input ref="ele" type = { this.props.type } value = { this.formatValue(this.state.value) } onChange = { this.handleChange } style = { this.props.style } onKeyDown ={this.props.onKeyDownHandler}/>
 
     }
 

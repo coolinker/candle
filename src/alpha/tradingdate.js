@@ -1,8 +1,8 @@
 'use strict';
+let from "./io";
 
 module.exports = class TradingDate {
-    constructor() {
-    }
+    constructor() {}
 
     static load(kdata) {
         TradingDate.arrayData = kdata;
@@ -30,3 +30,12 @@ module.exports = class TradingDate {
         return TradingDate.arrayData[idx - 1].date
     }
 }
+
+
+IO.httpGetStockJson("SH999999", function(json) {
+    console.log("SH99999", json.length)
+    TradingDate.load(json);
+});
+
+TradingDate.arrayData = null;
+TradingDate.dateIndexMap = {};

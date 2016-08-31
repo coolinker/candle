@@ -25,8 +25,9 @@ pointerPainter.mouseDblclickHandler = function(e) {
     let y = e.y;
     let candleCanvasX = parseInt(candlePainter.canvas.style.left, 10);
     let dataindex = painterCore.getDataIndexByX(x - candleCanvasX);
-    let data = painterCore.getDataByIndex(dataindex);
 
+    let data = painterCore.getDataByIndex(dataindex);
+    console.log("mouseDblclickHandler", data)
 }
 pointerPainter.mouseMoveHandler = function(e) {
     if (!painterCore.arrayData) return;
@@ -63,10 +64,11 @@ class CandleApp extends React.Component {
         this.handleSidChanged = this.handleSidChanged.bind(this);
         this.handleSidInputChagned = this.handleSidInputChagned.bind(this);
         this.handleMatchTextAreaChange = this.handleMatchTextAreaChange.bind(this);
+        this.handleMatchTextAreaKeyUp = this.handleMatchTextAreaKeyUp.bind(this);
         this.state = {
             windowWidth: window.innerWidth,
             windowHeight: window.innerHeight,
-            matchStr: '(data[n].close  - data[n].ave_close_8)/data[n].ave_close_8 >0.05 && data[n-1].low > data[n-1].ave_close_8 && data[n].low > data[n].ave_close_8 && data[n].ave_close_8 > data[n].ave_close_13&&  data[n].ave_close_13 > data[n].ave_close_21 && data[n].ave_close_8 > data[n-1].ave_close_8 '
+            matchStr: 'diffR(data[n].ave_close_8, data[n].high) > priceCRA(5, data, n)'
         };
     }
 
@@ -97,15 +99,16 @@ class CandleApp extends React.Component {
         return <div style = { divstyle } >
             <div ref = "toolbar" height = { toolbarHeight } style = { toolbarStyle } >
                 <FormInput ref = "sidInput" style={{color: '#c0c0c0', width: '65px', borderStyle: 'groove', borderColor: '#424242', backgroundColor: 'transparent',}} 
-                    validRegex = {"^(sh|sz|SH|SZ)\\d{6}$"} value = "SH600022"
-                    handleInputChanged = {this.handleSidInputChagned} onKeyDown ={function(e){e.nativeEvent.stopImmediatePropagation()}}/>
+                    validRegex = {"^(sh|sz|SH|SZ)\\d{6}$"} value = "SH999999"
+                    handleInputChanged = {this.handleSidInputChagned} onKeyDownHandler ={function(e){e.nativeEvent.stopImmediatePropagation()}}/>
                 <div style = {{position: 'absolute', top: '30px', color: '#c0c0c0', zIndex: 100}} ref={(ref) => this.suggest = ref}/>
                 <DateInput ref = "dateInput" value = { '07/04/2016' } style={{color: '#c0c0c0', width: '130px', borderStyle: 'groove', borderColor: '#424242', backgroundColor: 'transparent',}} 
-                    handleInputCompleted = { this.handleDateChanged } onKeyDown ={function(e){e.nativeEvent.stopImmediatePropagation()}}/> 
+                    handleInputCompleted = { this.handleDateChanged } onKeyDownHandler ={function(e){e.nativeEvent.stopImmediatePropagation()}}/> 
                 <div style = {{position: 'absolute', right: '20px',  color: '#f0f0f0', top:'10px'}} ref={(ref) => this.info = ref}>Loading...</div>
-                <div style = {{position: 'absolute', right: '20px',  color: '#f0f0f0', top:'30px'}} ref={(ref) => this.detailinfo = ref}>0/0/0</div>
-                <textarea value={this.state.matchStr} style = {{position: 'absolute', right: '20px',  color: '#c0c0c0', top:'50px', zIndex: 100, width: '200px', height: '50px', background: 'transparent'}} 
-                    ref={(ref) => this.matchTexArea = ref} onChange={this.handleMatchTextAreaChange} onKeyDown ={function(e){e.nativeEvent.stopImmediatePropagation()}}></textarea>
+                <div style = {{position: 'absolute', right: '20px',  color: '#f0f0f0', top:'30px'}} ref={(ref) => this.scanAllInfo = ref}>0/0/0</div>
+                <div style = {{position: 'absolute', right: '420px',  color: '#f0f0f0', top:'30px'}} ref={(ref) => this.scanInfo = ref}>0/0</div>
+                <textarea value={this.state.matchStr} style = {{position: 'absolute', right: '20px',  color: 'rgba(230, 230, 230, 0.5)', borderColor: 'rgba(230, 230, 230, 0.1)', top:'50px', zIndex: 100, width: '400px', height: '500px', background: 'transparent', 'fontSize': '10px'}} 
+                    ref={(ref) => this.matchTexArea = ref} onChange={this.handleMatchTextAreaChange} onKeyUp={this.handleMatchTextAreaKeyUp} onKeyDown ={function(e){e.nativeEvent.stopImmediatePropagation();}}></textarea>
             </div > 
             <ChartCanvas ref = "candleChart" width = "2000" height = { candleChartHeight } y = { candleChartY } > </ChartCanvas>  
             <ChartCanvas ref = "volChart" width = "2000" height = { volChartHeight } y = { volChartY } > </ChartCanvas> 
@@ -185,18 +188,27 @@ class CandleApp extends React.Component {
                     count = cnts.count,
                         match += cnts.match,
                         cases += cnts.cases;
-                    me.detailinfo.innerHTML = Math.round(100 * match / cases) + '%/' + cases + '/' + count;
+                    me.scanAllInfo.innerHTML = Math.round(100 * match / cases) + '%/' + cases + '/' + count;
                 })
             })
         }, 3000);
     }
 
+    handleMatchTextAreaKeyUp(e) {
+        if (e.keyCode === 13 && e.ctrlKey) {
+            // console.log("handleMatchTextAreaKeyUp", this.state.matchStr)
+            let result = painterCore.scanData(this.state.matchStr);
+            let bull = result.bull;
+            let bear = result.bear;
+            let cases = result.cases;
+            this.scanInfo.innerHTML = bull + '/' + bear + '/' + cases
+        }
+
+    }
     handleMatchTextAreaChange(e) {
         this.setState({
             matchStr: e.target.value
         });
-        e.stopPropagation();
-        painterCore.scanData(this.state.matchStr);
     }
 
     loadDataBySid(sid, date) {
@@ -225,6 +237,7 @@ class CandleApp extends React.Component {
         let me = this;
         this.timeoutHandleSidInputChagned = setTimeout(function() {
             let sidin = me.refs.sidInput.state.value;
+            if (sidin === '') return;
 
             IO.sidSuggest(sidin, function(arr) {
                 //console.log(arr)
@@ -233,12 +246,14 @@ class CandleApp extends React.Component {
                     ssid;
                 for (let i = 0; i < arr.length; i++) {
                     let sid = arr[i].sid.toUpperCase();
-                    if (StockIDs.validSid(sid)) {
+                    sid = StockIDs.validSid(sid);
+                    if (sid) {
                         list += sid + ' ' + arr[i].name + '<br/>';
                         count++;
                         ssid = sid;
                     }
                 }
+
                 console.log("count", count, ssid)
                 if (count === 1) me.handleSidChanged(ssid);
                 me.suggest.innerHTML = list;

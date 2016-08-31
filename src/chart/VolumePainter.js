@@ -5,6 +5,8 @@ module.exports = class VolumePainter extends MassPainter {
         super(painterCore, canvas);
 
         this.doOnAmountRange = this.doOnAmountRange.bind(this);
+        this.core.on("amountRange", this.doOnAmountRange);
+        this.core.on("netsummax_r0Range", this.doOnAmountRange);
         this.core.on("netsummax_r0_durationRange", this.doOnAmountRange);
 
         this.doOnMoneyFlow = this.doOnMoneyFlow.bind(this);
@@ -33,7 +35,6 @@ module.exports = class VolumePainter extends MassPainter {
         let h = this.canvas.height;
         let lastv = this.heightPerUnit;
         this.heightPerUnit = h / this.core.rangeFields.amount.high;
-
         let r = Math.max(this.core.rangeFields.netsummax_r0.high, -this.core.rangeFields.netsummax_r0.low)
         this.heightPerNetSumMax_r0Unit = 0.5 * h / r;
 
@@ -52,6 +53,17 @@ module.exports = class VolumePainter extends MassPainter {
         let data_pre = idx > 0 ? dataArr[idx - 1] : null;
         let ctx = this.canvas2DCtx;
         let w = this.core.unitWidth;
+        let xp = Math.floor(x + w / 2);
+        if (data.match) {
+            ctx.setLineDash([2, 4]);
+            ctx.strokeStyle = 'rgba(130, 130, 130, 1)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(xp, 0);
+            ctx.lineTo(xp, this.canvas.height);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
 
         if (data.netsummax_r0 !== undefined) {
             let nsmr0h = Math.round(data.netsummax_r0 * this.heightPerNetSumMax_r0Unit);
@@ -80,15 +92,15 @@ module.exports = class VolumePainter extends MassPainter {
 
         let open = data.open;
         let close = data.close;
-        let preclose = data_pre.close;
         let vol = data.amount;
 
-        let color = close < open ? '#4caf50' : (close > open ? '#f44336' : (preclose > close ? '#4caf50' : '#f44336'));
-        ctx.strokeStyle = color;
-        ctx.fillStyle = color;
-
-        ctx.fillRect(x, this.canvas.height, w - 1, -Math.round(vol * this.heightPerUnit));
-
+        if (data_pre) {
+            let preclose = data_pre.close;
+            let color = close < open ? '#4caf50' : (close > open ? '#f44336' : (preclose > close ? '#4caf50' : '#f44336'));
+            ctx.strokeStyle = color;
+            ctx.fillStyle = color;
+            ctx.fillRect(x, this.canvas.height, w - 1, -Math.round(vol * this.heightPerUnit));
+        }
         //    this.drawMoneyFlow(x, idx, dataArr);
         if (data.netamount !== undefined) {
             let rox_net = data.netamount - data.r0_net;

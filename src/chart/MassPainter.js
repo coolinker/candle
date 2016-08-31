@@ -8,11 +8,12 @@ module.exports = class MassPainter {
         this.core = painterCore;
         this.doOnData = this.doOnData.bind(this);
         this.core.on("data", this.doOnData);
-        this.doOnRange =  this.doOnRange.bind(this);
+        this.doOnRange = this.doOnRange.bind(this);
         this.core.on("range", this.doOnRange);
         this.doOnUnitWidth = this.doOnUnitWidth.bind(this);
         this.core.on("unitWidth", this.doOnUnitWidth)
-        
+        this.doOnScan = this.doOnScan.bind(this);
+        this.core.on("scan", this.doOnScan);
 
         this.topBorder = 0;
         this.bottomBorder = 0;
@@ -24,6 +25,12 @@ module.exports = class MassPainter {
         if (!this.canvas) return;
         this.canvas.width = this.core.getCanvasWidth();
         // console.log("canvas width changed:", this.canvas.width)
+        this.clearDrawCache();
+        this.draw(this.core.drawRangeStart, this.core.drawRangeEnd);
+    }
+
+    doOnScan() {
+        console.log("doOnScan")
         this.clearDrawCache();
         this.draw(this.core.drawRangeStart, this.core.drawRangeEnd);
     }
@@ -43,7 +50,7 @@ module.exports = class MassPainter {
         this.draw(this.core.drawRangeStart, this.core.drawRangeEnd);
     }
 
-    setCanvas(canvas){
+    setCanvas(canvas) {
         this.canvas = canvas;
         if (this.canvas) this.canvas2DCtx = canvas.getContext('2d');
     }
@@ -63,8 +70,8 @@ module.exports = class MassPainter {
         const data = this.core.arrayData;
         var drawcount = 0;
         //console.log("draw", start, end, data.length, w)
-        for (let i = start; i <= end && i>=0; i++) {
-            let x = i  * w;
+        for (let i = start; i <= end && i >= 0; i++) {
+            let x = i * w;
             if (this.hasDrawCache(i)) continue;
             drawcount++;
             //this.drawSingle(x, data[i], i > 0 ? data[i - 1] : null);
@@ -77,7 +84,7 @@ module.exports = class MassPainter {
         this.lastDrawHeight = this.canvas.height;
     }
 
-    hasDrawCache(i){
+    hasDrawCache(i) {
         return this.drawCache[i];
     }
 
@@ -92,11 +99,11 @@ module.exports = class MassPainter {
         this.drawBorder();
     }
 
-    drawBorder(){
+    drawBorder() {
         //console.log("border draw", this.topBorder, this.bottomBorder)
         let canvas = this.canvas;
         let ctx = this.canvas2DCtx
-         ctx.strokeStyle = '#424242';
+        ctx.strokeStyle = '#424242';
         if (this.topBorder > 0) {
             ctx.beginPath();
             ctx.moveTo(0, 0);
@@ -105,8 +112,8 @@ module.exports = class MassPainter {
             ctx.stroke();
         }
         if (this.bottomBorder > 0) {
-            ctx.moveTo(0, canvas.height-1);
-            ctx.lineTo(canvas.width, canvas.height-1);
+            ctx.moveTo(0, canvas.height - 1);
+            ctx.lineTo(canvas.width, canvas.height - 1);
             ctx.lineWidth = this.bottomBorder;
             ctx.stroke();
         }
@@ -129,8 +136,8 @@ module.exports = class MassPainter {
     // getPriceY(price) {
     //     return (this.core.priceHigh - price)*100*this.core.heightPerUnit;
     // }
-    
+
     // getVolumeByY(y) {
-        
+
     // }
 }

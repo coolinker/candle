@@ -5,7 +5,7 @@ let Zip = require('./zip');
 
 module.exports = class DataSourceIO {
     constructor(root) {
-        this.dataSourceRoot = root === undefined ? "../data" : root;
+        this.dataSourceRoot = root === undefined ? "../../data" : root;
         this.allStockIDArray = this.getAllStockIds();
         this.historyPageParams = ""; //"year=2016&jidu=2"; 
         this.stockCompressedCache = {};
@@ -237,7 +237,7 @@ module.exports = class DataSourceIO {
             console.log("----------body", body)
             callback(body);
         }).catch(function(error) {
-            //console.log('request failed', error)
+            console.log('request failed', error)
             callback(null);
         });
     }

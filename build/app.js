@@ -20522,7 +20522,7 @@ module.exports = function () {
         key: 'buildSingle',
         value: function buildSingle(idx, data) {
             var obj = data[idx];
-            if (obj['ex'] !== undefined || obj['changeratio'] === undefined || idx === 0) return;
+            if (obj['ex'] !== undefined || obj['changeratio'] === undefined || idx === 0 || obj['changeratio'] === 0 && data[idx - 1]['changeratio'] === 0) return;
             var preclose = data[idx - 1].close;
             var close = obj.close;
             var inc = Math.round(10000 * obj.changeratio);
@@ -20542,6 +20542,27 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
+var tools = {
+    priceCR: function priceCR(data, n) {
+        var base = n === 0 ? data[n.open] : data[n - 1].close;
+        return (data[n].close - base) / base;
+    },
+
+    diffR: function diffR(val0, val1) {
+        return (val1 - val0) / val0;
+    },
+
+    priceCRA: function priceCRA(period, data, n) {
+        if (n < period) return null;
+        var sum = 0;
+        for (var i = n; i > n - period; i--) {
+            sum += (data[i].high - data[i].low) / data[i].open;
+        }
+        return sum / period;
+    }
+
+};
+
 module.exports = function () {
     function MatchFunctionUtil() {
         _classCallCheck(this, MatchFunctionUtil);
@@ -20551,7 +20572,21 @@ module.exports = function () {
         key: 'composeFunction',
         value: function composeFunction(returnStr) {
             try {
-                var matchFun = new Function('data', 'n', 'return ' + returnStr);
+                var funs = '';
+                for (var att in tools) {
+                    funs += 'let ' + att + ' = ' + tools[att].toString() + '\n';
+                }
+
+                // if (returnStr.indexOf("priceCR") >= 0) {
+                //     funs += 'let priceCR = ' + MatchFunctionUtil.priceCR.toString() + '\n';
+                // }
+                // if (returnStr.indexOf("diffR") >= 0) {
+                //     funs += 'let diffR = ' + MatchFunctionUtil.diffR.toString() + '\n';
+                // }
+                // if (returnStr.indexOf("priceCRA") >= 0) {
+                //     funs += 'let priceCRA = ' + MatchFunctionUtil.priceCRA.toString() + '\n';
+                // }
+                var matchFun = new Function('data', 'n', funs + '\nreturn ' + returnStr);
                 return matchFun;
             } catch (e) {
                 console.log("e", e);
@@ -20560,20 +20595,29 @@ module.exports = function () {
         }
     }, {
         key: 'scan',
-        value: function scan(data, functionStr) {
+        value: function scan(data, functionStr, countInDay) {
             var matchFun = MatchFunctionUtil.composeFunction(functionStr);
             var cases = 0,
-                match = 0;
+                bull = 0,
+                bear = 0;
             for (var i = 0; i < data.length; i++) {
                 if (matchFun(data, i)) {
+                    var d = data[i];
+                    if (!countInDay[d.date]) {
+                        countInDay[d.date] = 0;
+                    }
+                    countInDay[d.date] += 1;
+
                     data[i].match = {
                         fun: matchFun,
                         result: 0
                     };
                     cases++;
-                    var re = MatchFunctionUtil.isBullCase(data, i);
-                    if (re === 1) {
-                        match++;
+                    var re = MatchFunctionUtil.testBullBear(data, i);
+                    if (re > 0) {
+                        bull++;
+                    } else if (re < 0) {
+                        bear++;
                     }
 
                     data[i].match.result = re;
@@ -20584,21 +20628,38 @@ module.exports = function () {
 
             return {
                 cases: cases,
-                match: match
+                bull: bull,
+                bear: bear
             };
         }
+
+        // static isBullBear(data, idx) {
+        //     //let re = Math.round(100 * Math.random()) % 2 === 0;
+        //     let inc = 0.1,
+        //         dec = -0.05,
+        //         price = data[idx].close;
+
+        //     for (let i = idx + 1; i < data.length; i++) {
+        //         let d = data[i];
+        //         if ((d.low - price) / price < dec) return -1;
+        //         if ((d.high - price) / price > inc) return 1;
+        //     }
+        //     return 0;
+        // }
+
     }, {
-        key: 'isBullCase',
-        value: function isBullCase(data, idx) {
+        key: 'testBullBear',
+        value: function testBullBear(data, idx) {
             //let re = Math.round(100 * Math.random()) % 2 === 0;
             var inc = 0.1,
                 dec = -0.05,
-                price = data[idx].close;
-
+                price = data[idx].close,
+                almp = tools.priceCRA(10, data, idx);
+            console.log("isBullCase", almp);
             for (var i = idx + 1; i < data.length; i++) {
                 var d = data[i];
-                if ((d.low - price) / price < dec) return -1;
-                if ((d.high - price) / price > inc) return 1;
+                if ((d.low - price) / price < -3 * almp) return (d.low - price) / price;
+                if ((d.high - price) / price > 3 * almp) return (d.high - price) / price;
             }
             return 0;
         }
@@ -20726,7 +20787,7 @@ module.exports = function () {
     }, {
         key: 'buildSingle',
         value: function buildSingle(idx, period, data) {
-            if (data[idx]['marketCap'] !== undefined || data[idx]['turnover'] === undefined) return;
+            if (data[idx]['marketCap'] !== undefined || !data[idx]['turnover']) return;
 
             var netsum_r0 = 0,
                 netsummax_r0 = -100000000000,
@@ -20788,7 +20849,7 @@ module.exports = function () {
         value: function build(start, end, data) {
 
             for (var i = start; i <= end; i++) {
-                NetSumUtil.buildSingle(i, 150, data);
+                NetSumUtil.buildSingle(i, 250, data);
                 EXDateUtil.buildSingle(i, data);
                 MovingAverageUtil.buildSingle(i, 8, data, 'close');
                 MovingAverageUtil.buildSingle(i, 13, data, 'close');
@@ -20938,6 +20999,7 @@ module.exports = function () {
                 //     console.log(idx, m, d, y, ll, llv, v)
             } else if (field === 'amount' || field === 'netamount' || field === 'r0_net') {
                 v = v * 10000;
+                // if (v < 0) debugger;
             } else if (field === "open" || field === "close" || field === "low" || field === "high") {
                 var lf = 'last' + field;
                 var lv = last[lf];
@@ -21011,6 +21073,8 @@ module.exports = function () {
         this.core.on("range", this.doOnRange);
         this.doOnUnitWidth = this.doOnUnitWidth.bind(this);
         this.core.on("unitWidth", this.doOnUnitWidth);
+        this.doOnScan = this.doOnScan.bind(this);
+        this.core.on("scan", this.doOnScan);
 
         this.topBorder = 0;
         this.bottomBorder = 0;
@@ -21024,6 +21088,13 @@ module.exports = function () {
             if (!this.canvas) return;
             this.canvas.width = this.core.getCanvasWidth();
             // console.log("canvas width changed:", this.canvas.width)
+            this.clearDrawCache();
+            this.draw(this.core.drawRangeStart, this.core.drawRangeEnd);
+        }
+    }, {
+        key: 'doOnScan',
+        value: function doOnScan() {
+            console.log("doOnScan");
             this.clearDrawCache();
             this.draw(this.core.drawRangeStart, this.core.drawRangeEnd);
         }
@@ -21201,11 +21272,23 @@ module.exports = function (_MassPainter) {
             var high = data.high;
             var low = data.low;
             var ctx = this.canvas2DCtx;
+            var w = this.core.unitWidth;
+            var xp = Math.floor(x + w / 2);
+
+            if (data.match) {
+                ctx.setLineDash([2, 4]);
+                ctx.strokeStyle = 'rgba(130, 130, 130, 1)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(xp, 0);
+                ctx.lineTo(xp, this.canvas.height);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+
             var color = data.close === data.open ? '#ffffff' : data.close < data.open ? '#4caf50' : '#f44336';
             ctx.strokeStyle = color;
             ctx.beginPath();
-            var w = this.core.unitWidth;
-            var xp = Math.floor(x + w / 2);
             ctx.moveTo(xp, this.getPriceY(high));
             ctx.lineTo(xp, this.getPriceY(low));
             ctx.stroke();
@@ -21317,8 +21400,10 @@ module.exports = function (_EventEmitter) {
     }, {
         key: 'scanData',
         value: function scanData(str) {
-            var re = _matchfunctionutil2.default.scan(this.arrayData, str);
+            var re = _matchfunctionutil2.default.scan(this.arrayData, str, {});
+            console.log("scanData", re);
             this.emit('scan', re);
+            return re;
         }
     }, {
         key: 'getDefaultRangeFields',
@@ -21381,10 +21466,10 @@ module.exports = function (_EventEmitter) {
             var end = -1;
             var half = Math.ceil(showtotal / 2);
             if (half + idx > max + this.reservedSpaces) {
-                start = max - showtotal + this.reservedSpaces;
+                start = Math.max(0, max - showtotal + this.reservedSpaces);
                 end = max - 1;
             } else {
-                start = idx - half;
+                start = Math.max(0, idx - half);
                 end = Math.min(idx + half, max - 1);
             }
             //console.log("------------", start, idx, end, half, dateStr, max)
@@ -21397,13 +21482,12 @@ module.exports = function (_EventEmitter) {
             if (!this.arrayData) return;
             var kdata = this.arrayData;
 
-            _utilspipe2.default.build(start - 1, end, this.arrayData);
-
             var mlow = Number.MAX_SAFE_INTEGER;
             var mhigh = -1;
             var mvlow = Number.MAX_SAFE_INTEGER;
             var mvhigh = -1;
             var rfds = this.getDefaultRangeFields();
+
             for (var i = start; i <= end; i++) {
                 var data = kdata[i];
                 var high = data.high;
@@ -21421,21 +21505,23 @@ module.exports = function (_EventEmitter) {
                     if (data[att] < hl.low) hl.low = data[att];
                 }
             }
-
             if (this.priceHigh !== mhigh || this.priceLow !== mlow) {
                 this.priceHigh = mhigh;
                 this.priceLow = mlow;
 
                 this.emit("priceRange", true);
             }
-
+            var chnagedRange = void 0;
             for (var _att in this.rangeFields) {
                 if (this.rangeFields[_att].high !== rfds[_att].high || this.rangeFields[_att].low !== rfds[_att].low) {
                     this.rangeFields[_att].high = rfds[_att].high;
                     this.rangeFields[_att].low = rfds[_att].low;
-                    this.emit(_att + "Range", true);
-                    console.log("event-----", _att + "Range", rfds[_att]);
+                    chnagedRange = _att;
                 }
+            }
+            if (chnagedRange) {
+                this.emit(chnagedRange + "Range");
+                console.log("event-----", chnagedRange + "Range", rfds[chnagedRange]);
             }
 
             // if (this.volumeHigh !== mvhigh || this.volumeLow !== mvlow) {
@@ -21481,6 +21567,7 @@ module.exports = function (_EventEmitter) {
             var len = kdata.length;
             var i = len > 4500 ? len - 4500 : 0;
             this.arrayData = kdata.slice(i, len);
+            _utilspipe2.default.build(0, this.arrayData.length - 1, this.arrayData);
             for (; i < len; i++) {
                 this.dateIndexMap[kdata[i].date] = i;
             }
@@ -21699,6 +21786,8 @@ module.exports = function (_MassPainter) {
         var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(VolumePainter).call(this, painterCore, canvas));
 
         _this.doOnAmountRange = _this.doOnAmountRange.bind(_this);
+        _this.core.on("amountRange", _this.doOnAmountRange);
+        _this.core.on("netsummax_r0Range", _this.doOnAmountRange);
         _this.core.on("netsummax_r0_durationRange", _this.doOnAmountRange);
 
         _this.doOnMoneyFlow = _this.doOnMoneyFlow.bind(_this);
@@ -21732,7 +21821,6 @@ module.exports = function (_MassPainter) {
             var h = this.canvas.height;
             var lastv = this.heightPerUnit;
             this.heightPerUnit = h / this.core.rangeFields.amount.high;
-
             var r = Math.max(this.core.rangeFields.netsummax_r0.high, -this.core.rangeFields.netsummax_r0.low);
             this.heightPerNetSumMax_r0Unit = 0.5 * h / r;
 
@@ -21752,6 +21840,17 @@ module.exports = function (_MassPainter) {
             var data_pre = idx > 0 ? dataArr[idx - 1] : null;
             var ctx = this.canvas2DCtx;
             var w = this.core.unitWidth;
+            var xp = Math.floor(x + w / 2);
+            if (data.match) {
+                ctx.setLineDash([2, 4]);
+                ctx.strokeStyle = 'rgba(130, 130, 130, 1)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(xp, 0);
+                ctx.lineTo(xp, this.canvas.height);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
 
             if (data.netsummax_r0 !== undefined) {
                 var nsmr0h = Math.round(data.netsummax_r0 * this.heightPerNetSumMax_r0Unit);
@@ -21780,15 +21879,15 @@ module.exports = function (_MassPainter) {
 
             var open = data.open;
             var close = data.close;
-            var preclose = data_pre.close;
             var vol = data.amount;
 
-            var color = close < open ? '#4caf50' : close > open ? '#f44336' : preclose > close ? '#4caf50' : '#f44336';
-            ctx.strokeStyle = color;
-            ctx.fillStyle = color;
-
-            ctx.fillRect(x, this.canvas.height, w - 1, -Math.round(vol * this.heightPerUnit));
-
+            if (data_pre) {
+                var preclose = data_pre.close;
+                var color = close < open ? '#4caf50' : close > open ? '#f44336' : preclose > close ? '#4caf50' : '#f44336';
+                ctx.strokeStyle = color;
+                ctx.fillStyle = color;
+                ctx.fillRect(x, this.canvas.height, w - 1, -Math.round(vol * this.heightPerUnit));
+            }
             //    this.drawMoneyFlow(x, idx, dataArr);
             if (data.netamount !== undefined) {
                 var rox_net = data.netamount - data.r0_net;
@@ -21900,7 +21999,9 @@ pointerPainter.mouseDblclickHandler = function (e) {
     var y = e.y;
     var candleCanvasX = parseInt(candlePainter.canvas.style.left, 10);
     var dataindex = painterCore.getDataIndexByX(x - candleCanvasX);
+
     var data = painterCore.getDataByIndex(dataindex);
+    console.log("mouseDblclickHandler", data);
 };
 pointerPainter.mouseMoveHandler = function (e) {
     if (!painterCore.arrayData) return;
@@ -21936,10 +22037,11 @@ var CandleApp = function (_React$Component) {
         _this.handleSidChanged = _this.handleSidChanged.bind(_this);
         _this.handleSidInputChagned = _this.handleSidInputChagned.bind(_this);
         _this.handleMatchTextAreaChange = _this.handleMatchTextAreaChange.bind(_this);
+        _this.handleMatchTextAreaKeyUp = _this.handleMatchTextAreaKeyUp.bind(_this);
         _this.state = {
             windowWidth: window.innerWidth,
             windowHeight: window.innerHeight,
-            matchStr: '(data[n].close  - data[n].ave_close_8)/data[n].ave_close_8 >0.05 && data[n-1].low > data[n-1].ave_close_8 && data[n].low > data[n].ave_close_8 && data[n].ave_close_8 > data[n].ave_close_13&&  data[n].ave_close_13 > data[n].ave_close_21 && data[n].ave_close_8 > data[n-1].ave_close_8 '
+            matchStr: 'diffR(data[n].ave_close_8, data[n].high) > priceCRA(5, data, n)'
         };
         return _this;
     }
@@ -21978,15 +22080,15 @@ var CandleApp = function (_React$Component) {
                     'div',
                     { ref: 'toolbar', height: toolbarHeight, style: toolbarStyle },
                     _react2.default.createElement(_forminput2.default, { ref: 'sidInput', style: { color: '#c0c0c0', width: '65px', borderStyle: 'groove', borderColor: '#424242', backgroundColor: 'transparent' },
-                        validRegex: "^(sh|sz|SH|SZ)\\d{6}$", value: 'SH600022',
-                        handleInputChanged: this.handleSidInputChagned, onKeyDown: function onKeyDown(e) {
+                        validRegex: "^(sh|sz|SH|SZ)\\d{6}$", value: 'SH999999',
+                        handleInputChanged: this.handleSidInputChagned, onKeyDownHandler: function onKeyDownHandler(e) {
                             e.nativeEvent.stopImmediatePropagation();
                         } }),
                     _react2.default.createElement('div', { style: { position: 'absolute', top: '30px', color: '#c0c0c0', zIndex: 100 }, ref: function ref(_ref) {
                             return _this2.suggest = _ref;
                         } }),
                     _react2.default.createElement(_dateinput2.default, { ref: 'dateInput', value: '07/04/2016', style: { color: '#c0c0c0', width: '130px', borderStyle: 'groove', borderColor: '#424242', backgroundColor: 'transparent' },
-                        handleInputCompleted: this.handleDateChanged, onKeyDown: function onKeyDown(e) {
+                        handleInputCompleted: this.handleDateChanged, onKeyDownHandler: function onKeyDownHandler(e) {
                             e.nativeEvent.stopImmediatePropagation();
                         } }),
                     _react2.default.createElement(
@@ -21999,14 +22101,21 @@ var CandleApp = function (_React$Component) {
                     _react2.default.createElement(
                         'div',
                         { style: { position: 'absolute', right: '20px', color: '#f0f0f0', top: '30px' }, ref: function ref(_ref3) {
-                                return _this2.detailinfo = _ref3;
+                                return _this2.scanAllInfo = _ref3;
                             } },
                         '0/0/0'
                     ),
-                    _react2.default.createElement('textarea', { value: this.state.matchStr, style: { position: 'absolute', right: '20px', color: '#c0c0c0', top: '50px', zIndex: 100, width: '200px', height: '50px', background: 'transparent' },
-                        ref: function ref(_ref4) {
-                            return _this2.matchTexArea = _ref4;
-                        }, onChange: this.handleMatchTextAreaChange, onKeyDown: function onKeyDown(e) {
+                    _react2.default.createElement(
+                        'div',
+                        { style: { position: 'absolute', right: '420px', color: '#f0f0f0', top: '30px' }, ref: function ref(_ref4) {
+                                return _this2.scanInfo = _ref4;
+                            } },
+                        '0/0'
+                    ),
+                    _react2.default.createElement('textarea', { value: this.state.matchStr, style: { position: 'absolute', right: '20px', color: 'rgba(230, 230, 230, 0.5)', borderColor: 'rgba(230, 230, 230, 0.1)', top: '50px', zIndex: 100, width: '400px', height: '500px', background: 'transparent', 'fontSize': '10px' },
+                        ref: function ref(_ref5) {
+                            return _this2.matchTexArea = _ref5;
+                        }, onChange: this.handleMatchTextAreaChange, onKeyUp: this.handleMatchTextAreaKeyUp, onKeyDown: function onKeyDown(e) {
                             e.nativeEvent.stopImmediatePropagation();
                         } })
                 ),
@@ -22097,10 +22206,22 @@ var CandleApp = function (_React$Component) {
                         _io2.default.workerScanAll(matchStr, function (cnts) {
                             // && data[n].ave_close_8 > data[n-2].ave_close_8 && data[n].ave_close_8 > data[n-3].ave_close_8
                             count = cnts.count, match += cnts.match, cases += cnts.cases;
-                            me.detailinfo.innerHTML = Math.round(100 * match / cases) + '%/' + cases + '/' + count;
+                            me.scanAllInfo.innerHTML = Math.round(100 * match / cases) + '%/' + cases + '/' + count;
                         });
                 });
             }, 3000);
+        }
+    }, {
+        key: 'handleMatchTextAreaKeyUp',
+        value: function handleMatchTextAreaKeyUp(e) {
+            if (e.keyCode === 13 && e.ctrlKey) {
+                // console.log("handleMatchTextAreaKeyUp", this.state.matchStr)
+                var result = painterCore.scanData(this.state.matchStr);
+                var bull = result.bull;
+                var bear = result.bear;
+                var cases = result.cases;
+                this.scanInfo.innerHTML = bull + '/' + bear + '/' + cases;
+            }
         }
     }, {
         key: 'handleMatchTextAreaChange',
@@ -22108,8 +22229,6 @@ var CandleApp = function (_React$Component) {
             this.setState({
                 matchStr: e.target.value
             });
-            e.stopPropagation();
-            painterCore.scanData(this.state.matchStr);
         }
     }, {
         key: 'loadDataBySid',
@@ -22138,6 +22257,7 @@ var CandleApp = function (_React$Component) {
             var me = this;
             this.timeoutHandleSidInputChagned = setTimeout(function () {
                 var sidin = me.refs.sidInput.state.value;
+                if (sidin === '') return;
 
                 _io2.default.sidSuggest(sidin, function (arr) {
                     //console.log(arr)
@@ -22146,12 +22266,14 @@ var CandleApp = function (_React$Component) {
                         ssid = void 0;
                     for (var i = 0; i < arr.length; i++) {
                         var sid = arr[i].sid.toUpperCase();
-                        if (_stockids2.default.validSid(sid)) {
+                        sid = _stockids2.default.validSid(sid);
+                        if (sid) {
                             list += sid + ' ' + arr[i].name + '<br/>';
                             count++;
                             ssid = sid;
                         }
                     }
+
                     console.log("count", count, ssid);
                     if (count === 1) me.handleSidChanged(ssid);
                     me.suggest.innerHTML = list;
@@ -22319,6 +22441,7 @@ module.exports = function (self) {
 module.scanAll = function scanAll(patternStr, callback) {
     //let patternFun = new Function('data', 'n', 'return ' + patternStr);
     var total = _stockids2.default.getTotalCount();
+    var countInDay = {};
     for (var i = 0; i < total; i++) {
         var sid = _stockids2.default.getSidByIndex(i);
         var cmpdata = module.getStockDataSync(sid, stockFields);
@@ -22328,13 +22451,14 @@ module.scanAll = function scanAll(patternStr, callback) {
         }
         var decmpdata = _zip2.default.decompressStockJson(cmpdata);
         _utilspipe2.default.build(0, decmpdata.length - 1, decmpdata);
-        var m = _matchfunctionutil2.default.scan(decmpdata, patternStr);
+        var m = _matchfunctionutil2.default.scan(decmpdata, patternStr, countInDay);
         //module.matchPattern(decmpdata, patternFun);
         // console.log(sid, decmpdata.length, m)
         callback({
             count: i,
             match: m.match,
             cases: m.cases,
+            countInDay: countInDay,
             finished: i === total
         }, i === total);
     }
@@ -22616,7 +22740,7 @@ var FormInput = function (_React$Component) {
         key: 'render',
         value: function render() {
 
-            return _react2.default.createElement('input', { ref: 'ele', type: this.props.type, value: this.formatValue(this.state.value), onChange: this.handleChange, style: this.props.style });
+            return _react2.default.createElement('input', { ref: 'ele', type: this.props.type, value: this.formatValue(this.state.value), onChange: this.handleChange, style: this.props.style, onKeyDown: this.props.onKeyDownHandler });
         }
     }]);
 
@@ -22702,12 +22826,13 @@ var IO = function () {
             }).then(function (res) {
                 return res.text();
             }).then(function (text) {
-                if (text === '') {
+                var result = text.split('"')[1];
+                if (result === '') {
                     callback([]);
                     return;
                 }
-                var result = text.split('"')[1];
                 var secs = result.split(';');
+
                 var stocks = [];
                 for (var i = 0; i < secs.length; i++) {
                     var arr = secs[i].split(',');
@@ -22889,7 +23014,7 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _io = require("./io");
+var _io = require('./io');
 
 var _io2 = _interopRequireDefault(_io);
 
@@ -22903,7 +23028,7 @@ var StockIDs = function () {
     }
 
     _createClass(StockIDs, null, [{
-        key: "load",
+        key: 'load',
         value: function load(ids) {
             StockIDs.arrayData = ids;
             for (var i = 0; i < ids.length; i++) {
@@ -22911,38 +23036,38 @@ var StockIDs = function () {
             }
         }
     }, {
-        key: "validSid",
+        key: 'validSid',
         value: function validSid(sid) {
-            return StockIDs.idIndexMap[sid] !== undefined;
+            if (sid === 'SH000001') sid = 'SH999999';
+            return StockIDs.idIndexMap[sid] !== undefined ? sid : null;
         }
     }, {
-        key: "getNext",
+        key: 'getNext',
         value: function getNext(id) {
             var idx = StockIDs.idIndexMap[id];
             if (idx === StockIDs.arrayData.length - 1) return null;
-
             return StockIDs.arrayData[idx + 1];
         }
     }, {
-        key: "getPrevious",
+        key: 'getPrevious',
         value: function getPrevious(id) {
             var idx = StockIDs.idIndexMap[id];
             if (idx === 0) return null;
             return StockIDs.arrayData[idx - 1];
         }
     }, {
-        key: "getIDsByIndex",
+        key: 'getIDsByIndex',
         value: function getIDsByIndex(start, count) {
             if (StockIDs.arrayData === null) return [];
             return StockIDs.arrayData.slice(start, start + count);
         }
     }, {
-        key: "getTotalCount",
+        key: 'getTotalCount',
         value: function getTotalCount() {
             return StockIDs.arrayData.length;
         }
     }, {
-        key: "getSidByIndex",
+        key: 'getSidByIndex',
         value: function getSidByIndex(idx) {
             return StockIDs.arrayData[idx];
         }

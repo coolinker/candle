@@ -33,6 +33,7 @@ module.exports = function(self) {
 module.scanAll = function scanAll(patternStr, callback) {
     //let patternFun = new Function('data', 'n', 'return ' + patternStr);
     let total = StockIDs.getTotalCount();
+    let countInDay = {};
     for (let i = 0; i < total; i++) {
         let sid = StockIDs.getSidByIndex(i);
         let cmpdata = module.getStockDataSync(sid, stockFields);
@@ -42,13 +43,14 @@ module.scanAll = function scanAll(patternStr, callback) {
         }
         let decmpdata = Zip.decompressStockJson(cmpdata);
         UtilsPipe.build(0, decmpdata.length - 1, decmpdata);
-        let m = MatchFunctionUtil.scan(decmpdata, patternStr);
+        let m = MatchFunctionUtil.scan(decmpdata, patternStr, countInDay);
         //module.matchPattern(decmpdata, patternFun);
         // console.log(sid, decmpdata.length, m)
         callback({
             count: i,
             match: m.match,
             cases: m.cases,
+            countInDay: countInDay,
             finished: i === total
         }, i === total);
     }

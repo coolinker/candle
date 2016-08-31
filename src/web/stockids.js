@@ -12,13 +12,13 @@ class StockIDs {
     }
 
     static validSid(sid) {
-        return StockIDs.idIndexMap[sid] !== undefined;
+        if (sid === 'SH000001') sid = 'SH999999';
+        return StockIDs.idIndexMap[sid] !== undefined ? sid : null;
     }
 
     static getNext(id) {
         let idx = StockIDs.idIndexMap[id];
         if (idx === StockIDs.arrayData.length - 1) return null;
-
         return StockIDs.arrayData[idx + 1]
     }
 

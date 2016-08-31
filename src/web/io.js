@@ -16,12 +16,13 @@ class IO {
         }).then(function(res) {
             return res.text();
         }).then(function(text) {
-            if (text === '') {
+            let result = text.split('"')[1];
+            if (result === '') {
                 callback([]);
                 return;
             }
-            let result = text.split('"')[1];
             let secs = result.split(';');
+
             let stocks = [];
             for (let i = 0; i < secs.length; i++) {
                 let arr = secs[i].split(',')

@@ -121,6 +121,7 @@ module.exports = class Zip {
             //     console.log(idx, m, d, y, ll, llv, v)
         } else if (field === 'amount' || field === 'netamount' || field === 'r0_net') {
             v = v * 10000;
+            // if (v < 0) debugger;
         } else if (field === "open" || field === "close" || field === "low" || field === "high") {
             let lf = 'last' + field;
             let lv = last[lf];
