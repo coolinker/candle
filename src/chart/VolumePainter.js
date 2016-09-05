@@ -3,7 +3,7 @@ let MassPainter = require('./MassPainter');
 module.exports = class VolumePainter extends MassPainter {
     constructor(painterCore, canvas) {
         super(painterCore, canvas);
-
+        this.topPadding = 25;
         this.doOnAmountRange = this.doOnAmountRange.bind(this);
         this.core.on("amountRange", this.doOnAmountRange);
         this.core.on("netsummax_r0Range", this.doOnAmountRange);
@@ -11,6 +11,7 @@ module.exports = class VolumePainter extends MassPainter {
 
         this.doOnMoneyFlow = this.doOnMoneyFlow.bind(this);
         this.core.on("moneyFlow", this.doOnMoneyFlow);
+
     }
 
     doOnMoneyFlow() {
@@ -32,8 +33,10 @@ module.exports = class VolumePainter extends MassPainter {
 
     updateHeightPerUnit() {
         if (!this.canvas) return;
-        let h = this.canvas.height;
+        let h = this.canvas.height - this.topPadding;
         let lastv = this.heightPerUnit;
+        let ha = this.getAmountY(this.core.rangeFields.amount.high);
+        if (this.heightPerUnit > 0 && ha > 0 && ha < 2 * this.topPadding) return false;
         this.heightPerUnit = h / this.core.rangeFields.amount.high;
         let r = Math.max(this.core.rangeFields.netsummax_r0.high, -this.core.rangeFields.netsummax_r0.low)
         this.heightPerNetSumMax_r0Unit = 0.5 * h / r;
@@ -41,6 +44,7 @@ module.exports = class VolumePainter extends MassPainter {
         let dh = this.core.rangeFields.netsummax_r0_duration.high;
         this.heightPerNetSumMax_r0_DurationUnit = 0.5 * h / dh;
 
+        return true;
     }
 
     getAmountY(amount) {
@@ -86,13 +90,15 @@ module.exports = class VolumePainter extends MassPainter {
             ctx.moveTo(x, 0);
             ctx.lineTo(x, nsmr0dh);
             ctx.strokeStyle = 'rgba(66, 66, 66, 0.8)';
-            ctx.lineWidth = 0.5;
+            ctx.lineWidth = 1;
             ctx.stroke();
+            ctx.restore();
         }
 
         let open = data.open;
         let close = data.close;
         let vol = data.amount;
+
 
         if (data_pre) {
             let preclose = data_pre.close;
@@ -125,8 +131,8 @@ module.exports = class VolumePainter extends MassPainter {
 
             ctx.strokeStyle = avecolors[i];
             ctx.beginPath();
-            ctx.moveTo(x + unitWidth / 2, avy);
-            ctx.lineTo(x - unitWidth / 2, avpy);
+            ctx.moveTo(x + Math.floor(unitWidth / 2), avy);
+            ctx.lineTo(x - Math.ceil(unitWidth / 2), avpy);
 
             if (this.hasDrawCache(idx + 1)) {
                 let data_next = dataArr[idx + 1];

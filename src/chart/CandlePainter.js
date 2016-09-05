@@ -6,23 +6,30 @@ module.exports = class CandlePainter extends MassPainter {
 
         this.doOnPriceRange = this.doOnPriceRange.bind(this);
         this.core.on("priceRange", this.doOnPriceRange);
-        this.topPadding = 20;
-        this.bottomPadding = 20;
+        this.topPadding = 50;
+        this.bottomPadding = 50;
         this.bottomBorder = 1;
         this.topBorder = 1;
     }
 
     doOnPriceRange() {
-        this.updateHeightPerUnit();
-        this.clearDrawCache();
+        if (this.updateHeightPerUnit()) {
+            this.clearDrawCache();
+        }
+
     }
 
     updateHeightPerUnit() {
-        if (!this.canvas) return;
+        if (!this.canvas || this.core.priceHigh === 0) return false;
+        let ly = this.getPriceY(this.core.priceLow);
+        let hy = this.getPriceY(this.core.priceHigh);
         let h = this.canvas.height;
         let lastv = this.heightPerUnit;
+        if (this.heightPerUnit && (ly < h && ly > h - 2 * this.bottomPadding && hy < 2 * this.topPadding && hy > 0)) return false;
+        // console.log(this.heightPerUnit, this.core.priceLow, ly, this.core.priceHigh, hy);
+
         this.heightPerUnit = (h - this.bottomPadding - this.topPadding) / (100 * (this.core.priceHigh - this.core.priceLow));
-        // console.log("updateHeightPerUnit", lastv, h - this.bottomPadding, this.core.priceHigh, this.core.priceLow, this.heightPerUnit)
+        //console.log("updateHeightPerUnit", lastv, h - this.bottomPadding, this.core.priceHigh, this.core.priceLow, this.heightPerUnit)
         return lastv != this.heightPerUnit;
     }
 

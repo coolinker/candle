@@ -9,8 +9,8 @@ module.exports = class PainterCore extends EventEmitter {
         super();
         this.reset();
         this.aves = [8, 13, 21, 55];
-        this.avecolors = ["#FFEB3B", "#00BCD4", "#9C27B0", "#DBDBDB"];
-
+        //this.avecolors = ["#FFEB3B", "#00BCD4", "#9C27B0", "#DBDBDB"];
+        this.avecolors = ['rgba(255, 235, 60, 1)', "#00BCD4", "#9C27B0", "#DBDBDB"];
     }
 
     reset() {

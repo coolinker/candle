@@ -12,10 +12,10 @@ let dateStr = '08/23/2016';
 // });
 
 
-// dataBuilder.updateJson(new Date(dateStr), 0, function(idx, count) {
-// console.log("finished updateJson => updateMoneyFlow", idx, count)
-dataBuilder.updateMoneyFlow(2850, new Date(dateStr), function(end) {
-    console.log("updateMoneyFlow => updateMarketMoneyFlow", end);
-    dataBuilder.updateMarketMoneyFlow(new Date(dateStr));
+dataBuilder.updateJson(new Date(dateStr), 0, function(idx, count) {
+    console.log("finished updateJson => updateMoneyFlow", idx, count)
+    dataBuilder.updateMoneyFlow(0, new Date(dateStr), function(end) {
+        console.log("updateMoneyFlow => updateMarketMoneyFlow", end);
+        dataBuilder.updateMarketMoneyFlow(new Date(dateStr));
+    });
 });
-// });

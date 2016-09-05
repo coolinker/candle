@@ -9,14 +9,48 @@ let tools = {
         return (val1 - val0) / val0;
     },
 
-    priceCRA: function(period, data, n) {
+    priceCRA: function(data, n, period) {
         if (n < period) return null;
         let sum = 0;
         for (let i = n; i > n - period; i--) {
             sum += (data[i].high - data[i].low) / data[i].open;
         }
         return sum / period;
+    },
+
+    aboveS: function(data, n, field, period) {
+        if (!period) return 0;
+        let price = data[n].close;
+        let sum = 0;
+        for (let i = n; i >= 0 && i > n - period; i--) {
+            if ((data[i].high + data[i].low) / 2 < price) continue;
+            // console.log(data[i].date, data[i][field])
+            sum += data[i][field];
+        }
+
+        return sum;
+    },
+
+    bellowS: function(data, n, field, period) {
+        if (!period) return 0;
+        let price = data[n].close;
+        let sum = 0;
+        for (let i = n; i >= 0 && i > n - period; i--) {
+            if ((data[i].high + data[i].low) / 2 >= price) continue;
+            sum += data[i][field];
+        }
+        return sum;
+    },
+
+    sum: function(data, n, field, period) {
+        if (!period) return 0;
+        let sum = 0;
+        for (let i = n; i >= 0 && i > n - period; i--) {
+            sum += data[i][field];
+        }
+        return sum;
     }
+
 
 };
 
@@ -25,7 +59,7 @@ module.exports = class MatchFunctionUtil {
 
     static composeFunction(returnStr) {
         try {
-            let funs = '';
+            let funs = 'let dn = d[n];\n';
             for (let att in tools) {
                 funs += 'let ' + att + ' = ' + tools[att].toString() + '\n';
             }
@@ -39,7 +73,7 @@ module.exports = class MatchFunctionUtil {
             // if (returnStr.indexOf("priceCRA") >= 0) {
             //     funs += 'let priceCRA = ' + MatchFunctionUtil.priceCRA.toString() + '\n';
             // }
-            let matchFun = new Function('data', 'n', funs + '\nreturn ' + returnStr);
+            let matchFun = new Function('d', 'n', funs + '\nreturn ' + returnStr);
             return matchFun;
         } catch (e) {
             console.log("e", e);
@@ -104,8 +138,7 @@ module.exports = class MatchFunctionUtil {
         let inc = 0.1,
             dec = -0.05,
             price = data[idx].close,
-            almp = tools.priceCRA(10, data, idx);
-        console.log("isBullCase", almp)
+            almp = tools.priceCRA(data, idx, 10);
         for (let i = idx + 1; i < data.length; i++) {
             let d = data[i];
             if ((d.low - price) / price < -3 * almp) return (d.low - price) / price;

@@ -20552,13 +20552,46 @@ var tools = {
         return (val1 - val0) / val0;
     },
 
-    priceCRA: function priceCRA(period, data, n) {
+    priceCRA: function priceCRA(data, n, period) {
         if (n < period) return null;
         var sum = 0;
         for (var i = n; i > n - period; i--) {
             sum += (data[i].high - data[i].low) / data[i].open;
         }
         return sum / period;
+    },
+
+    aboveS: function aboveS(data, n, field, period) {
+        if (!period) return 0;
+        var price = data[n].close;
+        var sum = 0;
+        for (var i = n; i >= 0 && i > n - period; i--) {
+            if ((data[i].high + data[i].low) / 2 < price) continue;
+            // console.log(data[i].date, data[i][field])
+            sum += data[i][field];
+        }
+
+        return sum;
+    },
+
+    bellowS: function bellowS(data, n, field, period) {
+        if (!period) return 0;
+        var price = data[n].close;
+        var sum = 0;
+        for (var i = n; i >= 0 && i > n - period; i--) {
+            if ((data[i].high + data[i].low) / 2 >= price) continue;
+            sum += data[i][field];
+        }
+        return sum;
+    },
+
+    sum: function sum(data, n, field, period) {
+        if (!period) return 0;
+        var sum = 0;
+        for (var i = n; i >= 0 && i > n - period; i--) {
+            sum += data[i][field];
+        }
+        return sum;
     }
 
 };
@@ -20572,7 +20605,7 @@ module.exports = function () {
         key: 'composeFunction',
         value: function composeFunction(returnStr) {
             try {
-                var funs = '';
+                var funs = 'let dn = d[n];\n';
                 for (var att in tools) {
                     funs += 'let ' + att + ' = ' + tools[att].toString() + '\n';
                 }
@@ -20586,7 +20619,7 @@ module.exports = function () {
                 // if (returnStr.indexOf("priceCRA") >= 0) {
                 //     funs += 'let priceCRA = ' + MatchFunctionUtil.priceCRA.toString() + '\n';
                 // }
-                var matchFun = new Function('data', 'n', funs + '\nreturn ' + returnStr);
+                var matchFun = new Function('d', 'n', funs + '\nreturn ' + returnStr);
                 return matchFun;
             } catch (e) {
                 console.log("e", e);
@@ -20654,8 +20687,7 @@ module.exports = function () {
             var inc = 0.1,
                 dec = -0.05,
                 price = data[idx].close,
-                almp = tools.priceCRA(10, data, idx);
-            console.log("isBullCase", almp);
+                almp = tools.priceCRA(data, idx, 10);
             for (var i = idx + 1; i < data.length; i++) {
                 var d = data[i];
                 if ((d.low - price) / price < -3 * almp) return (d.low - price) / price;
@@ -21239,8 +21271,8 @@ module.exports = function (_MassPainter) {
 
         _this.doOnPriceRange = _this.doOnPriceRange.bind(_this);
         _this.core.on("priceRange", _this.doOnPriceRange);
-        _this.topPadding = 20;
-        _this.bottomPadding = 20;
+        _this.topPadding = 50;
+        _this.bottomPadding = 50;
         _this.bottomBorder = 1;
         _this.topBorder = 1;
         return _this;
@@ -21249,17 +21281,23 @@ module.exports = function (_MassPainter) {
     _createClass(CandlePainter, [{
         key: 'doOnPriceRange',
         value: function doOnPriceRange() {
-            this.updateHeightPerUnit();
-            this.clearDrawCache();
+            if (this.updateHeightPerUnit()) {
+                this.clearDrawCache();
+            }
         }
     }, {
         key: 'updateHeightPerUnit',
         value: function updateHeightPerUnit() {
-            if (!this.canvas) return;
+            if (!this.canvas || this.core.priceHigh === 0) return false;
+            var ly = this.getPriceY(this.core.priceLow);
+            var hy = this.getPriceY(this.core.priceHigh);
             var h = this.canvas.height;
             var lastv = this.heightPerUnit;
+            if (this.heightPerUnit && ly < h && ly > h - 2 * this.bottomPadding && hy < 2 * this.topPadding && hy > 0) return false;
+            // console.log(this.heightPerUnit, this.core.priceLow, ly, this.core.priceHigh, hy);
+
             this.heightPerUnit = (h - this.bottomPadding - this.topPadding) / (100 * (this.core.priceHigh - this.core.priceLow));
-            // console.log("updateHeightPerUnit", lastv, h - this.bottomPadding, this.core.priceHigh, this.core.priceLow, this.heightPerUnit)
+            //console.log("updateHeightPerUnit", lastv, h - this.bottomPadding, this.core.priceHigh, this.core.priceLow, this.heightPerUnit)
             return lastv != this.heightPerUnit;
         }
     }, {
@@ -21375,8 +21413,8 @@ module.exports = function (_EventEmitter) {
 
         _this.reset();
         _this.aves = [8, 13, 21, 55];
-        _this.avecolors = ["#FFEB3B", "#00BCD4", "#9C27B0", "#DBDBDB"];
-
+        //this.avecolors = ["#FFEB3B", "#00BCD4", "#9C27B0", "#DBDBDB"];
+        _this.avecolors = ['rgba(255, 235, 60, 1)', "#00BCD4", "#9C27B0", "#DBDBDB"];
         return _this;
     }
 
@@ -21612,7 +21650,6 @@ module.exports = function () {
         this.doOnRange = this.doOnRange.bind(this);
         this.core.on("range", this.doOnRange);
         this.mouseMoveHandler = null;
-        this.lastPointerX = -1;
     }
 
     _createClass(PointerPainter, [{
@@ -21658,48 +21695,45 @@ module.exports = function () {
         }
     }, {
         key: "updatePointer",
-        value: function updatePointer(x, dataIndex, valueToY) {
+        value: function updatePointer(x, y, dataIndex, valueToY) {
             x = x - x % this.core.unitWidth;
-            if (this.lastPointerX !== x) {
-                this.clear();
-                var data = this.core.getDataByIndex(dataIndex);
-                var pdata = this.core.getDataByIndex(dataIndex - 1);
-                this.drawPointer(x);
-                this.lastPointerX = x;
+            this.clear();
+            var data = this.core.getDataByIndex(dataIndex);
+            var pdata = this.core.getDataByIndex(dataIndex - 1);
+            this.drawPointer(x, y);
 
-                var Ys = this.getDisplayYs(data, valueToY);
+            var Ys = this.getDisplayYs(data, valueToY);
 
-                var vol = data.amount;
-                var voly = valueToY.amount;
-                var xpos = x + this.core.unitWidth + 2;
-                //this.drawNumber(vol , xpos, Ys.volume, "rgba(255, 255, 255, 0.5)");
-                this.drawNumber(Math.round(data.amount / 10000) + "万", xpos, Ys.amount, "rgba(255, 255, 255, 0.5)");
-                //this.drawNumberLine(x + this.core.unitWidth / 2, voly, xpos, Ys.volume);
+            var vol = data.amount;
+            var voly = valueToY.amount;
+            var xpos = x + this.core.unitWidth + 2;
+            //this.drawNumber(vol , xpos, Ys.volume, "rgba(255, 255, 255, 0.5)");
+            this.drawNumber(Math.round(data.amount / 10000) + "万", xpos, Ys.amount, "rgba(255, 255, 255, 0.5)");
+            //this.drawNumberLine(x + this.core.unitWidth / 2, voly, xpos, Ys.volume);
 
-                this.drawNumber(data.open, xpos, Ys.open, "rgba(255, 255, 255, 0.5)");
-                //this.drawNumberLine(x + this.core.unitWidth / 2, valueToY.open, xpos, Ys.open);
-                //f44336  4caf50
-                if (pdata) {
-                    var cls = data.close;
-                    var inc = Math.round(10000 * (cls - pdata.close) / pdata.close) / 100;
-                    var display = inc === 0 ? cls : cls + '(' + inc + '%)';
-                    var clr = inc === 0 ? "rgba(255, 255, 255, 0.8)" : inc > 0 ? "rgba(244, 67, 54, 0.8)" : "rgba(76, 175, 80, 0.8)";
-                    this.drawNumber(display, xpos, Ys.close, clr);
-                } else {
-                    this.drawNumber(data.close, xpos, Ys.close, "rgba(255, 255, 255, 1)");
-                }
-
-                //this.drawNumberLine(x + this.core.unitWidth / 2, valueToY.close, xpos, Ys.close);
-
-                this.drawNumber(data.high, xpos, Ys.high, "rgba(255, 255, 255, 0.5)");
-                //this.drawNumberLine(x + this.core.unitWidth / 2, valueToY.high, xpos, Ys.high);
-
-                this.drawNumber(data.low, xpos, Ys.low, "rgba(255, 255, 255, 0.5)");
-                //this.drawNumberLine(x + this.core.unitWidth / 2, valueToY.low, xpos, Ys.low);
-
-                this.drawNumber(data.date, xpos, Ys.date, "rgba(255, 255, 255, 0.5)");
-                //this.drawNumberLine(x + this.core.unitWidth / 2, valueToY.date, xpos, Ys.date);
+            this.drawNumber(data.open, xpos, Ys.open, "rgba(255, 255, 255, 0.5)");
+            //this.drawNumberLine(x + this.core.unitWidth / 2, valueToY.open, xpos, Ys.open);
+            //f44336  4caf50
+            if (pdata) {
+                var cls = data.close;
+                var inc = Math.round(10000 * (cls - pdata.close) / pdata.close) / 100;
+                var display = inc === 0 ? cls : cls + '(' + inc + '%)';
+                var clr = inc === 0 ? "rgba(255, 255, 255, 0.8)" : inc > 0 ? "rgba(244, 67, 54, 0.8)" : "rgba(76, 175, 80, 0.8)";
+                this.drawNumber(display, xpos, Ys.close, clr);
+            } else {
+                this.drawNumber(data.close, xpos, Ys.close, "rgba(255, 255, 255, 1)");
             }
+
+            //this.drawNumberLine(x + this.core.unitWidth / 2, valueToY.close, xpos, Ys.close);
+
+            this.drawNumber(data.high, xpos, Ys.high, "rgba(255, 255, 255, 0.5)");
+            //this.drawNumberLine(x + this.core.unitWidth / 2, valueToY.high, xpos, Ys.high);
+
+            this.drawNumber(data.low, xpos, Ys.low, "rgba(255, 255, 255, 0.5)");
+            //this.drawNumberLine(x + this.core.unitWidth / 2, valueToY.low, xpos, Ys.low);
+
+            this.drawNumber(data.date, xpos, Ys.date, "rgba(255, 255, 255, 0.5)");
+            //this.drawNumberLine(x + this.core.unitWidth / 2, valueToY.date, xpos, Ys.date);
         }
     }, {
         key: "clear",
@@ -21727,16 +21761,23 @@ module.exports = function () {
         }
     }, {
         key: "drawPointer",
-        value: function drawPointer(x) {
+        value: function drawPointer(x, y) {
             var ctx = this.canvas2DCtx;
-            ctx.strokeStyle = "#424242";
+            ctx.setLineDash([2, 2]);
+            ctx.strokeStyle = 'rgba(220, 220, 220, 1)';
+            ctx.lineWidth = 0.5;
             ctx.beginPath();
             ctx.moveTo(x, 0);
             ctx.lineTo(x, this.canvas.height);
-            ctx.moveTo(x + this.core.unitWidth, 0);
-            ctx.lineTo(x + this.core.unitWidth, this.canvas.height);
+            ctx.moveTo(x + this.core.unitWidth - 1, 0);
+            ctx.lineTo(x + this.core.unitWidth - 1, this.canvas.height);
+
+            ctx.moveTo(0, y);
+            ctx.lineTo(this.canvas.width, y);
+
             ctx.lineWidth = 1;
             ctx.stroke();
+            ctx.setLineDash([]);
         }
     }, {
         key: "doOnData",
@@ -21785,6 +21826,7 @@ module.exports = function (_MassPainter) {
 
         var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(VolumePainter).call(this, painterCore, canvas));
 
+        _this.topPadding = 25;
         _this.doOnAmountRange = _this.doOnAmountRange.bind(_this);
         _this.core.on("amountRange", _this.doOnAmountRange);
         _this.core.on("netsummax_r0Range", _this.doOnAmountRange);
@@ -21792,6 +21834,7 @@ module.exports = function (_MassPainter) {
 
         _this.doOnMoneyFlow = _this.doOnMoneyFlow.bind(_this);
         _this.core.on("moneyFlow", _this.doOnMoneyFlow);
+
         return _this;
     }
 
@@ -21818,14 +21861,18 @@ module.exports = function (_MassPainter) {
         key: 'updateHeightPerUnit',
         value: function updateHeightPerUnit() {
             if (!this.canvas) return;
-            var h = this.canvas.height;
+            var h = this.canvas.height - this.topPadding;
             var lastv = this.heightPerUnit;
+            var ha = this.getAmountY(this.core.rangeFields.amount.high);
+            if (this.heightPerUnit > 0 && ha > 0 && ha < 2 * this.topPadding) return false;
             this.heightPerUnit = h / this.core.rangeFields.amount.high;
             var r = Math.max(this.core.rangeFields.netsummax_r0.high, -this.core.rangeFields.netsummax_r0.low);
             this.heightPerNetSumMax_r0Unit = 0.5 * h / r;
 
             var dh = this.core.rangeFields.netsummax_r0_duration.high;
             this.heightPerNetSumMax_r0_DurationUnit = 0.5 * h / dh;
+
+            return true;
         }
     }, {
         key: 'getAmountY',
@@ -21873,8 +21920,9 @@ module.exports = function (_MassPainter) {
                 ctx.moveTo(x, 0);
                 ctx.lineTo(x, nsmr0dh);
                 ctx.strokeStyle = 'rgba(66, 66, 66, 0.8)';
-                ctx.lineWidth = 0.5;
+                ctx.lineWidth = 1;
                 ctx.stroke();
+                ctx.restore();
             }
 
             var open = data.open;
@@ -21911,8 +21959,8 @@ module.exports = function (_MassPainter) {
 
                 ctx.strokeStyle = avecolors[i];
                 ctx.beginPath();
-                ctx.moveTo(x + unitWidth / 2, avy);
-                ctx.lineTo(x - unitWidth / 2, avpy);
+                ctx.moveTo(x + Math.floor(unitWidth / 2), avy);
+                ctx.lineTo(x - Math.ceil(unitWidth / 2), avpy);
 
                 if (this.hasDrawCache(idx + 1)) {
                     var data_next = dataArr[idx + 1];
@@ -21973,6 +22021,10 @@ var _stockids = require('./stockids');
 
 var _stockids2 = _interopRequireDefault(_stockids);
 
+var _localstoreutil = require('./localstoreutil');
+
+var _localstoreutil2 = _interopRequireDefault(_localstoreutil);
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -22013,17 +22065,16 @@ pointerPainter.mouseMoveHandler = function (e) {
     var data = painterCore.getDataByIndex(dataindex);
     if (!data) return;
     var valuetoy = {};
-    var candlePainterTop = 0; //parseInt(candlePainter.canvas.style.top);
-    valuetoy.open = candlePainterTop + candlePainter.getPriceY(data.open);
-    valuetoy.close = candlePainterTop + candlePainter.getPriceY(data.close);
-    valuetoy.high = candlePainterTop + candlePainter.getPriceY(data.high);
-    valuetoy.low = candlePainterTop + candlePainter.getPriceY(data.low);
-    valuetoy.date = candlePainterTop + candlePainter.canvas.height - 5;
+    valuetoy.open = candlePainter.getPriceY(data.open);
+    valuetoy.close = candlePainter.getPriceY(data.close);
+    valuetoy.high = candlePainter.getPriceY(data.high);
+    valuetoy.low = candlePainter.getPriceY(data.low);
+    valuetoy.date = candlePainter.canvas.height - 5;
 
     var top = parseInt(volPainter.canvas.style.top) - parseInt(candlePainter.canvas.style.top);
     valuetoy.amount = top + Math.max(volPainter.getAmountY(data.amount), 10);
     valuetoy.amountStart = top;
-    pointerPainter.updatePointer(x, dataindex, valuetoy);
+    pointerPainter.updatePointer(x, y - parseInt(candlePainter.canvas.style.top), dataindex, valuetoy);
 };
 
 var CandleApp = function (_React$Component) {
@@ -22038,11 +22089,17 @@ var CandleApp = function (_React$Component) {
         _this.handleSidInputChagned = _this.handleSidInputChagned.bind(_this);
         _this.handleMatchTextAreaChange = _this.handleMatchTextAreaChange.bind(_this);
         _this.handleMatchTextAreaKeyUp = _this.handleMatchTextAreaKeyUp.bind(_this);
+        var matchStr = _localstoreutil2.default.getCookie('scanExp');
         _this.state = {
             windowWidth: window.innerWidth,
             windowHeight: window.innerHeight,
-            matchStr: 'diffR(data[n].ave_close_8, data[n].high) > priceCRA(5, data, n)'
+            matchStr: matchStr
         };
+        //         dn.date==='09/01/2016'
+        // &&priceAS(d,n,'r0_net', dn.netsummax_r0_duration) > 0.1*dn.marketCap
+        // && function(){console.log(priceAS(d,n,'r0_net', dn.netsummax_r0_duration), dn.netsummax_r0_duration)}()
+        //         priceAS(d,n,'r0_net', dn.netsummax_r0_duration) > 0.5*dn.marketCap
+        // &&priceAS(d,n,'r0_net', dn.netsummax_r0_duration) > 3*priceBS(d,n,'r0_net', dn.netsummax_r0_duration)
         return _this;
     }
 
@@ -22112,7 +22169,7 @@ var CandleApp = function (_React$Component) {
                             } },
                         '0/0'
                     ),
-                    _react2.default.createElement('textarea', { value: this.state.matchStr, style: { position: 'absolute', right: '20px', color: 'rgba(230, 230, 230, 0.5)', borderColor: 'rgba(230, 230, 230, 0.1)', top: '50px', zIndex: 100, width: '400px', height: '500px', background: 'transparent', 'fontSize': '10px' },
+                    _react2.default.createElement('textarea', { value: this.state.matchStr, style: { position: 'absolute', right: '20px', color: 'rgba(230, 230, 230, 0.5)', borderColor: 'rgba(230, 230, 230, 0.1)', top: '50px', zIndex: 100, width: '500px', height: '100px', background: 'transparent', 'fontSize': '10px' },
                         ref: function ref(_ref5) {
                             return _this2.matchTexArea = _ref5;
                         }, onChange: this.handleMatchTextAreaChange, onKeyUp: this.handleMatchTextAreaKeyUp, onKeyDown: function onKeyDown(e) {
@@ -22229,6 +22286,7 @@ var CandleApp = function (_React$Component) {
             this.setState({
                 matchStr: e.target.value
             });
+            _localstoreutil2.default.setCookie('scanExp', e.target.value);
         }
     }, {
         key: 'loadDataBySid',
@@ -22318,7 +22376,7 @@ var CandleApp = function (_React$Component) {
 
 exports.default = CandleApp;
 
-},{"../chart/candlepainter":178,"../chart/paintercore":179,"../chart/pointerpainter":180,"../chart/volumepainter":181,"./chartcanvas":183,"./dataworker.js":184,"./forms/dateinput":185,"./forms/forminput":186,"./io":188,"./stockids":189,"./tradingdate":190,"./workerproxy":191,"react":168,"webworkify":169}],183:[function(require,module,exports){
+},{"../chart/candlepainter":178,"../chart/paintercore":179,"../chart/pointerpainter":180,"../chart/volumepainter":181,"./chartcanvas":183,"./dataworker.js":184,"./forms/dateinput":185,"./forms/forminput":186,"./io":188,"./localstoreutil":189,"./stockids":190,"./tradingdate":191,"./workerproxy":192,"react":168,"webworkify":169}],183:[function(require,module,exports){
 'use strict';
 
 // let sampleData = [{ open: 15.5, close: 16, high: 16.5, low: 15.2 }, { open: 15.8, close: 15, high: 16.8, low: 14.2 }, { open: 15.5, close: 16, high: 16.8, low: 15.2 }, { open: 10.5, close: 10, high: 10.8, low: 9.2 }];
@@ -22563,7 +22621,7 @@ module.loadStockIds = function loadStockIds(start, count, fields, callback) {
     });
 };
 
-},{"../alpha/matchfunctionutil":172,"../alpha/utilspipe":175,"../alpha/zip":176,"./io":188,"./stockids":189}],185:[function(require,module,exports){
+},{"../alpha/matchfunctionutil":172,"../alpha/utilspipe":175,"../alpha/zip":176,"./io":188,"./stockids":190}],185:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -23014,6 +23072,53 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var LocalStoreUtil = function () {
+    function LocalStoreUtil() {
+        _classCallCheck(this, LocalStoreUtil);
+    }
+
+    _createClass(LocalStoreUtil, null, [{
+        key: "setCookie",
+        value: function setCookie(cname, cvalue, exdays) {
+            var d = new Date();
+            d.setTime(d.getTime() + exdays * 24 * 60 * 60 * 1000);
+            var expires = "expires=" + d.toUTCString();
+            document.cookie = cname + "=" + cvalue + "; " + expires;
+        }
+    }, {
+        key: "getCookie",
+        value: function getCookie(cname) {
+            var name = cname + "=";
+            var ca = document.cookie.split(';');
+            for (var i = 0; i < ca.length; i++) {
+                var c = ca[i];
+                while (c.charAt(0) == ' ') {
+                    c = c.substring(1);
+                }
+                if (c.indexOf(name) == 0) {
+                    return c.substring(name.length, c.length);
+                }
+            }
+            return "";
+        }
+    }]);
+
+    return LocalStoreUtil;
+}();
+
+exports.default = LocalStoreUtil;
+
+},{}],190:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
 var _io = require('./io');
 
 var _io2 = _interopRequireDefault(_io);
@@ -23085,7 +23190,7 @@ StockIDs.idIndexMap = {};
 
 exports.default = StockIDs;
 
-},{"./io":188}],190:[function(require,module,exports){
+},{"./io":188}],191:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -23145,7 +23250,7 @@ TradingDate.dateIndexMap = {};
 
 exports.default = TradingDate;
 
-},{"./io":188}],191:[function(require,module,exports){
+},{"./io":188}],192:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {

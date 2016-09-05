@@ -39,17 +39,16 @@ pointerPainter.mouseMoveHandler = function(e) {
     let data = painterCore.getDataByIndex(dataindex);
     if (!data) return;
     let valuetoy = {};
-    let candlePainterTop = 0 //parseInt(candlePainter.canvas.style.top);
-    valuetoy.open = candlePainterTop + candlePainter.getPriceY(data.open);
-    valuetoy.close = candlePainterTop + candlePainter.getPriceY(data.close);
-    valuetoy.high = candlePainterTop + candlePainter.getPriceY(data.high);
-    valuetoy.low = candlePainterTop + candlePainter.getPriceY(data.low);
-    valuetoy.date = candlePainterTop + candlePainter.canvas.height - 5;
+    valuetoy.open = candlePainter.getPriceY(data.open);
+    valuetoy.close = candlePainter.getPriceY(data.close);
+    valuetoy.high = candlePainter.getPriceY(data.high);
+    valuetoy.low = candlePainter.getPriceY(data.low);
+    valuetoy.date = candlePainter.canvas.height - 5;
 
     let top = parseInt(volPainter.canvas.style.top) - parseInt(candlePainter.canvas.style.top);
     valuetoy.amount = top + Math.max(volPainter.getAmountY(data.amount), 10);
     valuetoy.amountStart = top;
-    pointerPainter.updatePointer(x, dataindex, valuetoy);
+    pointerPainter.updatePointer(x, y - parseInt(candlePainter.canvas.style.top), dataindex, valuetoy);
 }
 
 import ChartCanvas from './chartcanvas';
@@ -57,6 +56,7 @@ import FormInput from './forms/forminput';
 import DateInput from './forms/dateinput';
 import TradingDate from './tradingdate';
 import StockIDs from './stockids';
+import LocalStoreUtil from './localstoreutil';
 
 class CandleApp extends React.Component {
     constructor(props) {
@@ -65,11 +65,17 @@ class CandleApp extends React.Component {
         this.handleSidInputChagned = this.handleSidInputChagned.bind(this);
         this.handleMatchTextAreaChange = this.handleMatchTextAreaChange.bind(this);
         this.handleMatchTextAreaKeyUp = this.handleMatchTextAreaKeyUp.bind(this);
+        let matchStr = LocalStoreUtil.getCookie('scanExp');
         this.state = {
             windowWidth: window.innerWidth,
             windowHeight: window.innerHeight,
-            matchStr: 'diffR(data[n].ave_close_8, data[n].high) > priceCRA(5, data, n)'
+            matchStr: matchStr
         };
+        //         dn.date==='09/01/2016'
+        // &&priceAS(d,n,'r0_net', dn.netsummax_r0_duration) > 0.1*dn.marketCap
+        // && function(){console.log(priceAS(d,n,'r0_net', dn.netsummax_r0_duration), dn.netsummax_r0_duration)}()
+        //         priceAS(d,n,'r0_net', dn.netsummax_r0_duration) > 0.5*dn.marketCap
+        // &&priceAS(d,n,'r0_net', dn.netsummax_r0_duration) > 3*priceBS(d,n,'r0_net', dn.netsummax_r0_duration)
     }
 
     render() {
@@ -107,7 +113,7 @@ class CandleApp extends React.Component {
                 <div style = {{position: 'absolute', right: '20px',  color: '#f0f0f0', top:'10px'}} ref={(ref) => this.info = ref}>Loading...</div>
                 <div style = {{position: 'absolute', right: '20px',  color: '#f0f0f0', top:'30px'}} ref={(ref) => this.scanAllInfo = ref}>0/0/0</div>
                 <div style = {{position: 'absolute', right: '420px',  color: '#f0f0f0', top:'30px'}} ref={(ref) => this.scanInfo = ref}>0/0</div>
-                <textarea value={this.state.matchStr} style = {{position: 'absolute', right: '20px',  color: 'rgba(230, 230, 230, 0.5)', borderColor: 'rgba(230, 230, 230, 0.1)', top:'50px', zIndex: 100, width: '400px', height: '500px', background: 'transparent', 'fontSize': '10px'}} 
+                <textarea value={this.state.matchStr} style = {{position: 'absolute', right: '20px',  color: 'rgba(230, 230, 230, 0.5)', borderColor: 'rgba(230, 230, 230, 0.1)', top:'50px', zIndex: 100, width: '500px', height: '100px', background: 'transparent', 'fontSize': '10px'}} 
                     ref={(ref) => this.matchTexArea = ref} onChange={this.handleMatchTextAreaChange} onKeyUp={this.handleMatchTextAreaKeyUp} onKeyDown ={function(e){e.nativeEvent.stopImmediatePropagation();}}></textarea>
             </div > 
             <ChartCanvas ref = "candleChart" width = "2000" height = { candleChartHeight } y = { candleChartY } > </ChartCanvas>  
@@ -209,6 +215,7 @@ class CandleApp extends React.Component {
         this.setState({
             matchStr: e.target.value
         });
+        LocalStoreUtil.setCookie('scanExp', e.target.value);
     }
 
     loadDataBySid(sid, date) {
