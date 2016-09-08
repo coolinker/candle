@@ -7,21 +7,22 @@ import UtilsPipe from "../alpha/utilspipe";
 
 let stockFields = ['date', 'open', 'close', 'high', 'low', 'amount', 'netamount', 'r0_net', 'changeratio', 'turnover'];
 let cacheMap = {};
-
+let stopScanFlag = false;
 module.exports = function(self) {
     let me = this;
     self.addEventListener('message', function(ev) {
         let mn = ev.data['methodName'];
-        //console.log("worker on message", mn, module[mn]);
         let params = ev.data['params'];
+        // console.log("worker on message", mn, module[mn]);
         params.push(function(result, finished) {
-            if (finished === undefined) finished = true;
-            self.postMessage({
-                mkey: ev.data.mkey,
-                result: result,
-                finished: finished
-            });
-        })
+                if (finished === undefined) finished = true;
+                self.postMessage({
+                    mkey: ev.data.mkey,
+                    result: result,
+                    finished: finished
+                });
+            })
+            // console.log("=====", mn, params)
         module[mn].apply(me, params)
             // IO.httpGetStockJson(sid, function(json) {
             //     self.postMessage();
@@ -30,8 +31,51 @@ module.exports = function(self) {
 
 };
 
+module.stopScanByIndex = function stopScanByIndex(callback) {
+    stopScanFlag = true;
+    callback(stopScanFlag);
+}
+
+module.scanByIndex = function scanByIndex(idx, patternStr, countInDay, callback) {
+    let sid = StockIDs.getSidByIndex(idx);
+
+    let cmpdata = module.getStockDataSync(sid, stockFields);
+    let m = {
+        bull: 0,
+        bear: 0,
+        cases: 0
+    };
+    if (cmpdata) {
+        let decmpdata = Zip.decompressStockJson(cmpdata);
+        UtilsPipe.build(0, decmpdata.length - 1, decmpdata);
+        m = MatchFunctionUtil.scan(decmpdata, patternStr, countInDay);
+    }
+
+    let total = StockIDs.getTotalCount();
+    let finished = idx === (total - 1);
+    callback({
+        count: idx,
+        bull: m.bull,
+        bear: m.bear,
+        cases: m.cases,
+        countInDay: countInDay,
+        finished: finished
+    }, finished);
+
+    if (!finished) {
+        setTimeout(function() {
+            if (stopScanFlag) {
+                stopScanFlag = false;
+            } else {
+                module.scanByIndex(++idx, patternStr, countInDay, callback);
+            }
+
+        }, 1);
+    }
+}
+
+
 module.scanAll = function scanAll(patternStr, callback) {
-    //let patternFun = new Function('data', 'n', 'return ' + patternStr);
     let total = StockIDs.getTotalCount();
     let countInDay = {};
     for (let i = 0; i < total; i++) {
@@ -46,54 +90,18 @@ module.scanAll = function scanAll(patternStr, callback) {
         let m = MatchFunctionUtil.scan(decmpdata, patternStr, countInDay);
         //module.matchPattern(decmpdata, patternFun);
         // console.log(sid, decmpdata.length, m)
+        let finished = i === total;
         callback({
             count: i,
-            match: m.match,
+            bull: m.bull,
+            bear: m.bear,
             cases: m.cases,
             countInDay: countInDay,
-            finished: i === total
-        }, i === total);
+            finished: finished
+        }, finished);
     }
 
 }
-
-// module.matchPattern = function matchPattern(data, patternFun) {
-//     let cases = 0,
-//         match = 0;
-//     for (let i = 0; i < data.length; i++) {
-//         if (patternFun(data, i)) {
-//             data[i].patternFun = patternFun;
-//             cases++;
-//             if (module.isBullCase(data, i)) {
-//                 match++;
-//             }
-
-//         } else {
-//             delete data[i].patternFun;
-//         }
-
-//     }
-
-//     return {
-//         cases: cases,
-//         match: match
-//     };
-// }
-
-// module.isBullCase = function isBullCase(data, idx) {
-//     //let re = Math.round(100 * Math.random()) % 2 === 0;
-//     let inc = 0.1,
-//         dec = -0.05,
-//         price = data[idx].close;
-
-//     for (let i = idx + 1; i < data.length; i++) {
-//         let d = data[i];
-//         if ((d.low - price) / price < dec) return false;
-//         if ((d.high - price) / price > inc) return true;
-//     }
-//     return false;
-// }
-
 module.loadStocksDataPage = function loadStocksDataPage(start, count, callback) {
     let total = StockIDs.getTotalCount();
     let pageSize = count;

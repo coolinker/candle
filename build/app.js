@@ -22089,17 +22089,19 @@ var CandleApp = function (_React$Component) {
         _this.handleSidInputChagned = _this.handleSidInputChagned.bind(_this);
         _this.handleMatchTextAreaChange = _this.handleMatchTextAreaChange.bind(_this);
         _this.handleMatchTextAreaKeyUp = _this.handleMatchTextAreaKeyUp.bind(_this);
+        _this.scanAllBtnClick = _this.scanAllBtnClick.bind(_this);
+
         var matchStr = _localstoreutil2.default.getCookie('scanExp');
+
         _this.state = {
             windowWidth: window.innerWidth,
             windowHeight: window.innerHeight,
-            matchStr: matchStr
+            matchStr: unescape(matchStr)
         };
-        //         dn.date==='09/01/2016'
-        // &&priceAS(d,n,'r0_net', dn.netsummax_r0_duration) > 0.1*dn.marketCap
-        // && function(){console.log(priceAS(d,n,'r0_net', dn.netsummax_r0_duration), dn.netsummax_r0_duration)}()
-        //         priceAS(d,n,'r0_net', dn.netsummax_r0_duration) > 0.5*dn.marketCap
-        // &&priceAS(d,n,'r0_net', dn.netsummax_r0_duration) > 3*priceBS(d,n,'r0_net', dn.netsummax_r0_duration)
+        //         Math.max(diffR(dn.close, dn.ave_close_8),diffR(dn.close, dn.ave_close_13)) > 0.5*priceCRA(d,n,8)
+        // && dn.turnover<100
+        // && dn.ave_close_13 < d[n-1].ave_close_13
+        // && aboveS(d,n,'r0_net', dn.netsummax_r0_duration) > bellowS(d,n,'r0_net', dn.netsummax_r0_duration)*1
         return _this;
     }
 
@@ -22157,21 +22159,28 @@ var CandleApp = function (_React$Component) {
                     ),
                     _react2.default.createElement(
                         'div',
-                        { style: { position: 'absolute', right: '20px', color: '#f0f0f0', top: '30px' }, ref: function ref(_ref3) {
+                        { style: { position: 'absolute', right: '40px', color: '#f0f0f0', top: '30px' }, ref: function ref(_ref3) {
                                 return _this2.scanAllInfo = _ref3;
                             } },
                         '0/0/0'
                     ),
                     _react2.default.createElement(
                         'div',
-                        { style: { position: 'absolute', right: '420px', color: '#f0f0f0', top: '30px' }, ref: function ref(_ref4) {
-                                return _this2.scanInfo = _ref4;
+                        { style: { position: 'absolute', right: '20px', color: '#f44336', top: '30px' }, onClick: this.scanAllBtnClick, ref: function ref(_ref4) {
+                                return _this2.scanAllBtn = _ref4;
                             } },
-                        '0/0'
+                        '►'
                     ),
-                    _react2.default.createElement('textarea', { value: this.state.matchStr, style: { position: 'absolute', right: '20px', color: 'rgba(230, 230, 230, 0.5)', borderColor: 'rgba(230, 230, 230, 0.1)', top: '50px', zIndex: 100, width: '500px', height: '100px', background: 'transparent', 'fontSize': '10px' },
-                        ref: function ref(_ref5) {
-                            return _this2.matchTexArea = _ref5;
+                    _react2.default.createElement(
+                        'div',
+                        { style: { position: 'absolute', right: '420px', color: '#f0f0f0', top: '30px' }, ref: function ref(_ref5) {
+                                return _this2.scanInfo = _ref5;
+                            } },
+                        '0/0/0(Ctrl+Enter)'
+                    ),
+                    _react2.default.createElement('textarea', { value: this.state.matchStr, style: { position: 'absolute', right: '20px', color: 'rgba(230, 230, 230, 1)', borderColor: 'rgba(230, 230, 230, 0.1)', top: '50px', zIndex: 100, width: '500px', height: '100px', background: 'transparent', 'fontSize': '10px' },
+                        ref: function ref(_ref6) {
+                            return _this2.matchTexArea = _ref6;
                         }, onChange: this.handleMatchTextAreaChange, onKeyUp: this.handleMatchTextAreaKeyUp, onKeyDown: function onKeyDown(e) {
                             e.nativeEvent.stopImmediatePropagation();
                         } })
@@ -22247,26 +22256,45 @@ var CandleApp = function (_React$Component) {
                 me.refs.dateInput.updateState(date, false);
             });
 
-            var count = 0,
-                match = 0,
-                cases = 0;
             var sid = this.refs.sidInput.state.value;
             var date = this.refs.dateInput.state.value;
             var matchStr = this.matchTexArea.value;
-            console.log("matchStr", matchStr);
-            this.loadDataBySid(sid, date);
 
+            this.loadDataBySid(sid, date);
             setTimeout(function () {
                 _io2.default.workerStartLoadStocks(function (re) {
                     me.info.innerHTML = re;
-                    if (re >= 30000) //2886
-                        _io2.default.workerScanAll(matchStr, function (cnts) {
-                            // && data[n].ave_close_8 > data[n-2].ave_close_8 && data[n].ave_close_8 > data[n-3].ave_close_8
-                            count = cnts.count, match += cnts.match, cases += cnts.cases;
-                            me.scanAllInfo.innerHTML = Math.round(100 * match / cases) + '%/' + cases + '/' + count;
-                        });
                 });
             }, 3000);
+        }
+    }, {
+        key: 'scanAllBtnClick',
+        value: function scanAllBtnClick() {
+            var start = this.scanAllBtn.innerHTML === '►';
+            if (!start) {
+                this.scanAllBtn.innerHTML = '►';
+                _io2.default.workerStopScanByIndex(function (re) {
+                    console.log("workerStopScanAll", re);
+                });
+                return;
+            }
+
+            this.scanAllBtn.innerHTML = '❚❚';
+            var me = this;
+            var count = 0,
+                bull = 0,
+                bear = 0,
+                cases = 0;
+            var matchStr = this.matchTexArea.value;
+            _io2.default.workerScanByIndex(matchStr, function (cnts) {
+                // && data[n].ave_close_8 > data[n-2].ave_close_8 && data[n].ave_close_8 > data[n-3].ave_close_8
+                console.log("-----------------", cnts);
+                count = cnts.count;
+                bull += cnts.bull;
+                bear += cnts.bear;
+                cases += cnts.cases;
+                me.scanAllInfo.innerHTML = Math.round(100 * bull / (bull + bear)) + '%/' + cases + '/' + count;
+            });
         }
     }, {
         key: 'handleMatchTextAreaKeyUp',
@@ -22277,7 +22305,9 @@ var CandleApp = function (_React$Component) {
                 var bull = result.bull;
                 var bear = result.bear;
                 var cases = result.cases;
-                this.scanInfo.innerHTML = bull + '/' + bear + '/' + cases;
+                var pct = bull / (bull + bear);
+                pct = Math.round(pct * 100) / 100;
+                this.scanInfo.innerHTML = pct + '/' + bull + '/' + bear + '/' + cases + '(Ctrl+Enter)';
             }
         }
     }, {
@@ -22286,7 +22316,7 @@ var CandleApp = function (_React$Component) {
             this.setState({
                 matchStr: e.target.value
             });
-            _localstoreutil2.default.setCookie('scanExp', e.target.value);
+            _localstoreutil2.default.setCookie('scanExp', escape(e.target.value));
         }
     }, {
         key: 'loadDataBySid',
@@ -22474,13 +22504,13 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 var stockFields = ['date', 'open', 'close', 'high', 'low', 'amount', 'netamount', 'r0_net', 'changeratio', 'turnover'];
 var cacheMap = {};
-
+var stopScanFlag = false;
 module.exports = function (self) {
     var me = this;
     self.addEventListener('message', function (ev) {
         var mn = ev.data['methodName'];
-        //console.log("worker on message", mn, module[mn]);
         var params = ev.data['params'];
+        // console.log("worker on message", mn, module[mn]);
         params.push(function (result, finished) {
             if (finished === undefined) finished = true;
             self.postMessage({
@@ -22489,6 +22519,7 @@ module.exports = function (self) {
                 finished: finished
             });
         });
+        // console.log("=====", mn, params)
         module[mn].apply(me, params);
         // IO.httpGetStockJson(sid, function(json) {
         //     self.postMessage();
@@ -22496,8 +22527,49 @@ module.exports = function (self) {
     });
 };
 
+module.stopScanByIndex = function stopScanByIndex(callback) {
+    stopScanFlag = true;
+    callback(stopScanFlag);
+};
+
+module.scanByIndex = function scanByIndex(idx, patternStr, countInDay, callback) {
+    var sid = _stockids2.default.getSidByIndex(idx);
+
+    var cmpdata = module.getStockDataSync(sid, stockFields);
+    var m = {
+        bull: 0,
+        bear: 0,
+        cases: 0
+    };
+    if (cmpdata) {
+        var decmpdata = _zip2.default.decompressStockJson(cmpdata);
+        _utilspipe2.default.build(0, decmpdata.length - 1, decmpdata);
+        m = _matchfunctionutil2.default.scan(decmpdata, patternStr, countInDay);
+    }
+
+    var total = _stockids2.default.getTotalCount();
+    var finished = idx === total - 1;
+    callback({
+        count: idx,
+        bull: m.bull,
+        bear: m.bear,
+        cases: m.cases,
+        countInDay: countInDay,
+        finished: finished
+    }, finished);
+
+    if (!finished) {
+        setTimeout(function () {
+            if (stopScanFlag) {
+                stopScanFlag = false;
+            } else {
+                module.scanByIndex(++idx, patternStr, countInDay, callback);
+            }
+        }, 1);
+    }
+};
+
 module.scanAll = function scanAll(patternStr, callback) {
-    //let patternFun = new Function('data', 'n', 'return ' + patternStr);
     var total = _stockids2.default.getTotalCount();
     var countInDay = {};
     for (var i = 0; i < total; i++) {
@@ -22512,53 +22584,17 @@ module.scanAll = function scanAll(patternStr, callback) {
         var m = _matchfunctionutil2.default.scan(decmpdata, patternStr, countInDay);
         //module.matchPattern(decmpdata, patternFun);
         // console.log(sid, decmpdata.length, m)
+        var finished = i === total;
         callback({
             count: i,
-            match: m.match,
+            bull: m.bull,
+            bear: m.bear,
             cases: m.cases,
             countInDay: countInDay,
-            finished: i === total
-        }, i === total);
+            finished: finished
+        }, finished);
     }
 };
-
-// module.matchPattern = function matchPattern(data, patternFun) {
-//     let cases = 0,
-//         match = 0;
-//     for (let i = 0; i < data.length; i++) {
-//         if (patternFun(data, i)) {
-//             data[i].patternFun = patternFun;
-//             cases++;
-//             if (module.isBullCase(data, i)) {
-//                 match++;
-//             }
-
-//         } else {
-//             delete data[i].patternFun;
-//         }
-
-//     }
-
-//     return {
-//         cases: cases,
-//         match: match
-//     };
-// }
-
-// module.isBullCase = function isBullCase(data, idx) {
-//     //let re = Math.round(100 * Math.random()) % 2 === 0;
-//     let inc = 0.1,
-//         dec = -0.05,
-//         price = data[idx].close;
-
-//     for (let i = idx + 1; i < data.length; i++) {
-//         let d = data[i];
-//         if ((d.low - price) / price < dec) return false;
-//         if ((d.high - price) / price > inc) return true;
-//     }
-//     return false;
-// }
-
 module.loadStocksDataPage = function loadStocksDataPage(start, count, callback) {
     var total = _stockids2.default.getTotalCount();
     var pageSize = count;
@@ -22913,6 +22949,21 @@ var IO = function () {
         value: function workerScanAll(patternStr, callback) {
             var params = [patternStr];
             IO.dataWorkerProxy.callMethod("scanAll", params, function (re) {
+                callback(re);
+            });
+        }
+    }, {
+        key: 'workerScanByIndex',
+        value: function workerScanByIndex(patternStr, callback) {
+            var params = [0, patternStr, {}];
+            IO.dataWorkerProxy.callMethod("scanByIndex", params, function (re) {
+                callback(re);
+            });
+        }
+    }, {
+        key: 'workerStopScanByIndex',
+        value: function workerStopScanByIndex(callback) {
+            IO.dataWorkerProxy.callMethod("stopScanByIndex", [], function (re) {
                 callback(re);
             });
         }
@@ -23281,6 +23332,7 @@ var WorkerProxy = function () {
         value: function callMethod(methodName, params, callback) {
             var mkey = this.getMethodKey(methodName);
             this.penddingCalls[mkey] = callback;
+            console.log("callMethod methodName", methodName);
             this.worker.postMessage({
                 methodName: methodName,
                 mkey: mkey,

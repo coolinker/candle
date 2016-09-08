@@ -49,6 +49,19 @@ class IO {
         });
     }
 
+    static workerScanByIndex(patternStr, callback) {
+        let params = [0, patternStr, {}];
+        IO.dataWorkerProxy.callMethod("scanByIndex", params, function(re) {
+            callback(re);
+
+        });
+    }
+    static workerStopScanByIndex(callback) {
+        IO.dataWorkerProxy.callMethod("stopScanByIndex", [], function(re) {
+            callback(re);
+        });
+    }
+
     static workerGetStockJson(sid, callback) {
         let params = [sid, ['date', 'open', 'close', 'high', 'low', 'amount', 'netamount', 'r0_net', 'changeratio', 'turnover']];
         IO.dataWorkerProxy.callMethod("getStockData", params, function(re) {

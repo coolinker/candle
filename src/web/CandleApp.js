@@ -65,17 +65,19 @@ class CandleApp extends React.Component {
         this.handleSidInputChagned = this.handleSidInputChagned.bind(this);
         this.handleMatchTextAreaChange = this.handleMatchTextAreaChange.bind(this);
         this.handleMatchTextAreaKeyUp = this.handleMatchTextAreaKeyUp.bind(this);
+        this.scanAllBtnClick = this.scanAllBtnClick.bind(this);
+
         let matchStr = LocalStoreUtil.getCookie('scanExp');
+        
         this.state = {
             windowWidth: window.innerWidth,
             windowHeight: window.innerHeight,
-            matchStr: matchStr
+            matchStr: unescape(matchStr)
         };
-        //         dn.date==='09/01/2016'
-        // &&priceAS(d,n,'r0_net', dn.netsummax_r0_duration) > 0.1*dn.marketCap
-        // && function(){console.log(priceAS(d,n,'r0_net', dn.netsummax_r0_duration), dn.netsummax_r0_duration)}()
-        //         priceAS(d,n,'r0_net', dn.netsummax_r0_duration) > 0.5*dn.marketCap
-        // &&priceAS(d,n,'r0_net', dn.netsummax_r0_duration) > 3*priceBS(d,n,'r0_net', dn.netsummax_r0_duration)
+        //         Math.max(diffR(dn.close, dn.ave_close_8),diffR(dn.close, dn.ave_close_13)) > 0.5*priceCRA(d,n,8)
+        // && dn.turnover<100
+        // && dn.ave_close_13 < d[n-1].ave_close_13
+        // && aboveS(d,n,'r0_net', dn.netsummax_r0_duration) > bellowS(d,n,'r0_net', dn.netsummax_r0_duration)*1
     }
 
     render() {
@@ -111,9 +113,10 @@ class CandleApp extends React.Component {
                 <DateInput ref = "dateInput" value = { '07/04/2016' } style={{color: '#c0c0c0', width: '130px', borderStyle: 'groove', borderColor: '#424242', backgroundColor: 'transparent',}} 
                     handleInputCompleted = { this.handleDateChanged } onKeyDownHandler ={function(e){e.nativeEvent.stopImmediatePropagation()}}/> 
                 <div style = {{position: 'absolute', right: '20px',  color: '#f0f0f0', top:'10px'}} ref={(ref) => this.info = ref}>Loading...</div>
-                <div style = {{position: 'absolute', right: '20px',  color: '#f0f0f0', top:'30px'}} ref={(ref) => this.scanAllInfo = ref}>0/0/0</div>
-                <div style = {{position: 'absolute', right: '420px',  color: '#f0f0f0', top:'30px'}} ref={(ref) => this.scanInfo = ref}>0/0</div>
-                <textarea value={this.state.matchStr} style = {{position: 'absolute', right: '20px',  color: 'rgba(230, 230, 230, 0.5)', borderColor: 'rgba(230, 230, 230, 0.1)', top:'50px', zIndex: 100, width: '500px', height: '100px', background: 'transparent', 'fontSize': '10px'}} 
+                <div style = {{position: 'absolute', right: '40px',  color: '#f0f0f0', top:'30px'}} ref={(ref) => this.scanAllInfo = ref}>0/0/0</div>
+                <div style = {{position: 'absolute', right: '20px',  color: '#f44336', top:'30px'}} onClick={this.scanAllBtnClick} ref={(ref) => this.scanAllBtn = ref}>►</div>
+                <div style = {{position: 'absolute', right: '420px',  color: '#f0f0f0', top:'30px'}} ref={(ref) => this.scanInfo = ref}>0/0/0(Ctrl+Enter)</div>
+                <textarea value={this.state.matchStr} style = {{position: 'absolute', right: '20px',  color: 'rgba(230, 230, 230, 1)', borderColor: 'rgba(230, 230, 230, 0.1)', top:'50px', zIndex: 100, width: '500px', height: '100px', background: 'transparent', 'fontSize': '10px'}} 
                     ref={(ref) => this.matchTexArea = ref} onChange={this.handleMatchTextAreaChange} onKeyUp={this.handleMatchTextAreaKeyUp} onKeyDown ={function(e){e.nativeEvent.stopImmediatePropagation();}}></textarea>
             </div > 
             <ChartCanvas ref = "candleChart" width = "2000" height = { candleChartHeight } y = { candleChartY } > </ChartCanvas>  
@@ -177,27 +180,44 @@ class CandleApp extends React.Component {
 
         });
 
-        let count = 0,
-            match = 0,
-            cases = 0;
         let sid = this.refs.sidInput.state.value;
         let date = this.refs.dateInput.state.value;
         let matchStr = this.matchTexArea.value;
-        console.log("matchStr", matchStr)
-        this.loadDataBySid(sid, date);
 
+        this.loadDataBySid(sid, date);
         setTimeout(function() {
             IO.workerStartLoadStocks(function(re) {
                 me.info.innerHTML = re;
-                if (re >= 30000) //2886
-                    IO.workerScanAll(matchStr, function(cnts) { // && data[n].ave_close_8 > data[n-2].ave_close_8 && data[n].ave_close_8 > data[n-3].ave_close_8
-                    count = cnts.count,
-                        match += cnts.match,
-                        cases += cnts.cases;
-                    me.scanAllInfo.innerHTML = Math.round(100 * match / cases) + '%/' + cases + '/' + count;
-                })
-            })
-        }, 3000);
+            });
+        }, 3000)
+
+    }
+
+    scanAllBtnClick() {
+        let start = this.scanAllBtn.innerHTML === '►';
+        if (!start) {
+            this.scanAllBtn.innerHTML = '►';
+            IO.workerStopScanByIndex(function(re) {
+                console.log("workerStopScanAll", re)
+            });
+            return;
+        }
+
+        this.scanAllBtn.innerHTML = '❚❚';
+        let me = this;
+        let count = 0,
+            bull = 0,
+            bear = 0,
+            cases = 0;
+        let matchStr = this.matchTexArea.value;
+        IO.workerScanByIndex(matchStr, function(cnts) { // && data[n].ave_close_8 > data[n-2].ave_close_8 && data[n].ave_close_8 > data[n-3].ave_close_8
+            console.log("-----------------", cnts)
+            count = cnts.count;
+            bull += cnts.bull;
+            bear += cnts.bear;
+            cases += cnts.cases;
+            me.scanAllInfo.innerHTML = Math.round(100 * bull / (bull + bear)) + '%/' + cases + '/' + count;
+        })
     }
 
     handleMatchTextAreaKeyUp(e) {
@@ -207,7 +227,9 @@ class CandleApp extends React.Component {
             let bull = result.bull;
             let bear = result.bear;
             let cases = result.cases;
-            this.scanInfo.innerHTML = bull + '/' + bear + '/' + cases
+            let pct = bull / (bull + bear);
+            pct = Math.round(pct * 100) / 100;
+            this.scanInfo.innerHTML = pct + '/' + bull + '/' + bear + '/' + cases + '(Ctrl+Enter)'
         }
 
     }
@@ -215,7 +237,7 @@ class CandleApp extends React.Component {
         this.setState({
             matchStr: e.target.value
         });
-        LocalStoreUtil.setCookie('scanExp', e.target.value);
+        LocalStoreUtil.setCookie('scanExp', escape(e.target.value));
     }
 
     loadDataBySid(sid, date) {
