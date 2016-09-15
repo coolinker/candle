@@ -78,6 +78,7 @@ module.exports = class PainterCore extends EventEmitter {
 
     updateDrawPort(dateStr, w) {
         if (!this.arrayData) return;
+        console.log("updateDrawPort", dateStr)
         let max = this.arrayData.length;
         let idx = this.dateIndexMap[dateStr];
         if (idx === undefined) {
@@ -145,7 +146,7 @@ module.exports = class PainterCore extends EventEmitter {
         }
         if (chnagedRange) {
             this.emit(chnagedRange + "Range");
-            console.log("event-----", chnagedRange + "Range", rfds[chnagedRange])
+            //console.log("event-----", chnagedRange + "Range", rfds[chnagedRange])
         }
 
         // if (this.volumeHigh !== mvhigh || this.volumeLow !== mvlow) {
@@ -181,6 +182,25 @@ module.exports = class PainterCore extends EventEmitter {
         if (end - len >= this.reservedSpaces) return;
         end = Math.min(end, len - 1);
         this.setDrawRange(start, end);
+    }
+
+    moveToPattern(drct, w) {
+        let len = this.arrayData.length;
+        if (drct > 0) {
+            for (let i = this.drawRangeEnd - 10; i < len; i++) {
+                if (this.arrayData[i].match) {
+                    this.updateDrawPort(this.arrayData[i].date, this.drawPortWidth)
+                    return;
+                }
+            }
+        } else {
+            for (let i = this.drawRangeStart + 10; i >= 0; i--) {
+                if (this.arrayData[i].match) {
+                    this.updateDrawPort(this.arrayData[i].date, this.drawPortWidth)
+                    return;
+                }
+            }
+        }
     }
 
     loadData(kdata) {

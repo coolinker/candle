@@ -49,8 +49,48 @@ let tools = {
             sum += data[i][field];
         }
         return sum;
-    }
+    },
 
+    lowIndex: function(data, start, end, field) {
+        let low = Number.MAX_SAFE_INTEGER;
+        let lowidx = -1;
+        for (let i = start; i <= end; i++) {
+            let v = data[i][field];
+            if (v < low) {
+                low = v;
+                lowidx = i;
+            }
+        }
+        return lowidx;
+    },
+
+    highIndex: function(data, start, end, field) {
+        let high = Number.MIN_SAFE_INTEGER;
+        let highidx = -1;
+        for (let i = start; i <= end; i++) {
+            let v = data[i][field];
+            if (v > high) {
+                high = v;
+                highidx = i;
+            }
+        }
+        return highidx;
+    },
+
+    maxSumIndex: function(data, n, field, period) {
+        if (!period) return 0;
+        let sum = 0;
+        let maxsum = Number.MIN_SAFE_INTEGER;
+        let maxidx = -1;
+        for (let i = n; i >= 0 && i > n - period; i--) {
+            sum += data[i][field];
+            if (sum > maxsum) {
+                maxidx = i;
+                maxsum = sum;
+            }
+        }
+        return maxidx;
+    }
 
 };
 
@@ -86,32 +126,33 @@ module.exports = class MatchFunctionUtil {
         let cases = 0,
             bull = 0,
             bear = 0;
-        for (let i = 0; i < data.length; i++) {
-            if (matchFun(data, i)) {
-                let d = data[i];
-                if (!countInDay[d.date]) {
-                    countInDay[d.date] = 0;
-                }
-                countInDay[d.date] += 1;
+        if (matchFun) {
+            for (let i = 0; i < data.length; i++) {
+                if (matchFun(data, i)) {
+                    let d = data[i];
+                    if (!countInDay[d.date]) {
+                        countInDay[d.date] = 0;
+                    }
+                    countInDay[d.date] += 1;
 
-                data[i].match = {
-                    fun: matchFun,
-                    result: 0
-                };
-                cases++;
-                let re = MatchFunctionUtil.testBullBear(data, i);
-                if (re > 0) {
-                    bull++;
-                } else if (re < 0) {
-                    bear++;
-                }
+                    data[i].match = {
+                        fun: matchFun,
+                        result: 0
+                    };
+                    cases++;
+                    let re = MatchFunctionUtil.testBullBear(data, i);
+                    if (re > 0) {
+                        bull++;
+                    } else if (re < 0) {
+                        bear++;
+                    }
 
-                data[i].match.result = re;
-            } else {
-                delete data[i].match;
+                    data[i].match.result = re;
+                } else {
+                    delete data[i].match;
+                }
             }
         }
-
         return {
             cases: cases,
             bull: bull,

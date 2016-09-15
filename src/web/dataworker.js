@@ -70,7 +70,7 @@ module.scanByIndex = function scanByIndex(idx, patternStr, countInDay, callback)
                 module.scanByIndex(++idx, patternStr, countInDay, callback);
             }
 
-        }, 1);
+        }, 0);
     }
 }
 

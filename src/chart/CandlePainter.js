@@ -14,6 +14,7 @@ module.exports = class CandlePainter extends MassPainter {
 
     doOnPriceRange() {
         if (this.updateHeightPerUnit()) {
+            console.log("candle painter ------------clear draw cache", this.heightPerUnit)
             this.clearDrawCache();
         }
 

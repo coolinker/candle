@@ -68,7 +68,9 @@ class CandleApp extends React.Component {
         this.scanAllBtnClick = this.scanAllBtnClick.bind(this);
 
         let matchStr = LocalStoreUtil.getCookie('scanExp');
-        
+        if (!matchStr) {
+            matchStr = 'function(m1, m2, p1, p2) { var rightBottomIdx = lowIndex(d, n - m2, n, "low");' + 'var midTopIdx = highIndex(d, rightBottomIdx - m2, rightBottomIdx, "high");' + 'var leftBottomIdx = lowIndex(d, midTopIdx - m2, midTopIdx, "low");' + 'var leftTopIdx = highIndex(d, leftBottomIdx - m1, leftBottomIdx, "high");' + 'return diffR(d[n].close, d[midTopIdx].high) > p1' + '&& diffR(d[leftTopIdx].high, d[midTopIdx].high) > p2' + '} (25,10, -1.25,0.18)'
+        }
         this.state = {
             windowWidth: window.innerWidth,
             windowHeight: window.innerHeight,
@@ -78,6 +80,8 @@ class CandleApp extends React.Component {
         // && dn.turnover<100
         // && dn.ave_close_13 < d[n-1].ave_close_13
         // && aboveS(d,n,'r0_net', dn.netsummax_r0_duration) > bellowS(d,n,'r0_net', dn.netsummax_r0_duration)*1
+
+
     }
 
     render() {
@@ -146,7 +150,15 @@ class CandleApp extends React.Component {
         });
 
         document.addEventListener('keydown', function(e) {
-            if (e.keyCode === 39) {
+            // console.log(e.ctrlKey, e.keyCode)
+            if (e.ctrlKey) {
+                if (e.keyCode === 37) {
+                    painterCore.moveToPattern(-1, me.state.windowWidth);
+                } else if (e.keyCode === 39) {
+                    painterCore.moveToPattern(1, me.state.windowWidth);
+                }
+
+            } else if (e.keyCode === 39) {
                 painterCore.moveDrawPort(3, me.state.windowWidth);
             } else if (e.keyCode === 37) {
                 painterCore.moveDrawPort(-3, me.state.windowWidth);
@@ -167,7 +179,7 @@ class CandleApp extends React.Component {
                 console.log("psid", psid)
 
             }
-            console.log("keyCode", e.keyCode)
+            //console.log("keyCode", e.keyCode)
         });
 
         //document.addEventListener('keyup', function(e) {});
@@ -203,7 +215,7 @@ class CandleApp extends React.Component {
             return;
         }
 
-        this.scanAllBtn.innerHTML = '❚❚';
+        this.scanAllBtn.innerHTML = '□'; // '❚❚';
         let me = this;
         let count = 0,
             bull = 0,
@@ -211,12 +223,15 @@ class CandleApp extends React.Component {
             cases = 0;
         let matchStr = this.matchTexArea.value;
         IO.workerScanByIndex(matchStr, function(cnts) { // && data[n].ave_close_8 > data[n-2].ave_close_8 && data[n].ave_close_8 > data[n-3].ave_close_8
-            console.log("-----------------", cnts)
+            // console.log("-----------------", cnts)
             count = cnts.count;
             bull += cnts.bull;
             bear += cnts.bear;
             cases += cnts.cases;
             me.scanAllInfo.innerHTML = Math.round(100 * bull / (bull + bear)) + '%/' + cases + '/' + count;
+            if (cnts.finished) {
+                me.scanAllBtn.innerHTML = '►';
+            }
         })
     }
 
@@ -228,7 +243,7 @@ class CandleApp extends React.Component {
             let bear = result.bear;
             let cases = result.cases;
             let pct = bull / (bull + bear);
-            pct = Math.round(pct * 100) / 100;
+            pct = isNaN(pct) ? 0 : Math.round(pct * 100) / 100;
             this.scanInfo.innerHTML = pct + '/' + bull + '/' + bear + '/' + cases + '(Ctrl+Enter)'
         }
 

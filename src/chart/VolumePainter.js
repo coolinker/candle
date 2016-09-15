@@ -4,10 +4,10 @@ module.exports = class VolumePainter extends MassPainter {
     constructor(painterCore, canvas) {
         super(painterCore, canvas);
         this.topPadding = 25;
-        this.doOnAmountRange = this.doOnAmountRange.bind(this);
-        this.core.on("amountRange", this.doOnAmountRange);
-        this.core.on("netsummax_r0Range", this.doOnAmountRange);
-        this.core.on("netsummax_r0_durationRange", this.doOnAmountRange);
+        this.doOnValueRange = this.doOnValueRange.bind(this);
+        this.core.on("amountRange", this.doOnValueRange);
+        this.core.on("netsummax_r0Range", this.doOnValueRange);
+        this.core.on("netsummax_r0_durationRange", this.doOnValueRange);
 
         this.doOnMoneyFlow = this.doOnMoneyFlow.bind(this);
         this.core.on("moneyFlow", this.doOnMoneyFlow);
@@ -18,10 +18,11 @@ module.exports = class VolumePainter extends MassPainter {
         this.doOnData();
     }
 
-    doOnAmountRange() {
-        this.updateHeightPerUnit();
-        this.clearDrawCache();
-
+    doOnValueRange() {
+        if (this.updateHeightPerUnit()) {
+            console.log("columen panter doOnValueRange----------------------clear draw")
+            this.clearDrawCache();
+        }
     }
 
     clearDrawCache() {

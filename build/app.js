@@ -20592,6 +20592,47 @@ var tools = {
             sum += data[i][field];
         }
         return sum;
+    },
+
+    lowIndex: function lowIndex(data, start, end, field) {
+        var low = Number.MAX_SAFE_INTEGER;
+        var lowidx = -1;
+        for (var i = start; i <= end; i++) {
+            var v = data[i][field];
+            if (v < low) {
+                low = v;
+                lowidx = i;
+            }
+        }
+        return lowidx;
+    },
+
+    highIndex: function highIndex(data, start, end, field) {
+        var high = Number.MIN_SAFE_INTEGER;
+        var highidx = -1;
+        for (var i = start; i <= end; i++) {
+            var v = data[i][field];
+            if (v > high) {
+                high = v;
+                highidx = i;
+            }
+        }
+        return highidx;
+    },
+
+    maxSumIndex: function maxSumIndex(data, n, field, period) {
+        if (!period) return 0;
+        var sum = 0;
+        var maxsum = Number.MIN_SAFE_INTEGER;
+        var maxidx = -1;
+        for (var i = n; i >= 0 && i > n - period; i--) {
+            sum += data[i][field];
+            if (sum > maxsum) {
+                maxidx = i;
+                maxsum = sum;
+            }
+        }
+        return maxidx;
     }
 
 };
@@ -20633,32 +20674,33 @@ module.exports = function () {
             var cases = 0,
                 bull = 0,
                 bear = 0;
-            for (var i = 0; i < data.length; i++) {
-                if (matchFun(data, i)) {
-                    var d = data[i];
-                    if (!countInDay[d.date]) {
-                        countInDay[d.date] = 0;
-                    }
-                    countInDay[d.date] += 1;
+            if (matchFun) {
+                for (var i = 0; i < data.length; i++) {
+                    if (matchFun(data, i)) {
+                        var d = data[i];
+                        if (!countInDay[d.date]) {
+                            countInDay[d.date] = 0;
+                        }
+                        countInDay[d.date] += 1;
 
-                    data[i].match = {
-                        fun: matchFun,
-                        result: 0
-                    };
-                    cases++;
-                    var re = MatchFunctionUtil.testBullBear(data, i);
-                    if (re > 0) {
-                        bull++;
-                    } else if (re < 0) {
-                        bear++;
-                    }
+                        data[i].match = {
+                            fun: matchFun,
+                            result: 0
+                        };
+                        cases++;
+                        var re = MatchFunctionUtil.testBullBear(data, i);
+                        if (re > 0) {
+                            bull++;
+                        } else if (re < 0) {
+                            bear++;
+                        }
 
-                    data[i].match.result = re;
-                } else {
-                    delete data[i].match;
+                        data[i].match.result = re;
+                    } else {
+                        delete data[i].match;
+                    }
                 }
             }
-
             return {
                 cases: cases,
                 bull: bull,
@@ -21282,6 +21324,7 @@ module.exports = function (_MassPainter) {
         key: 'doOnPriceRange',
         value: function doOnPriceRange() {
             if (this.updateHeightPerUnit()) {
+                console.log("candle painter ------------clear draw cache", this.heightPerUnit);
                 this.clearDrawCache();
             }
         }
@@ -21492,6 +21535,7 @@ module.exports = function (_EventEmitter) {
         key: 'updateDrawPort',
         value: function updateDrawPort(dateStr, w) {
             if (!this.arrayData) return;
+            console.log("updateDrawPort", dateStr);
             var max = this.arrayData.length;
             var idx = this.dateIndexMap[dateStr];
             if (idx === undefined) {
@@ -21559,7 +21603,7 @@ module.exports = function (_EventEmitter) {
             }
             if (chnagedRange) {
                 this.emit(chnagedRange + "Range");
-                console.log("event-----", chnagedRange + "Range", rfds[chnagedRange]);
+                //console.log("event-----", chnagedRange + "Range", rfds[chnagedRange])
             }
 
             // if (this.volumeHigh !== mvhigh || this.volumeLow !== mvlow) {
@@ -21597,6 +21641,26 @@ module.exports = function (_EventEmitter) {
             if (end - len >= this.reservedSpaces) return;
             end = Math.min(end, len - 1);
             this.setDrawRange(start, end);
+        }
+    }, {
+        key: 'moveToPattern',
+        value: function moveToPattern(drct, w) {
+            var len = this.arrayData.length;
+            if (drct > 0) {
+                for (var i = this.drawRangeEnd - 10; i < len; i++) {
+                    if (this.arrayData[i].match) {
+                        this.updateDrawPort(this.arrayData[i].date, this.drawPortWidth);
+                        return;
+                    }
+                }
+            } else {
+                for (var _i = this.drawRangeStart + 10; _i >= 0; _i--) {
+                    if (this.arrayData[_i].match) {
+                        this.updateDrawPort(this.arrayData[_i].date, this.drawPortWidth);
+                        return;
+                    }
+                }
+            }
         }
     }, {
         key: 'loadData',
@@ -21827,10 +21891,10 @@ module.exports = function (_MassPainter) {
         var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(VolumePainter).call(this, painterCore, canvas));
 
         _this.topPadding = 25;
-        _this.doOnAmountRange = _this.doOnAmountRange.bind(_this);
-        _this.core.on("amountRange", _this.doOnAmountRange);
-        _this.core.on("netsummax_r0Range", _this.doOnAmountRange);
-        _this.core.on("netsummax_r0_durationRange", _this.doOnAmountRange);
+        _this.doOnValueRange = _this.doOnValueRange.bind(_this);
+        _this.core.on("amountRange", _this.doOnValueRange);
+        _this.core.on("netsummax_r0Range", _this.doOnValueRange);
+        _this.core.on("netsummax_r0_durationRange", _this.doOnValueRange);
 
         _this.doOnMoneyFlow = _this.doOnMoneyFlow.bind(_this);
         _this.core.on("moneyFlow", _this.doOnMoneyFlow);
@@ -21844,10 +21908,12 @@ module.exports = function (_MassPainter) {
             this.doOnData();
         }
     }, {
-        key: 'doOnAmountRange',
-        value: function doOnAmountRange() {
-            this.updateHeightPerUnit();
-            this.clearDrawCache();
+        key: 'doOnValueRange',
+        value: function doOnValueRange() {
+            if (this.updateHeightPerUnit()) {
+                console.log("columen panter doOnValueRange----------------------clear draw");
+                this.clearDrawCache();
+            }
         }
     }, {
         key: 'clearDrawCache',
@@ -22092,7 +22158,9 @@ var CandleApp = function (_React$Component) {
         _this.scanAllBtnClick = _this.scanAllBtnClick.bind(_this);
 
         var matchStr = _localstoreutil2.default.getCookie('scanExp');
-
+        if (!matchStr) {
+            matchStr = 'function(m1, m2, p1, p2) { var rightBottomIdx = lowIndex(d, n - m2, n, "low");' + 'var midTopIdx = highIndex(d, rightBottomIdx - m2, rightBottomIdx, "high");' + 'var leftBottomIdx = lowIndex(d, midTopIdx - m2, midTopIdx, "low");' + 'var leftTopIdx = highIndex(d, leftBottomIdx - m1, leftBottomIdx, "high");' + 'return diffR(d[n].close, d[midTopIdx].high) > p1' + '&& diffR(d[leftTopIdx].high, d[midTopIdx].high) > p2' + '} (25,10, -1.25,0.18)';
+        }
         _this.state = {
             windowWidth: window.innerWidth,
             windowHeight: window.innerHeight,
@@ -22102,6 +22170,7 @@ var CandleApp = function (_React$Component) {
         // && dn.turnover<100
         // && dn.ave_close_13 < d[n-1].ave_close_13
         // && aboveS(d,n,'r0_net', dn.netsummax_r0_duration) > bellowS(d,n,'r0_net', dn.netsummax_r0_duration)*1
+
         return _this;
     }
 
@@ -22225,7 +22294,14 @@ var CandleApp = function (_React$Component) {
             });
 
             document.addEventListener('keydown', function (e) {
-                if (e.keyCode === 39) {
+                // console.log(e.ctrlKey, e.keyCode)
+                if (e.ctrlKey) {
+                    if (e.keyCode === 37) {
+                        painterCore.moveToPattern(-1, me.state.windowWidth);
+                    } else if (e.keyCode === 39) {
+                        painterCore.moveToPattern(1, me.state.windowWidth);
+                    }
+                } else if (e.keyCode === 39) {
                     painterCore.moveDrawPort(3, me.state.windowWidth);
                 } else if (e.keyCode === 37) {
                     painterCore.moveDrawPort(-3, me.state.windowWidth);
@@ -22244,7 +22320,7 @@ var CandleApp = function (_React$Component) {
                     if (psid) me.refs.sidInput.updateState(psid, true);
                     console.log("psid", psid);
                 }
-                console.log("keyCode", e.keyCode);
+                //console.log("keyCode", e.keyCode)
             });
 
             //document.addEventListener('keyup', function(e) {});
@@ -22279,7 +22355,7 @@ var CandleApp = function (_React$Component) {
                 return;
             }
 
-            this.scanAllBtn.innerHTML = '❚❚';
+            this.scanAllBtn.innerHTML = '□'; // '❚❚';
             var me = this;
             var count = 0,
                 bull = 0,
@@ -22288,12 +22364,15 @@ var CandleApp = function (_React$Component) {
             var matchStr = this.matchTexArea.value;
             _io2.default.workerScanByIndex(matchStr, function (cnts) {
                 // && data[n].ave_close_8 > data[n-2].ave_close_8 && data[n].ave_close_8 > data[n-3].ave_close_8
-                console.log("-----------------", cnts);
+                // console.log("-----------------", cnts)
                 count = cnts.count;
                 bull += cnts.bull;
                 bear += cnts.bear;
                 cases += cnts.cases;
                 me.scanAllInfo.innerHTML = Math.round(100 * bull / (bull + bear)) + '%/' + cases + '/' + count;
+                if (cnts.finished) {
+                    me.scanAllBtn.innerHTML = '►';
+                }
             });
         }
     }, {
@@ -22306,7 +22385,7 @@ var CandleApp = function (_React$Component) {
                 var bear = result.bear;
                 var cases = result.cases;
                 var pct = bull / (bull + bear);
-                pct = Math.round(pct * 100) / 100;
+                pct = isNaN(pct) ? 0 : Math.round(pct * 100) / 100;
                 this.scanInfo.innerHTML = pct + '/' + bull + '/' + bear + '/' + cases + '(Ctrl+Enter)';
             }
         }
@@ -22565,7 +22644,7 @@ module.scanByIndex = function scanByIndex(idx, patternStr, countInDay, callback)
             } else {
                 module.scanByIndex(++idx, patternStr, countInDay, callback);
             }
-        }, 1);
+        }, 0);
     }
 };
 
