@@ -20570,7 +20570,6 @@ var tools = {
             // console.log(data[i].date, data[i][field])
             sum += data[i][field];
         }
-
         return sum;
     },
 
@@ -20582,6 +20581,7 @@ var tools = {
             if ((data[i].high + data[i].low) / 2 >= price) continue;
             sum += data[i][field];
         }
+
         return sum;
     },
 
@@ -21147,8 +21147,6 @@ module.exports = function () {
         this.core.on("range", this.doOnRange);
         this.doOnUnitWidth = this.doOnUnitWidth.bind(this);
         this.core.on("unitWidth", this.doOnUnitWidth);
-        this.doOnScan = this.doOnScan.bind(this);
-        this.core.on("scan", this.doOnScan);
 
         this.topBorder = 0;
         this.bottomBorder = 0;
@@ -21162,13 +21160,6 @@ module.exports = function () {
             if (!this.canvas) return;
             this.canvas.width = this.core.getCanvasWidth();
             // console.log("canvas width changed:", this.canvas.width)
-            this.clearDrawCache();
-            this.draw(this.core.drawRangeStart, this.core.drawRangeEnd);
-        }
-    }, {
-        key: 'doOnScan',
-        value: function doOnScan() {
-            console.log("doOnScan");
             this.clearDrawCache();
             this.draw(this.core.drawRangeStart, this.core.drawRangeEnd);
         }
@@ -21188,12 +21179,14 @@ module.exports = function () {
             if (!this.canvas) return;
             // console.log("MassPainter doOnRange", this.core.unitWidth)
             this.draw(this.core.drawRangeStart, this.core.drawRangeEnd);
+            this.chartCanvas.updateX(this.core.drawRangeStart * this.core.unitWidth);
         }
     }, {
         key: 'setCanvas',
         value: function setCanvas(canvas) {
-            this.canvas = canvas;
-            if (this.canvas) this.canvas2DCtx = canvas.getContext('2d');
+            this.chartCanvas = canvas;
+            this.canvas = canvas.getDomCanvas();
+            if (this.canvas) this.canvas2DCtx = this.canvas.getContext('2d');
         }
     }, {
         key: 'draw',
@@ -21302,6 +21295,99 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
+var MassPainter = require('./masspainter');
+module.exports = function (_MassPainter) {
+    _inherits(AlphaPainter, _MassPainter);
+
+    function AlphaPainter(painterCore, canvas) {
+        _classCallCheck(this, AlphaPainter);
+
+        var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(AlphaPainter).call(this, painterCore, canvas));
+
+        _this.topPadding = 25;
+        _this.doOnValueRange = _this.doOnValueRange.bind(_this);
+        _this.core.on("alphaRange", _this.doOnValueRange);
+
+        _this.doOnScan = _this.doOnScan.bind(_this);
+        _this.core.on("scan", _this.doOnScan);
+        return _this;
+    }
+
+    _createClass(AlphaPainter, [{
+        key: 'doOnScan',
+        value: function doOnScan() {
+            console.log("doOnScan AlphaPainter");
+            this.clearDrawCache();
+            this.draw(this.core.drawRangeStart, this.core.drawRangeEnd);
+        }
+    }, {
+        key: 'doOnValueRange',
+        value: function doOnValueRange() {
+            if (this.updateHeightPerUnit()) {
+                console.log("AlphaPainter panter doOnValueRange----------------------clear draw");
+                this.clearDrawCache();
+            }
+        }
+    }, {
+        key: 'updateHeightPerUnit',
+        value: function updateHeightPerUnit() {
+            if (!this.canvas) return;
+            // let h = this.canvas.height - this.topPadding;
+            // let lastv = this.heightPerUnit;
+            // let ha = this.getAmountY(this.core.rangeFields.amount.high);
+            // if (this.heightPerUnit > 0 && ha > 0 && ha < 2 * this.topPadding) return false;
+            // this.heightPerUnit = h / this.core.rangeFields.amount.high;
+            // console.log("this.heightPerUnit", this.heightPerUnit)
+            // let r = Math.max(this.core.rangeFields.netsummax_r0.high, -this.core.rangeFields.netsummax_r0.low)
+            // this.heightPerNetSumMax_r0Unit = 0.5 * h / r;
+
+            // let dh = this.core.rangeFields.netsummax_r0_duration.high;
+            // this.heightPerNetSumMax_r0_DurationUnit = 0.5 * h / dh;
+            return true;
+        }
+    }, {
+        key: 'getMatchCountY',
+        value: function getMatchCountY(amount) {
+            var y = Math.round(this.canvas.height - amount * this.heightPerUnit);
+            return y;
+        }
+    }, {
+        key: 'drawSingle',
+        value: function drawSingle(x, idx, dataArr) {
+
+            var data = dataArr[idx];
+            var data_pre = idx > 0 ? dataArr[idx - 1] : null;
+            var ctx = this.canvas2DCtx;
+            var w = this.core.unitWidth;
+            var xp = Math.floor(x + w / 2);
+
+            if (data.match) {
+                ctx.setLineDash([2, 4]);
+                ctx.strokeStyle = 'rgba(130, 130, 130, 1)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(xp, 0);
+                ctx.lineTo(xp, this.canvas.height);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+        }
+    }]);
+
+    return AlphaPainter;
+}(MassPainter);
+
+},{"./masspainter":180}],179:[function(require,module,exports){
+'use strict';
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
 var MassPainter = require('./MassPainter');
 module.exports = function (_MassPainter) {
     _inherits(CandlePainter, _MassPainter);
@@ -21317,6 +21403,7 @@ module.exports = function (_MassPainter) {
         _this.bottomPadding = 50;
         _this.bottomBorder = 1;
         _this.topBorder = 1;
+        _this.priceLowInCache;
         return _this;
     }
 
@@ -21332,6 +21419,7 @@ module.exports = function (_MassPainter) {
         key: 'updateHeightPerUnit',
         value: function updateHeightPerUnit() {
             if (!this.canvas || this.core.priceHigh === 0) return false;
+            if (this.priceLowInCache === undefined) this.priceLowInCache = this.core.priceLow;
             var ly = this.getPriceY(this.core.priceLow);
             var hy = this.getPriceY(this.core.priceHigh);
             var h = this.canvas.height;
@@ -21340,6 +21428,7 @@ module.exports = function (_MassPainter) {
             // console.log(this.heightPerUnit, this.core.priceLow, ly, this.core.priceHigh, hy);
 
             this.heightPerUnit = (h - this.bottomPadding - this.topPadding) / (100 * (this.core.priceHigh - this.core.priceLow));
+            this.priceLowInCache = this.core.priceLow;
             //console.log("updateHeightPerUnit", lastv, h - this.bottomPadding, this.core.priceHigh, this.core.priceLow, this.heightPerUnit)
             return lastv != this.heightPerUnit;
         }
@@ -21355,17 +21444,6 @@ module.exports = function (_MassPainter) {
             var ctx = this.canvas2DCtx;
             var w = this.core.unitWidth;
             var xp = Math.floor(x + w / 2);
-
-            if (data.match) {
-                ctx.setLineDash([2, 4]);
-                ctx.strokeStyle = 'rgba(130, 130, 130, 1)';
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                ctx.moveTo(xp, 0);
-                ctx.lineTo(xp, this.canvas.height);
-                ctx.stroke();
-                ctx.setLineDash([]);
-            }
 
             var color = data.close === data.open ? '#ffffff' : data.close < data.open ? '#4caf50' : '#f44336';
             ctx.strokeStyle = color;
@@ -21411,7 +21489,7 @@ module.exports = function (_MassPainter) {
     }, {
         key: 'getPriceY',
         value: function getPriceY(price) {
-            var y = Math.round(this.canvas.height - this.bottomPadding - (price - this.core.priceLow) * 100 * this.heightPerUnit);
+            var y = Math.round(this.canvas.height - this.bottomPadding - (price - this.priceLowInCache) * 100 * this.heightPerUnit);
             return y;
         }
     }]);
@@ -21419,7 +21497,165 @@ module.exports = function (_MassPainter) {
     return CandlePainter;
 }(MassPainter);
 
-},{"./MassPainter":177}],179:[function(require,module,exports){
+},{"./MassPainter":177}],180:[function(require,module,exports){
+'use strict';
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+module.exports = function () {
+    function MassPainter(painterCore, canvas) {
+        _classCallCheck(this, MassPainter);
+
+        this.canvas = canvas;
+        if (this.canvas) this.canvas2DCtx = canvas.getContext('2d');
+        this.heightPerUnit = null;
+        this.core = painterCore;
+        this.doOnData = this.doOnData.bind(this);
+        this.core.on("data", this.doOnData);
+        this.doOnRange = this.doOnRange.bind(this);
+        this.core.on("range", this.doOnRange);
+        this.doOnUnitWidth = this.doOnUnitWidth.bind(this);
+        this.core.on("unitWidth", this.doOnUnitWidth);
+
+        this.topBorder = 0;
+        this.bottomBorder = 0;
+        this.drawCache = [];
+        this.lastDrawHeight = -1;
+    }
+
+    _createClass(MassPainter, [{
+        key: 'doOnData',
+        value: function doOnData() {
+            if (!this.canvas) return;
+            this.canvas.width = this.core.getCanvasWidth();
+            // console.log("canvas width changed:", this.canvas.width)
+            this.clearDrawCache();
+            this.draw(this.core.drawRangeStart, this.core.drawRangeEnd);
+        }
+    }, {
+        key: 'doOnUnitWidth',
+        value: function doOnUnitWidth(w) {
+            if (!this.canvas) return;
+            this.canvas.width = this.core.getCanvasWidth();
+            this.clearDrawCache();
+            // console.log("MassPainter doOnUnitWidth:", this.canvas.width)
+            //this.draw(this.core.drawRangeStart, this.core.drawRangeEnd);
+            // this.doOnRange();
+        }
+    }, {
+        key: 'doOnRange',
+        value: function doOnRange() {
+            if (!this.canvas) return;
+            // console.log("MassPainter doOnRange", this.core.unitWidth)
+            this.draw(this.core.drawRangeStart, this.core.drawRangeEnd);
+            this.chartCanvas.updateX(this.core.drawRangeStart * this.core.unitWidth);
+        }
+    }, {
+        key: 'setCanvas',
+        value: function setCanvas(canvas) {
+            this.chartCanvas = canvas;
+            this.canvas = canvas.getDomCanvas();
+            if (this.canvas) this.canvas2DCtx = this.canvas.getContext('2d');
+        }
+    }, {
+        key: 'draw',
+        value: function draw(start, end) {
+            if (this.didDrawHeightChanged()) {
+                this.updateHeightPerUnit();
+                this.clearDrawCache();
+            }
+
+            // if (this.updateHeightPerUnit()) {
+            //     this.clearDrawCache();
+            //     this.canvas2DCtx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            // }
+
+            var w = this.core.unitWidth;
+            var data = this.core.arrayData;
+            var drawcount = 0;
+            //console.log("draw", start, end, data.length, w)
+            for (var i = start; i <= end && i >= 0; i++) {
+                var x = i * w;
+                if (this.hasDrawCache(i)) continue;
+                drawcount++;
+                //this.drawSingle(x, data[i], i > 0 ? data[i - 1] : null);
+                this.drawSingle(x, i, data, start, end);
+                this.drawCache[i] = true;
+            }
+
+            // if (drawcount>1)
+            //     console.log("draw new signles", start, start*w, drawcount);
+            this.lastDrawHeight = this.canvas.height;
+        }
+    }, {
+        key: 'hasDrawCache',
+        value: function hasDrawCache(i) {
+            return this.drawCache[i];
+        }
+    }, {
+        key: 'didDrawHeightChanged',
+        value: function didDrawHeightChanged() {
+            //console.log("changed", this.canvas.height,  this.lastDrawHeight)
+            return this.canvas.height != this.lastDrawHeight;
+        }
+    }, {
+        key: 'clearDrawCache',
+        value: function clearDrawCache() {
+            this.drawCache = [];
+            this.canvas2DCtx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            this.drawBorder();
+        }
+    }, {
+        key: 'drawBorder',
+        value: function drawBorder() {
+            //console.log("border draw", this.topBorder, this.bottomBorder)
+            var canvas = this.canvas;
+            var ctx = this.canvas2DCtx;
+            ctx.strokeStyle = '#424242';
+            if (this.topBorder > 0) {
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(canvas.width, 0);
+                ctx.lineWidth = this.topBorder;
+                ctx.stroke();
+            }
+            if (this.bottomBorder > 0) {
+                ctx.moveTo(0, canvas.height - 1);
+                ctx.lineTo(canvas.width, canvas.height - 1);
+                ctx.lineWidth = this.bottomBorder;
+                ctx.stroke();
+            }
+        }
+    }, {
+        key: 'drawSingle',
+        value: function drawSingle(x, idx, dataArr) {}
+    }, {
+        key: 'updateHeightPerUnit',
+        value: function updateHeightPerUnit() {
+            return true;
+        }
+
+        // getPriceByY(y) {
+        //     let low = this.core.priceLow;
+        //     return low + Math.round(y/this.heightPerUnit)/100;
+        // }
+
+        // getPriceY(price) {
+        //     return (this.core.priceHigh - price)*100*this.core.heightPerUnit;
+        // }
+
+        // getVolumeByY(y) {
+
+        // }
+
+    }]);
+
+    return MassPainter;
+}();
+
+},{}],181:[function(require,module,exports){
 'use strict';
 // const EventEmitter = require('events');
 
@@ -21587,6 +21823,7 @@ module.exports = function (_EventEmitter) {
                     if (data[att] < hl.low) hl.low = data[att];
                 }
             }
+
             if (this.priceHigh !== mhigh || this.priceLow !== mlow) {
                 this.priceHigh = mhigh;
                 this.priceLow = mlow;
@@ -21696,7 +21933,7 @@ module.exports = function (_EventEmitter) {
     return PainterCore;
 }(_events2.default);
 
-},{"../alpha/matchfunctionutil":172,"../alpha/utilspipe":175,"events":1}],180:[function(require,module,exports){
+},{"../alpha/matchfunctionutil":172,"../alpha/utilspipe":175,"events":1}],182:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -21852,17 +22089,17 @@ module.exports = function () {
     }, {
         key: "setCanvas",
         value: function setCanvas(canvas) {
-            this.canvas = canvas;
-            if (!this.canvas) return;
+            this.chartCanvas = canvas;
+            if (!this.chartCanvas) return;
+            this.canvas = canvas.getDomCanvas();
 
-            this.canvas2DCtx = canvas.getContext('2d');
-
+            this.canvas2DCtx = this.canvas.getContext('2d');
             if (this.mouseMoveHandler) {
-                canvas.addEventListener('mousemove', this.mouseMoveHandler, false);
+                this.canvas.addEventListener('mousemove', this.mouseMoveHandler, false);
             }
 
             if (this.mouseDblclickHandler) {
-                canvas.addEventListener('dblclick', this.mouseDblclickHandler, false);
+                this.canvas.addEventListener('dblclick', this.mouseDblclickHandler, false);
             }
         }
     }]);
@@ -21870,7 +22107,7 @@ module.exports = function () {
     return PointerPainter;
 }();
 
-},{}],181:[function(require,module,exports){
+},{}],183:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -21911,7 +22148,6 @@ module.exports = function (_MassPainter) {
         key: 'doOnValueRange',
         value: function doOnValueRange() {
             if (this.updateHeightPerUnit()) {
-                console.log("columen panter doOnValueRange----------------------clear draw");
                 this.clearDrawCache();
             }
         }
@@ -21932,6 +22168,7 @@ module.exports = function (_MassPainter) {
             var ha = this.getAmountY(this.core.rangeFields.amount.high);
             if (this.heightPerUnit > 0 && ha > 0 && ha < 2 * this.topPadding) return false;
             this.heightPerUnit = h / this.core.rangeFields.amount.high;
+            console.log("this.heightPerUnit", this.heightPerUnit);
             var r = Math.max(this.core.rangeFields.netsummax_r0.high, -this.core.rangeFields.netsummax_r0.low);
             this.heightPerNetSumMax_r0Unit = 0.5 * h / r;
 
@@ -21954,16 +22191,6 @@ module.exports = function (_MassPainter) {
             var ctx = this.canvas2DCtx;
             var w = this.core.unitWidth;
             var xp = Math.floor(x + w / 2);
-            if (data.match) {
-                ctx.setLineDash([2, 4]);
-                ctx.strokeStyle = 'rgba(130, 130, 130, 1)';
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                ctx.moveTo(xp, 0);
-                ctx.lineTo(xp, this.canvas.height);
-                ctx.stroke();
-                ctx.setLineDash([]);
-            }
 
             if (data.netsummax_r0 !== undefined) {
                 var nsmr0h = Math.round(data.netsummax_r0 * this.heightPerNetSumMax_r0Unit);
@@ -22031,8 +22258,8 @@ module.exports = function (_MassPainter) {
                 if (this.hasDrawCache(idx + 1)) {
                     var data_next = dataArr[idx + 1];
                     var avny = this.getAmountY(data_next["ave_amount_" + aves[i]]);
-                    ctx.moveTo(x + this.core.unitWidth, avny);
-                    ctx.lineTo(x, avy);
+                    ctx.moveTo(x + unitWidth * 3 / 2, avny);
+                    ctx.lineTo(x + unitWidth / 2, avy);
                 }
                 ctx.stroke();
             }
@@ -22042,7 +22269,7 @@ module.exports = function (_MassPainter) {
     return VolumePainter;
 }(MassPainter);
 
-},{"./MassPainter":177}],182:[function(require,module,exports){
+},{"./MassPainter":177}],184:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -22107,6 +22334,9 @@ var painterCore = new PainterCore();
 
 var CandlePainter = require('../chart/candlepainter');
 var candlePainter = new CandlePainter(painterCore);
+var AlphaPainter = require('../chart/alphapainter');
+var alphaPainter = new AlphaPainter(painterCore);
+
 var VolumePainter = require('../chart/volumepainter');
 var volPainter = new VolumePainter(painterCore);
 
@@ -22161,6 +22391,7 @@ var CandleApp = function (_React$Component) {
         if (!matchStr) {
             matchStr = 'function(m1, m2, p1, p2) { var rightBottomIdx = lowIndex(d, n - m2, n, "low");' + 'var midTopIdx = highIndex(d, rightBottomIdx - m2, rightBottomIdx, "high");' + 'var leftBottomIdx = lowIndex(d, midTopIdx - m2, midTopIdx, "low");' + 'var leftTopIdx = highIndex(d, leftBottomIdx - m1, leftBottomIdx, "high");' + 'return diffR(d[n].close, d[midTopIdx].high) > p1' + '&& diffR(d[leftTopIdx].high, d[midTopIdx].high) > p2' + '} (25,10, -1.25,0.18)';
         }
+
         _this.state = {
             windowWidth: window.innerWidth,
             windowHeight: window.innerHeight,
@@ -22256,6 +22487,13 @@ var CandleApp = function (_React$Component) {
                 ),
                 _react2.default.createElement(
                     _chartcanvas2.default,
+                    { ref: function ref(_ref7) {
+                            return _this2.alphaChart = _ref7;
+                        }, width: '2000', height: candleChartHeight, y: candleChartY },
+                    ' '
+                ),
+                _react2.default.createElement(
+                    _chartcanvas2.default,
                     { ref: 'candleChart', width: '2000', height: candleChartHeight, y: candleChartY },
                     ' '
                 ),
@@ -22274,13 +22512,16 @@ var CandleApp = function (_React$Component) {
     }, {
         key: 'componentDidMount',
         value: function componentDidMount() {
-            var domCanvas = this.refs.candleChart.getDomCanvas();
-            candlePainter.setCanvas(domCanvas);
+            var candleCanvas = this.refs.candleChart; //.getDomCanvas();
+            candlePainter.setCanvas(candleCanvas);
 
-            var volCanvas = this.refs.volChart.getDomCanvas();
+            var alphaCanvas = this.alphaChart; //.getDomCanvas();
+            alphaPainter.setCanvas(alphaCanvas);
+
+            var volCanvas = this.refs.volChart; //.getDomCanvas();
             volPainter.setCanvas(volCanvas);
 
-            var pointerDomCanvas = this.refs.pointerCanvas.getDomCanvas();
+            var pointerDomCanvas = this.refs.pointerCanvas; //.getDomCanvas();
             pointerPainter.setCanvas(pointerDomCanvas);
 
             var me = this;
@@ -22326,7 +22567,6 @@ var CandleApp = function (_React$Component) {
             //document.addEventListener('keyup', function(e) {});
 
             painterCore.on("range", function () {
-                me.updateCanvasPosition(painterCore.drawRangeStart * painterCore.unitWidth);
                 var date = painterCore.getDateOfCurrentRange();
                 // console.log("on range:", painterCore.drawRangeStart, date)
                 me.refs.dateInput.updateState(date, false);
@@ -22464,14 +22704,6 @@ var CandleApp = function (_React$Component) {
             painterCore.updateDrawPort(date, window.innerWidth);
         }
     }, {
-        key: 'updateCanvasPosition',
-        value: function updateCanvasPosition(x) {
-            //var core = this.props.painterCore;
-            //console.log("updateCanvasPosition", painterCore.drawRangeStart, painterCore.unitWidth, x)
-            this.refs.candleChart.updateX(x);
-            this.refs.volChart.updateX(x);
-        }
-    }, {
         key: 'doOnResize',
         value: function doOnResize() {
             // console.log("doOnResize", e)
@@ -22485,7 +22717,7 @@ var CandleApp = function (_React$Component) {
 
 exports.default = CandleApp;
 
-},{"../chart/candlepainter":178,"../chart/paintercore":179,"../chart/pointerpainter":180,"../chart/volumepainter":181,"./chartcanvas":183,"./dataworker.js":184,"./forms/dateinput":185,"./forms/forminput":186,"./io":188,"./localstoreutil":189,"./stockids":190,"./tradingdate":191,"./workerproxy":192,"react":168,"webworkify":169}],183:[function(require,module,exports){
+},{"../chart/alphapainter":178,"../chart/candlepainter":179,"../chart/paintercore":181,"../chart/pointerpainter":182,"../chart/volumepainter":183,"./chartcanvas":185,"./dataworker.js":186,"./forms/dateinput":187,"./forms/forminput":188,"./io":190,"./localstoreutil":191,"./stockids":192,"./tradingdate":193,"./workerproxy":194,"react":168,"webworkify":169}],185:[function(require,module,exports){
 'use strict';
 
 // let sampleData = [{ open: 15.5, close: 16, high: 16.5, low: 15.2 }, { open: 15.8, close: 15, high: 16.8, low: 14.2 }, { open: 15.5, close: 16, high: 16.8, low: 15.2 }, { open: 10.5, close: 10, high: 10.8, low: 9.2 }];
@@ -22556,7 +22788,7 @@ var ChartCanvas = function (_React$Component) {
 
 exports.default = ChartCanvas;
 
-},{"react":168}],184:[function(require,module,exports){
+},{"react":168}],186:[function(require,module,exports){
 'use strict';
 
 var _io = require('./io');
@@ -22702,6 +22934,7 @@ module.getStockDataSync = function getStockDataSync(sid, fields) {
             if (stockFields[j] === f) fm[j] = true;
         }
     }
+
     var fulldata = cacheMap[sid];
     if (!fulldata) {
         return null;
@@ -22724,6 +22957,7 @@ module.getStockDataSync = function getStockDataSync(sid, fields) {
 
 module.loadStockIds = function loadStockIds(start, count, fields, callback) {
     var sids = _stockids2.default.getIDsByIndex(start, count);
+
     _io2.default.httpGetStocksCompressedJson(sids, fields.join(), function (json) {
         //console.log("loadStockIds", sids.length, sids[0], sids[sids.length - 1])
         for (var sid in json.data) {
@@ -22736,7 +22970,7 @@ module.loadStockIds = function loadStockIds(start, count, fields, callback) {
     });
 };
 
-},{"../alpha/matchfunctionutil":172,"../alpha/utilspipe":175,"../alpha/zip":176,"./io":188,"./stockids":190}],185:[function(require,module,exports){
+},{"../alpha/matchfunctionutil":172,"../alpha/utilspipe":175,"../alpha/zip":176,"./io":190,"./stockids":192}],187:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -22832,7 +23066,7 @@ DateInput.defaultProps = { type: "date", width: 130 };
 
 exports.default = DateInput;
 
-},{"./forminput":186,"react":168}],186:[function(require,module,exports){
+},{"./forminput":188,"react":168}],188:[function(require,module,exports){
 'use strict';
 
 // let sampleData = [{ open: 15.5, close: 16, high: 16.5, low: 15.2 }, { open: 15.8, close: 15, high: 16.8, low: 14.2 }, { open: 15.5, close: 16, high: 16.8, low: 15.2 }, { open: 10.5, close: 10, high: 10.8, low: 9.2 }];
@@ -22939,7 +23173,7 @@ FormInput.defaultProps = {
 
 exports.default = FormInput;
 
-},{"react":168}],187:[function(require,module,exports){
+},{"react":168}],189:[function(require,module,exports){
 'use strict';
 
 var _react = require("react");
@@ -22958,7 +23192,7 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 var candleApp = _reactDom2.default.render(_react2.default.createElement(_CandleApp2.default, null), document.getElementById('app'));
 
-},{"./CandleApp":182,"react":168,"react-dom":30}],188:[function(require,module,exports){
+},{"./CandleApp":184,"react":168,"react-dom":30}],190:[function(require,module,exports){
 'use strict';
 // import fetch from 'whatwg-fetch';
 
@@ -23014,7 +23248,7 @@ var IO = function () {
                         name: arr[4]
                     });
                 }
-                console.log("sidSuggest =>", stocks);
+                //console.log("sidSuggest =>", stocks);
                 callback(stocks);
             });
         }
@@ -23193,7 +23427,7 @@ IO.cacheMap = {};
 
 exports.default = IO;
 
-},{"../alpha/netsumutil":174,"../alpha/zip":176}],189:[function(require,module,exports){
+},{"../alpha/netsumutil":174,"../alpha/zip":176}],191:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -23240,7 +23474,7 @@ var LocalStoreUtil = function () {
 
 exports.default = LocalStoreUtil;
 
-},{}],190:[function(require,module,exports){
+},{}],192:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -23320,7 +23554,7 @@ StockIDs.idIndexMap = {};
 
 exports.default = StockIDs;
 
-},{"./io":188}],191:[function(require,module,exports){
+},{"./io":190}],193:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -23380,7 +23614,7 @@ TradingDate.dateIndexMap = {};
 
 exports.default = TradingDate;
 
-},{"./io":188}],192:[function(require,module,exports){
+},{"./io":190}],194:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -23444,4 +23678,4 @@ var WorkerProxy = function () {
 
 exports.default = WorkerProxy;
 
-},{"whatwg-fetch":170}]},{},[187]);
+},{"whatwg-fetch":170}]},{},[189]);

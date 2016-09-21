@@ -20,7 +20,6 @@ module.exports = class VolumePainter extends MassPainter {
 
     doOnValueRange() {
         if (this.updateHeightPerUnit()) {
-            console.log("columen panter doOnValueRange----------------------clear draw")
             this.clearDrawCache();
         }
     }
@@ -39,6 +38,7 @@ module.exports = class VolumePainter extends MassPainter {
         let ha = this.getAmountY(this.core.rangeFields.amount.high);
         if (this.heightPerUnit > 0 && ha > 0 && ha < 2 * this.topPadding) return false;
         this.heightPerUnit = h / this.core.rangeFields.amount.high;
+        console.log("this.heightPerUnit", this.heightPerUnit)
         let r = Math.max(this.core.rangeFields.netsummax_r0.high, -this.core.rangeFields.netsummax_r0.low)
         this.heightPerNetSumMax_r0Unit = 0.5 * h / r;
 
@@ -59,16 +59,6 @@ module.exports = class VolumePainter extends MassPainter {
         let ctx = this.canvas2DCtx;
         let w = this.core.unitWidth;
         let xp = Math.floor(x + w / 2);
-        if (data.match) {
-            ctx.setLineDash([2, 4]);
-            ctx.strokeStyle = 'rgba(130, 130, 130, 1)';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(xp, 0);
-            ctx.lineTo(xp, this.canvas.height);
-            ctx.stroke();
-            ctx.setLineDash([]);
-        }
 
         if (data.netsummax_r0 !== undefined) {
             let nsmr0h = Math.round(data.netsummax_r0 * this.heightPerNetSumMax_r0Unit);
@@ -138,8 +128,8 @@ module.exports = class VolumePainter extends MassPainter {
             if (this.hasDrawCache(idx + 1)) {
                 let data_next = dataArr[idx + 1];
                 let avny = this.getAmountY(data_next["ave_amount_" + aves[i]]);
-                ctx.moveTo(x + this.core.unitWidth, avny);
-                ctx.lineTo(x, avy);
+                ctx.moveTo(x + unitWidth * 3 / 2, avny);
+                ctx.lineTo(x + unitWidth / 2, avy);
 
             }
             ctx.stroke();

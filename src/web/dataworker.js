@@ -130,6 +130,7 @@ module.getStockDataSync = function getStockDataSync(sid, fields) {
             if (stockFields[j] === f) fm[j] = true;
         }
     }
+
     let fulldata = cacheMap[sid];
     if (!fulldata) {
         return null;
@@ -153,6 +154,7 @@ module.getStockDataSync = function getStockDataSync(sid, fields) {
 
 module.loadStockIds = function loadStockIds(start, count, fields, callback) {
     let sids = StockIDs.getIDsByIndex(start, count);
+
     IO.httpGetStocksCompressedJson(sids, fields.join(), function(json) {
         //console.log("loadStockIds", sids.length, sids[0], sids[sids.length - 1])
         for (let sid in json.data) {

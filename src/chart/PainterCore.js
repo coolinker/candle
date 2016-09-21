@@ -130,6 +130,7 @@ module.exports = class PainterCore extends EventEmitter {
                 if (data[att] < hl.low) hl.low = data[att];
             }
         }
+        
         if (this.priceHigh !== mhigh || this.priceLow !== mlow) {
             this.priceHigh = mhigh;
             this.priceLow = mlow;

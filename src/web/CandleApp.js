@@ -15,6 +15,9 @@ let painterCore = new PainterCore();
 
 let CandlePainter = require('../chart/candlepainter');
 let candlePainter = new CandlePainter(painterCore);
+let AlphaPainter = require('../chart/alphapainter');
+let alphaPainter = new AlphaPainter(painterCore);
+
 let VolumePainter = require('../chart/volumepainter');
 let volPainter = new VolumePainter(painterCore);
 
@@ -71,6 +74,7 @@ class CandleApp extends React.Component {
         if (!matchStr) {
             matchStr = 'function(m1, m2, p1, p2) { var rightBottomIdx = lowIndex(d, n - m2, n, "low");' + 'var midTopIdx = highIndex(d, rightBottomIdx - m2, rightBottomIdx, "high");' + 'var leftBottomIdx = lowIndex(d, midTopIdx - m2, midTopIdx, "low");' + 'var leftTopIdx = highIndex(d, leftBottomIdx - m1, leftBottomIdx, "high");' + 'return diffR(d[n].close, d[midTopIdx].high) > p1' + '&& diffR(d[leftTopIdx].high, d[midTopIdx].high) > p2' + '} (25,10, -1.25,0.18)'
         }
+
         this.state = {
             windowWidth: window.innerWidth,
             windowHeight: window.innerHeight,
@@ -123,6 +127,7 @@ class CandleApp extends React.Component {
                 <textarea value={this.state.matchStr} style = {{position: 'absolute', right: '20px',  color: 'rgba(230, 230, 230, 1)', borderColor: 'rgba(230, 230, 230, 0.1)', top:'50px', zIndex: 100, width: '500px', height: '100px', background: 'transparent', 'fontSize': '10px'}} 
                     ref={(ref) => this.matchTexArea = ref} onChange={this.handleMatchTextAreaChange} onKeyUp={this.handleMatchTextAreaKeyUp} onKeyDown ={function(e){e.nativeEvent.stopImmediatePropagation();}}></textarea>
             </div > 
+            <ChartCanvas ref={(ref) => this.alphaChart = ref} width = "2000" height = { candleChartHeight } y = { candleChartY } > </ChartCanvas>  
             <ChartCanvas ref = "candleChart" width = "2000" height = { candleChartHeight } y = { candleChartY } > </ChartCanvas>  
             <ChartCanvas ref = "volChart" width = "2000" height = { volChartHeight } y = { volChartY } > </ChartCanvas> 
             <ChartCanvas ref = "pointerCanvas" width = { this.state.windowWidth } height = { ponterCanvasHeight } y = { pointerCanvasY } > </ChartCanvas>  
@@ -130,13 +135,16 @@ class CandleApp extends React.Component {
     }
 
     componentDidMount() {
-        let domCanvas = this.refs.candleChart.getDomCanvas();
-        candlePainter.setCanvas(domCanvas);
+        let candleCanvas = this.refs.candleChart; //.getDomCanvas();
+        candlePainter.setCanvas(candleCanvas);
 
-        let volCanvas = this.refs.volChart.getDomCanvas();
+        let alphaCanvas = this.alphaChart; //.getDomCanvas();
+        alphaPainter.setCanvas(alphaCanvas);
+
+        let volCanvas = this.refs.volChart; //.getDomCanvas();
         volPainter.setCanvas(volCanvas);
 
-        let pointerDomCanvas = this.refs.pointerCanvas.getDomCanvas();
+        let pointerDomCanvas = this.refs.pointerCanvas; //.getDomCanvas();
         pointerPainter.setCanvas(pointerDomCanvas);
 
         let me = this;
@@ -185,7 +193,6 @@ class CandleApp extends React.Component {
         //document.addEventListener('keyup', function(e) {});
 
         painterCore.on("range", function() {
-            me.updateCanvasPosition(painterCore.drawRangeStart * painterCore.unitWidth);
             let date = painterCore.getDateOfCurrentRange();
             // console.log("on range:", painterCore.drawRangeStart, date)
             me.refs.dateInput.updateState(date, false);
@@ -319,13 +326,6 @@ class CandleApp extends React.Component {
     handleDateChanged(date) {
         console.log("handleDateChanged", date)
         painterCore.updateDrawPort(date, window.innerWidth);
-    }
-
-    updateCanvasPosition(x) {
-        //var core = this.props.painterCore;
-        //console.log("updateCanvasPosition", painterCore.drawRangeStart, painterCore.unitWidth, x)
-        this.refs.candleChart.updateX(x);
-        this.refs.volChart.updateX(x);
     }
 
     doOnResize() {

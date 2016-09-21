@@ -143,17 +143,17 @@ module.exports = class PointerPainter {
     }
 
     setCanvas(canvas) {
-        this.canvas = canvas;
-        if (!this.canvas) return;
+        this.chartCanvas = canvas;
+        if (!this.chartCanvas) return;
+        this.canvas = canvas.getDomCanvas();
 
-        this.canvas2DCtx = canvas.getContext('2d');
-
+        this.canvas2DCtx = this.canvas.getContext('2d');
         if (this.mouseMoveHandler) {
-            canvas.addEventListener('mousemove', this.mouseMoveHandler, false);
+            this.canvas.addEventListener('mousemove', this.mouseMoveHandler, false);
         }
 
         if (this.mouseDblclickHandler) {
-            canvas.addEventListener('dblclick', this.mouseDblclickHandler, false);
+            this.canvas.addEventListener('dblclick', this.mouseDblclickHandler, false);
         }
     }
 

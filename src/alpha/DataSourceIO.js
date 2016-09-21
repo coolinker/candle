@@ -224,7 +224,7 @@ module.exports = class DataSourceIO {
     }
 
     thirdPartyAjaxAPI(url, getpost, callback) {
-        console.log("thirdPartyAjaxAPI", url, getpost)
+        //console.log("thirdPartyAjaxAPI", url, getpost)
         fetch(url, {
             method: getpost,
             timeout: 1000
@@ -234,7 +234,6 @@ module.exports = class DataSourceIO {
             }
             return res.text();
         }).then(function(body) {
-            console.log("----------body", body)
             callback(body);
         }).catch(function(error) {
             console.log('request failed', error)

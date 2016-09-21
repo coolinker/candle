@@ -2,6 +2,7 @@
 
 module.exports = class MassPainter {
     constructor(painterCore, canvas) {
+
         this.canvas = canvas;
         if (this.canvas) this.canvas2DCtx = canvas.getContext('2d');
         this.heightPerUnit = null;
@@ -12,8 +13,7 @@ module.exports = class MassPainter {
         this.core.on("range", this.doOnRange);
         this.doOnUnitWidth = this.doOnUnitWidth.bind(this);
         this.core.on("unitWidth", this.doOnUnitWidth)
-        this.doOnScan = this.doOnScan.bind(this);
-        this.core.on("scan", this.doOnScan);
+
 
         this.topBorder = 0;
         this.bottomBorder = 0;
@@ -25,12 +25,6 @@ module.exports = class MassPainter {
         if (!this.canvas) return;
         this.canvas.width = this.core.getCanvasWidth();
         // console.log("canvas width changed:", this.canvas.width)
-        this.clearDrawCache();
-        this.draw(this.core.drawRangeStart, this.core.drawRangeEnd);
-    }
-
-    doOnScan() {
-        console.log("doOnScan")
         this.clearDrawCache();
         this.draw(this.core.drawRangeStart, this.core.drawRangeEnd);
     }
@@ -48,11 +42,13 @@ module.exports = class MassPainter {
         if (!this.canvas) return;
         // console.log("MassPainter doOnRange", this.core.unitWidth)
         this.draw(this.core.drawRangeStart, this.core.drawRangeEnd);
+        this.chartCanvas.updateX(this.core.drawRangeStart * this.core.unitWidth);
     }
 
     setCanvas(canvas) {
-        this.canvas = canvas;
-        if (this.canvas) this.canvas2DCtx = canvas.getContext('2d');
+        this.chartCanvas = canvas;
+        this.canvas = canvas.getDomCanvas();
+        if (this.canvas) this.canvas2DCtx = this.canvas.getContext('2d');
     }
 
     draw(start, end) {

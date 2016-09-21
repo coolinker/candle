@@ -10,6 +10,7 @@ module.exports = class CandlePainter extends MassPainter {
         this.bottomPadding = 50;
         this.bottomBorder = 1;
         this.topBorder = 1;
+        this.priceLowInCache;
     }
 
     doOnPriceRange() {
@@ -22,6 +23,7 @@ module.exports = class CandlePainter extends MassPainter {
 
     updateHeightPerUnit() {
         if (!this.canvas || this.core.priceHigh === 0) return false;
+        if (this.priceLowInCache === undefined) this.priceLowInCache = this.core.priceLow;
         let ly = this.getPriceY(this.core.priceLow);
         let hy = this.getPriceY(this.core.priceHigh);
         let h = this.canvas.height;
@@ -30,6 +32,7 @@ module.exports = class CandlePainter extends MassPainter {
         // console.log(this.heightPerUnit, this.core.priceLow, ly, this.core.priceHigh, hy);
 
         this.heightPerUnit = (h - this.bottomPadding - this.topPadding) / (100 * (this.core.priceHigh - this.core.priceLow));
+        this.priceLowInCache = this.core.priceLow;
         //console.log("updateHeightPerUnit", lastv, h - this.bottomPadding, this.core.priceHigh, this.core.priceLow, this.heightPerUnit)
         return lastv != this.heightPerUnit;
     }
@@ -44,17 +47,6 @@ module.exports = class CandlePainter extends MassPainter {
         let ctx = this.canvas2DCtx;
         let w = this.core.unitWidth;
         let xp = Math.floor(x + w / 2);
-
-        if (data.match) {
-            ctx.setLineDash([2, 4]);
-            ctx.strokeStyle = 'rgba(130, 130, 130, 1)';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(xp, 0);
-            ctx.lineTo(xp, this.canvas.height);
-            ctx.stroke();
-            ctx.setLineDash([]);
-        }
 
         let color = (data.close === data.open ? '#ffffff' : (data.close < data.open ? '#4caf50' : '#f44336'));
         ctx.strokeStyle = color;
@@ -102,7 +94,7 @@ module.exports = class CandlePainter extends MassPainter {
     }
 
     getPriceY(price) {
-        let y = Math.round(this.canvas.height - this.bottomPadding - (price - this.core.priceLow) * 100 * this.heightPerUnit);
+        let y = Math.round(this.canvas.height - this.bottomPadding - (price - this.priceLowInCache) * 100 * this.heightPerUnit);
         return y;
     }
 }

@@ -136,7 +136,7 @@ module.exports = class DataBuilder {
                 dateMap[dt].r0_net += mf.r0_net;
 
             }
-            if (i % 10 === 0) console.log(i);
+            if (i % 100 === 0) console.log(i);
         }
 
         let shmfarr = this.dataSourceIO.readMoneyFlowSync("SH999999");
@@ -154,9 +154,11 @@ module.exports = class DataBuilder {
             }
 
             if (date < startDate) continue;
-
-            if (shstart + shmfarr.length > i) shmfarr[i - shstart] = dateMapSH[dt];
-            else shmfarr.push(dateMapSH[dt]);
+            if (shstart + shmfarr.length > i) {
+                shmfarr[i - shstart] = dateMapSH[dt];
+            } else {
+                shmfarr.push(dateMapSH[dt]);
+            }
 
             if (szstart + szmfarr.length > i) szmfarr[i - szstart] = dateMapSZ[dt];
             else szmfarr.push(dateMapSZ[dt]);

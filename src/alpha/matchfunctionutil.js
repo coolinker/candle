@@ -27,7 +27,6 @@ let tools = {
             // console.log(data[i].date, data[i][field])
             sum += data[i][field];
         }
-
         return sum;
     },
 
@@ -39,6 +38,7 @@ let tools = {
             if ((data[i].high + data[i].low) / 2 >= price) continue;
             sum += data[i][field];
         }
+
         return sum;
     },
 

@@ -189,7 +189,6 @@ let apiDispatcher = {
         let url = params.url;
         let mtd = params.http;
         dataSourceIO.thirdPartyAjaxAPI(url, mtd, function(output) {
-            console.log("---===", output)
             outputCallback(output);
         });
     }

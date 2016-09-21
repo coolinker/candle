@@ -32,7 +32,7 @@ class IO {
                 });
 
             }
-            console.log("sidSuggest =>", stocks);
+            //console.log("sidSuggest =>", stocks);
             callback(stocks);
         });
     }
