@@ -16,9 +16,6 @@ dataBuilder.updateJson(new Date(dateStr), 0, function(idx, count) {
     console.log("finished updateJson => updateMoneyFlow", idx, count)
     dataBuilder.updateMoneyFlow(0, new Date(dateStr), function(end) {
         console.log("updateMoneyFlow => updateMarketMoneyFlow", end);
-        setTimeout(function() {
-            dataBuilder.updateMarketMoneyFlow(new Date(dateStr));
-        }, 1000)
-
+        dataBuilder.updateMarketMoneyFlow(new Date(dateStr));
     });
 });

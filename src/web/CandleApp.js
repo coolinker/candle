@@ -3,11 +3,14 @@ import React from 'react';
 import IO from './io';
 
 import work from 'webworkify';
-import WorkerProxy from './workerproxy';
 
-let w = work(require('./dataworker.js'));
-IO.dataWorkerProxy = new WorkerProxy(w);
 
+let w0 = work(require('./dataworker.js'));
+let w1 = work(require('./dataworker.js'));
+let w2 = work(require('./dataworker.js'));
+// IO.dataWorkerProxy = new WorkerProxy(w);
+IO.setDataWorkers([w0, w1, w2]);
+let loadStockStarts = [0, 800, 1800];
 
 let PainterCore = require('../chart/paintercore');
 let painterCore = new PainterCore();
@@ -72,7 +75,7 @@ class CandleApp extends React.Component {
 
         let matchStr = LocalStoreUtil.getCookie('scanExp');
         if (!matchStr) {
-            matchStr = 'function(m1, m2, p1, p2) { var rightBottomIdx = lowIndex(d, n - m2, n, "low");' + 'var midTopIdx = highIndex(d, rightBottomIdx - m2, rightBottomIdx, "high");' + 'var leftBottomIdx = lowIndex(d, midTopIdx - m2, midTopIdx, "low");' + 'var leftTopIdx = highIndex(d, leftBottomIdx - m1, leftBottomIdx, "high");' + 'return diffR(d[n].close, d[midTopIdx].high) > p1' + '&& diffR(d[leftTopIdx].high, d[midTopIdx].high) > p2' + '} (25,10, -1.25,0.18)'
+            matchStr = 'function(m1, m2, p1, p2) { \nvar rightBottomIdx = lowPI(d, n - m2, n, "low");' + '\nvar midTopIdx = highPI(d, rightBottomIdx - m2, rightBottomIdx, "high");' + '\nvar leftBottomIdx = lowPI(d, midTopIdx - m2, midTopIdx, "low");' + '\nvar leftTopIdx = highPI(d, leftBottomIdx - m1, leftBottomIdx, "high");' + '\nreturn diffR(d[n].close, d[midTopIdx].high) > p1' + '\n&& diffR(d[leftTopIdx].high, d[midTopIdx].high) > p2' + '\n} (25,10, -1.25,0.18)'
         }
 
         this.state = {
@@ -205,7 +208,7 @@ class CandleApp extends React.Component {
 
         this.loadDataBySid(sid, date);
         setTimeout(function() {
-            IO.workerStartLoadStocks(function(re) {
+            IO.loadStocksPerPage(loadStockStarts, function(re) {
                 me.info.innerHTML = re;
             });
         }, 3000)
@@ -229,13 +232,15 @@ class CandleApp extends React.Component {
             bear = 0,
             cases = 0;
         let matchStr = this.matchTexArea.value;
-        IO.workerScanByIndex(matchStr, function(cnts) { // && data[n].ave_close_8 > data[n-2].ave_close_8 && data[n].ave_close_8 > data[n-3].ave_close_8
-            // console.log("-----------------", cnts)
-            count = cnts.count;
+        painterCore.clearMatchCases();
+        IO.workersScanByIndex(matchStr, function(cnts) { // && data[n].ave_close_8 > data[n-2].ave_close_8 && data[n].ave_close_8 > data[n-3].ave_close_8
+            count = cnts.index;
             bull += cnts.bull;
             bear += cnts.bear;
             cases += cnts.cases;
-            me.scanAllInfo.innerHTML = Math.round(100 * bull / (bull + bear)) + '%/' + cases + '/' + count;
+            painterCore.addMatchCases(cnts.sid, cnts.matchOnDate)
+            let per = bull + bear > 0 ? Math.round(100 * bull / (bull + bear)) : 0;
+            me.scanAllInfo.innerHTML = per + '%/' + cases + '/' + count;
             if (cnts.finished) {
                 me.scanAllBtn.innerHTML = '►';
             }

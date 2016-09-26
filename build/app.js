@@ -20566,6 +20566,11 @@ var tools = {
         var price = data[n].close;
         var sum = 0;
         for (var i = n; i >= 0 && i > n - period; i--) {
+            if (data[i].ex) {
+                var pc = data[i - 1].close;
+                var o = data[i].open;
+                price = price * pc / o;
+            }
             if ((data[i].high + data[i].low) / 2 < price) continue;
             // console.log(data[i].date, data[i][field])
             sum += data[i][field];
@@ -20578,6 +20583,11 @@ var tools = {
         var price = data[n].close;
         var sum = 0;
         for (var i = n; i >= 0 && i > n - period; i--) {
+            if (data[i].ex) {
+                var pc = data[i - 1].close;
+                var o = data[i].open;
+                price = price * pc / o;
+            }
             if ((data[i].high + data[i].low) / 2 >= price) continue;
             sum += data[i][field];
         }
@@ -20594,7 +20604,39 @@ var tools = {
         return sum;
     },
 
-    lowIndex: function lowIndex(data, start, end, field) {
+    lowPI: function lowPI(data, start, end, field) {
+        var low = Number.MAX_SAFE_INTEGER;
+        var lowidx = -1;
+        for (var i = start; i <= end; i++) {
+            if (data[i].ex && i > start) {
+                low = low * data[i].open / data[i - 1].close;
+            }
+            var v = data[i][field];
+            if (v < low) {
+                low = v;
+                lowidx = i;
+            }
+        }
+        return lowidx;
+    },
+
+    highPI: function highPI(data, start, end, field) {
+        var high = Number.MIN_SAFE_INTEGER;
+        var highidx = -1;
+        for (var i = start; i <= end; i++) {
+            if (data[i].ex && i > start) {
+                high = high * data[i].open / data[i - 1].close;
+            }
+            var v = data[i][field];
+            if (v > high) {
+                high = v;
+                highidx = i;
+            }
+        }
+        return highidx;
+    },
+
+    lowVI: function lowVI(data, start, end, field) {
         var low = Number.MAX_SAFE_INTEGER;
         var lowidx = -1;
         for (var i = start; i <= end; i++) {
@@ -20607,7 +20649,7 @@ var tools = {
         return lowidx;
     },
 
-    highIndex: function highIndex(data, start, end, field) {
+    highVI: function highVI(data, start, end, field) {
         var high = Number.MIN_SAFE_INTEGER;
         var highidx = -1;
         for (var i = start; i <= end; i++) {
@@ -20620,7 +20662,20 @@ var tools = {
         return highidx;
     },
 
-    maxSumIndex: function maxSumIndex(data, n, field, period) {
+    maxS: function maxS(data, n, field, period) {
+        if (!period) return 0;
+        var sum = 0;
+        var maxsum = Number.MIN_SAFE_INTEGER;
+        for (var i = n; i >= 0 && i > n - period; i--) {
+            sum += data[i][field];
+            if (sum > maxsum) {
+                maxsum = sum;
+            }
+        }
+        return maxsum;
+    },
+
+    maxSI: function maxSI(data, n, field, period) {
         if (!period) return 0;
         var sum = 0;
         var maxsum = Number.MIN_SAFE_INTEGER;
@@ -20634,7 +20689,6 @@ var tools = {
         }
         return maxidx;
     }
-
 };
 
 module.exports = function () {
@@ -20669,7 +20723,7 @@ module.exports = function () {
         }
     }, {
         key: 'scan',
-        value: function scan(data, functionStr, countInDay) {
+        value: function scan(data, functionStr, matchInDay) {
             var matchFun = MatchFunctionUtil.composeFunction(functionStr);
             var cases = 0,
                 bull = 0,
@@ -20678,10 +20732,7 @@ module.exports = function () {
                 for (var i = 0; i < data.length; i++) {
                     if (matchFun(data, i)) {
                         var d = data[i];
-                        if (!countInDay[d.date]) {
-                            countInDay[d.date] = 0;
-                        }
-                        countInDay[d.date] += 1;
+                        //matchInDay[d.date] = true;
 
                         data[i].match = {
                             fun: matchFun,
@@ -20691,8 +20742,12 @@ module.exports = function () {
                         var re = MatchFunctionUtil.testBullBear(data, i);
                         if (re > 0) {
                             bull++;
+                            matchInDay[d.date] = 1;
                         } else if (re < 0) {
                             bear++;
+                            matchInDay[d.date] = -1;
+                        } else {
+                            matchInDay[d.date] = 0;
                         }
 
                         data[i].match.result = re;
@@ -20726,12 +20781,13 @@ module.exports = function () {
         key: 'testBullBear',
         value: function testBullBear(data, idx) {
             //let re = Math.round(100 * Math.random()) % 2 === 0;
-            var inc = 0.1,
-                dec = -0.05,
-                price = data[idx].close,
+            var price = data[idx].close,
                 almp = tools.priceCRA(data, idx, 10);
             for (var i = idx + 1; i < data.length; i++) {
                 var d = data[i];
+                if (d.ex) {
+                    price = price * d.open / data[i - 1].close;
+                }
                 if ((d.low - price) / price < -3 * almp) return (d.low - price) / price;
                 if ((d.high - price) / price > 3 * almp) return (d.high - price) / price;
             }
@@ -21305,11 +21361,12 @@ module.exports = function (_MassPainter) {
         var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(AlphaPainter).call(this, painterCore, canvas));
 
         _this.topPadding = 25;
-        _this.doOnValueRange = _this.doOnValueRange.bind(_this);
-        _this.core.on("alphaRange", _this.doOnValueRange);
+        _this.doOnMatchCases = _this.doOnMatchCases.bind(_this);
+        _this.core.on("matchCases", _this.doOnMatchCases);
 
         _this.doOnScan = _this.doOnScan.bind(_this);
         _this.core.on("scan", _this.doOnScan);
+
         return _this;
     }
 
@@ -21321,28 +21378,18 @@ module.exports = function (_MassPainter) {
             this.draw(this.core.drawRangeStart, this.core.drawRangeEnd);
         }
     }, {
-        key: 'doOnValueRange',
-        value: function doOnValueRange() {
+        key: 'doOnMatchCases',
+        value: function doOnMatchCases() {
             if (this.updateHeightPerUnit()) {
-                console.log("AlphaPainter panter doOnValueRange----------------------clear draw");
+                //console.log("AlphaPainter panter doOnValueRange----------------------clear draw")
                 this.clearDrawCache();
+                this.draw(this.core.drawRangeStart, this.core.drawRangeEnd);
             }
         }
     }, {
         key: 'updateHeightPerUnit',
         value: function updateHeightPerUnit() {
             if (!this.canvas) return;
-            // let h = this.canvas.height - this.topPadding;
-            // let lastv = this.heightPerUnit;
-            // let ha = this.getAmountY(this.core.rangeFields.amount.high);
-            // if (this.heightPerUnit > 0 && ha > 0 && ha < 2 * this.topPadding) return false;
-            // this.heightPerUnit = h / this.core.rangeFields.amount.high;
-            // console.log("this.heightPerUnit", this.heightPerUnit)
-            // let r = Math.max(this.core.rangeFields.netsummax_r0.high, -this.core.rangeFields.netsummax_r0.low)
-            // this.heightPerNetSumMax_r0Unit = 0.5 * h / r;
-
-            // let dh = this.core.rangeFields.netsummax_r0_duration.high;
-            // this.heightPerNetSumMax_r0_DurationUnit = 0.5 * h / dh;
             return true;
         }
     }, {
@@ -21370,6 +21417,22 @@ module.exports = function (_MassPainter) {
                 ctx.lineTo(xp, this.canvas.height);
                 ctx.stroke();
                 ctx.setLineDash([]);
+            }
+            //console.log("-----------------------", idx, x, data.date, data.matchCases)
+            if (data.matchCases) {
+                var cases = data.matchCases;
+                var totalcases = cases.pending.length + cases.bull.length + cases.bear.length;
+                var mcmax = Math.max(this.core.matchCasesRangeMax, 100);
+
+                var h = Math.round(totalcases * 0.8 * this.canvas.height / mcmax);
+                //let clr = Math.round(130 + 125 * cases.bull.length / totalcases);
+                //ctx.strokeStyle = 'rgba(' + clr + ', ' + clr + ', ' + clr + ', 1)';
+                ctx.strokeStyle = 'rgba(255,255,255, ' + (0.3 + 0.7 * cases.bull.length / totalcases) + ')';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(xp, this.canvas.height - h - 1);
+                ctx.lineTo(xp, this.canvas.height - 1);
+                ctx.stroke();
             }
         }
     }]);
@@ -21692,7 +21755,7 @@ module.exports = function (_EventEmitter) {
 
         _this.reset();
         _this.aves = [8, 13, 21, 55];
-        //this.avecolors = ["#FFEB3B", "#00BCD4", "#9C27B0", "#DBDBDB"];
+        _this.unitWidth = 7;
         _this.avecolors = ['rgba(255, 235, 60, 1)', "#00BCD4", "#9C27B0", "#DBDBDB"];
         return _this;
     }
@@ -21701,11 +21764,10 @@ module.exports = function (_EventEmitter) {
         key: 'reset',
         value: function reset() {
             this.arrayData = null;
-            this.unitWidth = 7;
+            //this.unitWidth = 7;
             this.priceHigh = 0;
             this.priceLow = 10000;
-            // this.volumeHigh = -1;
-            // this.volumeLow = Number.MAX_SAFE_INTEGER;
+            this.matchCasesRangeMax = Number.MIN_SAFE_INTEGER;
             this.dateIndexMap = {};
             this.drawRangeStart = -1;
             this.drawRangeEnd = -1;
@@ -21843,12 +21905,12 @@ module.exports = function (_EventEmitter) {
                 //console.log("event-----", chnagedRange + "Range", rfds[chnagedRange])
             }
 
+            this.matchCasesRangeMax = this.getMatchCasesMax();
             // if (this.volumeHigh !== mvhigh || this.volumeLow !== mvlow) {
             //     this.volumeHigh = mvhigh;
             //     this.volumeLow = mvlow;
             //     this.emit("volumeRange", true);
             // }
-
             this.drawRangeStart = start;
             this.drawRangeEnd = end;
             //console.log("-----start/end", start, end, this.arrayData.length-1)
@@ -21900,15 +21962,66 @@ module.exports = function (_EventEmitter) {
             }
         }
     }, {
+        key: 'addMatchCases',
+        value: function addMatchCases(sid, matchOnDate) {
+            var data = this.arrayData;
+            for (var i = 0; i < data.length; i++) {
+                var d = data[i].date;
+                var r = matchOnDate[d];
+                if (r !== undefined) {
+                    if (!data[i].matchCases) data[i].matchCases = {
+                        pending: [],
+                        bull: [],
+                        bear: []
+                    };
+                    if (r === 0) data[i].matchCases.pending.push(sid);else if (r === 1) data[i].matchCases.bull.push(sid);else if (r === -1) data[i].matchCases.bear.push(sid);
+                    // data[i].matchCases.push(sid);
+                }
+            }
+
+            this.matchCasesRangeMax = this.getMatchCasesMax();
+            this.emit("matchCases");
+        }
+    }, {
+        key: 'getMatchCasesMax',
+        value: function getMatchCasesMax() {
+            var data = this.arrayData;
+            var max = Number.MIN_SAFE_INTEGER;
+            for (var i = this.drawRangeStart; i >= 0 && i <= this.drawRangeEnd; i++) {
+                if (!data[i].matchCases) continue;
+                var c = data[i].matchCases;
+                var t = c.bull.length + c.bear.length + c.pending.length;
+                if (t > max) max = t;
+            }
+
+            return max;
+        }
+    }, {
+        key: 'clearMatchCases',
+        value: function clearMatchCases() {
+            var data = this.arrayData;
+            for (var i = 0; i < data.length; i++) {
+                if (data[i].matchCases) data[i].matchCases = undefined;
+            }
+            this.emit("matchCases");
+        }
+    }, {
         key: 'loadData',
         value: function loadData(kdata) {
+            var temp = this.arrayData;
             this.reset();
             var len = kdata.length;
             var i = len > 4500 ? len - 4500 : 0;
             this.arrayData = kdata.slice(i, len);
             _utilspipe2.default.build(0, this.arrayData.length - 1, this.arrayData);
-            for (; i < len; i++) {
-                this.dateIndexMap[kdata[i].date] = i;
+            for (var n = 0; n < this.arrayData.length; n++) {
+                this.dateIndexMap[this.arrayData[n].date] = n;
+            }
+
+            for (var j = 0; temp && j < temp.length; j++) {
+                var date = temp[j].date;
+                if (!this.dateIndexMap[date]) continue;
+                this.arrayData[this.dateIndexMap[date]].matchCases = temp[j].matchCases;
             }
             this.emit("data");
         }
@@ -22190,6 +22303,7 @@ module.exports = function (_MassPainter) {
             var data_pre = idx > 0 ? dataArr[idx - 1] : null;
             var ctx = this.canvas2DCtx;
             var w = this.core.unitWidth;
+            var cw = Math.max(1, w - 1);
             var xp = Math.floor(x + w / 2);
 
             if (data.netsummax_r0 !== undefined) {
@@ -22198,7 +22312,7 @@ module.exports = function (_MassPainter) {
                 grd.addColorStop(0, 'rgba(66, 66, 66, 0.5)');
                 grd.addColorStop(1, 'rgba(66, 66,66, 0)');
                 ctx.fillStyle = grd;
-                ctx.fillRect(x, 0, w - 1, nsmr0h);
+                ctx.fillRect(x, 0, cw, nsmr0h);
 
                 var nsmh = Math.round(data.netsummax * this.heightPerNetSumMax_r0Unit);
                 ctx.beginPath();
@@ -22227,7 +22341,7 @@ module.exports = function (_MassPainter) {
                 var color = close < open ? '#4caf50' : close > open ? '#f44336' : preclose > close ? '#4caf50' : '#f44336';
                 ctx.strokeStyle = color;
                 ctx.fillStyle = color;
-                ctx.fillRect(x, this.canvas.height, w - 1, -Math.round(vol * this.heightPerUnit));
+                ctx.fillRect(x, this.canvas.height, cw, -Math.round(vol * this.heightPerUnit));
             }
             //    this.drawMoneyFlow(x, idx, dataArr);
             if (data.netamount !== undefined) {
@@ -22235,10 +22349,10 @@ module.exports = function (_MassPainter) {
 
                 ctx.fillStyle = data.r0_net > 0 ? '#B6B6B6' : '#727272';
                 var r0_height = Math.round(Math.abs(data.r0_net) * this.heightPerUnit);
-                ctx.fillRect(x, this.canvas.height, w - 1, -r0_height);
+                ctx.fillRect(x, this.canvas.height, cw, -r0_height);
 
                 ctx.fillStyle = rox_net > 0 ? '#FFEB3B' : '#FF9800';
-                ctx.fillRect(x, this.canvas.height - r0_height, w - 1, -Math.round(Math.abs(rox_net) * this.heightPerUnit));
+                ctx.fillRect(x, this.canvas.height - r0_height, cw, -Math.round(Math.abs(rox_net) * this.heightPerUnit));
             }
 
             if (idx === 0) return;
@@ -22290,10 +22404,6 @@ var _webworkify = require('webworkify');
 
 var _webworkify2 = _interopRequireDefault(_webworkify);
 
-var _workerproxy = require('./workerproxy');
-
-var _workerproxy2 = _interopRequireDefault(_workerproxy);
-
 var _chartcanvas = require('./chartcanvas');
 
 var _chartcanvas2 = _interopRequireDefault(_chartcanvas);
@@ -22326,8 +22436,12 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-var w = (0, _webworkify2.default)(require('./dataworker.js'));
-_io2.default.dataWorkerProxy = new _workerproxy2.default(w);
+var w0 = (0, _webworkify2.default)(require('./dataworker.js'));
+var w1 = (0, _webworkify2.default)(require('./dataworker.js'));
+var w2 = (0, _webworkify2.default)(require('./dataworker.js'));
+// IO.dataWorkerProxy = new WorkerProxy(w);
+_io2.default.setDataWorkers([w0, w1, w2]);
+var loadStockStarts = [0, 800, 1800];
 
 var PainterCore = require('../chart/paintercore');
 var painterCore = new PainterCore();
@@ -22389,7 +22503,7 @@ var CandleApp = function (_React$Component) {
 
         var matchStr = _localstoreutil2.default.getCookie('scanExp');
         if (!matchStr) {
-            matchStr = 'function(m1, m2, p1, p2) { var rightBottomIdx = lowIndex(d, n - m2, n, "low");' + 'var midTopIdx = highIndex(d, rightBottomIdx - m2, rightBottomIdx, "high");' + 'var leftBottomIdx = lowIndex(d, midTopIdx - m2, midTopIdx, "low");' + 'var leftTopIdx = highIndex(d, leftBottomIdx - m1, leftBottomIdx, "high");' + 'return diffR(d[n].close, d[midTopIdx].high) > p1' + '&& diffR(d[leftTopIdx].high, d[midTopIdx].high) > p2' + '} (25,10, -1.25,0.18)';
+            matchStr = 'function(m1, m2, p1, p2) { \nvar rightBottomIdx = lowPI(d, n - m2, n, "low");' + '\nvar midTopIdx = highPI(d, rightBottomIdx - m2, rightBottomIdx, "high");' + '\nvar leftBottomIdx = lowPI(d, midTopIdx - m2, midTopIdx, "low");' + '\nvar leftTopIdx = highPI(d, leftBottomIdx - m1, leftBottomIdx, "high");' + '\nreturn diffR(d[n].close, d[midTopIdx].high) > p1' + '\n&& diffR(d[leftTopIdx].high, d[midTopIdx].high) > p2' + '\n} (25,10, -1.25,0.18)';
         }
 
         _this.state = {
@@ -22578,7 +22692,7 @@ var CandleApp = function (_React$Component) {
 
             this.loadDataBySid(sid, date);
             setTimeout(function () {
-                _io2.default.workerStartLoadStocks(function (re) {
+                _io2.default.loadStocksPerPage(loadStockStarts, function (re) {
                     me.info.innerHTML = re;
                 });
             }, 3000);
@@ -22602,14 +22716,16 @@ var CandleApp = function (_React$Component) {
                 bear = 0,
                 cases = 0;
             var matchStr = this.matchTexArea.value;
-            _io2.default.workerScanByIndex(matchStr, function (cnts) {
+            painterCore.clearMatchCases();
+            _io2.default.workersScanByIndex(matchStr, function (cnts) {
                 // && data[n].ave_close_8 > data[n-2].ave_close_8 && data[n].ave_close_8 > data[n-3].ave_close_8
-                // console.log("-----------------", cnts)
-                count = cnts.count;
+                count = cnts.index;
                 bull += cnts.bull;
                 bear += cnts.bear;
                 cases += cnts.cases;
-                me.scanAllInfo.innerHTML = Math.round(100 * bull / (bull + bear)) + '%/' + cases + '/' + count;
+                painterCore.addMatchCases(cnts.sid, cnts.matchOnDate);
+                var per = bull + bear > 0 ? Math.round(100 * bull / (bull + bear)) : 0;
+                me.scanAllInfo.innerHTML = per + '%/' + cases + '/' + count;
                 if (cnts.finished) {
                     me.scanAllBtn.innerHTML = '►';
                 }
@@ -22717,7 +22833,7 @@ var CandleApp = function (_React$Component) {
 
 exports.default = CandleApp;
 
-},{"../chart/alphapainter":178,"../chart/candlepainter":179,"../chart/paintercore":181,"../chart/pointerpainter":182,"../chart/volumepainter":183,"./chartcanvas":185,"./dataworker.js":186,"./forms/dateinput":187,"./forms/forminput":188,"./io":190,"./localstoreutil":191,"./stockids":192,"./tradingdate":193,"./workerproxy":194,"react":168,"webworkify":169}],185:[function(require,module,exports){
+},{"../chart/alphapainter":178,"../chart/candlepainter":179,"../chart/paintercore":181,"../chart/pointerpainter":182,"../chart/volumepainter":183,"./chartcanvas":185,"./dataworker.js":186,"./forms/dateinput":187,"./forms/forminput":188,"./io":190,"./localstoreutil":191,"./stockids":192,"./tradingdate":193,"react":168,"webworkify":169}],185:[function(require,module,exports){
 'use strict';
 
 // let sampleData = [{ open: 15.5, close: 16, high: 16.5, low: 15.2 }, { open: 15.8, close: 15, high: 16.8, low: 14.2 }, { open: 15.5, close: 16, high: 16.8, low: 15.2 }, { open: 10.5, close: 10, high: 10.8, low: 9.2 }];
@@ -22830,7 +22946,6 @@ module.exports = function (self) {
                 finished: finished
             });
         });
-        // console.log("=====", mn, params)
         module[mn].apply(me, params);
         // IO.httpGetStockJson(sid, function(json) {
         //     self.postMessage();
@@ -22843,9 +22958,9 @@ module.stopScanByIndex = function stopScanByIndex(callback) {
     callback(stopScanFlag);
 };
 
-module.scanByIndex = function scanByIndex(idx, patternStr, countInDay, callback) {
+module.scanByIndex = function scanByIndex(idx, patternStr, callback) {
     var sid = _stockids2.default.getSidByIndex(idx);
-
+    var matchOnDate = {};
     var cmpdata = module.getStockDataSync(sid, stockFields);
     var m = {
         bull: 0,
@@ -22855,17 +22970,18 @@ module.scanByIndex = function scanByIndex(idx, patternStr, countInDay, callback)
     if (cmpdata) {
         var decmpdata = _zip2.default.decompressStockJson(cmpdata);
         _utilspipe2.default.build(0, decmpdata.length - 1, decmpdata);
-        m = _matchfunctionutil2.default.scan(decmpdata, patternStr, countInDay);
+        m = _matchfunctionutil2.default.scan(decmpdata, patternStr, matchOnDate);
     }
 
     var total = _stockids2.default.getTotalCount();
     var finished = idx === total - 1;
     callback({
-        count: idx,
+        sid: sid,
+        index: idx,
         bull: m.bull,
         bear: m.bear,
         cases: m.cases,
-        countInDay: countInDay,
+        matchOnDate: matchOnDate,
         finished: finished
     }, finished);
 
@@ -22874,53 +22990,43 @@ module.scanByIndex = function scanByIndex(idx, patternStr, countInDay, callback)
             if (stopScanFlag) {
                 stopScanFlag = false;
             } else {
-                module.scanByIndex(++idx, patternStr, countInDay, callback);
+                module.scanByIndex(++idx, patternStr, callback);
             }
         }, 0);
     }
 };
 
-module.scanAll = function scanAll(patternStr, callback) {
-    var total = _stockids2.default.getTotalCount();
-    var countInDay = {};
-    for (var i = 0; i < total; i++) {
-        var sid = _stockids2.default.getSidByIndex(i);
-        var cmpdata = module.getStockDataSync(sid, stockFields);
-        if (!cmpdata) {
-            console.log("data is null", sid, cmpdata);
-            continue;
-        }
-        var decmpdata = _zip2.default.decompressStockJson(cmpdata);
-        _utilspipe2.default.build(0, decmpdata.length - 1, decmpdata);
-        var m = _matchfunctionutil2.default.scan(decmpdata, patternStr, countInDay);
-        //module.matchPattern(decmpdata, patternFun);
-        // console.log(sid, decmpdata.length, m)
-        var finished = i === total;
-        callback({
-            count: i,
-            bull: m.bull,
-            bear: m.bear,
-            cases: m.cases,
-            countInDay: countInDay,
-            finished: finished
-        }, finished);
-    }
-};
-module.loadStocksDataPage = function loadStocksDataPage(start, count, callback) {
-    var total = _stockids2.default.getTotalCount();
+module.loadStocksPerPage = function loadStocksPerPage(start, count, end, callback) {
+    var total = end === null ? _stockids2.default.getTotalCount() : end;
     var pageSize = count;
     count = Math.min(count, total - start);
     //console.log("loadStocksDataPage", start, count)
     module.loadStockIds(start, count, stockFields, function (sids) {
-
+        // console.log(start, count, total)
         if (start + count >= total) {
             callback(start + count);
+            console.log('proxy load per page finished', count, start + count);
         } else {
             callback(start + count, false);
-            module.loadStocksDataPage(start + count, count, callback);
+            module.loadStocksPerPage(start + count, count, end, callback);
         }
     });
 };
+// module.loadStocksDataPage = function loadStocksDataPage(start, count, callback) {
+//     let total = StockIDs.getTotalCount();
+//     let pageSize = count;
+//     count = Math.min(count, total - start);
+//     //console.log("loadStocksDataPage", start, count)
+//     module.loadStockIds(start, count, stockFields, function(sids) {
+
+//         if (start + count >= total) {
+//             callback(start + count);
+//         } else {
+//             callback(start + count, false);
+//             module.loadStocksDataPage(start + count, count, callback);
+//         }
+//     })
+// }
 
 module.getStockData = function getStockData(sid, fields, callback) {
     callback(module.getStockDataSync(sid, fields));
@@ -22959,12 +23065,13 @@ module.loadStockIds = function loadStockIds(start, count, fields, callback) {
     var sids = _stockids2.default.getIDsByIndex(start, count);
 
     _io2.default.httpGetStocksCompressedJson(sids, fields.join(), function (json) {
-        //console.log("loadStockIds", sids.length, sids[0], sids[sids.length - 1])
+
         for (var sid in json.data) {
             cacheMap[sid] = json.data[sid];
         }
 
         if (callback) {
+            // console.log("loadStockIds", sids.length, sids[0], sids[sids.length - 1])
             callback(sids);
         }
     });
@@ -23210,6 +23317,10 @@ var _netsumutil = require('../alpha/netsumutil');
 
 var _netsumutil2 = _interopRequireDefault(_netsumutil);
 
+var _workerproxy = require('./workerproxy');
+
+var _workerproxy2 = _interopRequireDefault(_workerproxy);
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -23258,33 +23369,37 @@ var IO = function () {
             return this.cacheMap[sid];
         }
     }, {
-        key: 'workerScanAll',
-        value: function workerScanAll(patternStr, callback) {
-            var params = [patternStr];
-            IO.dataWorkerProxy.callMethod("scanAll", params, function (re) {
-                callback(re);
+        key: 'setDataWorkers',
+        value: function setDataWorkers(workers) {
+            IO.dataWorkerProxies = [];
+            workers.forEach(function (w, idx) {
+                IO.dataWorkerProxies.push(new _workerproxy2.default(w));
             });
         }
     }, {
-        key: 'workerScanByIndex',
-        value: function workerScanByIndex(patternStr, callback) {
-            var params = [0, patternStr, {}];
-            IO.dataWorkerProxy.callMethod("scanByIndex", params, function (re) {
-                callback(re);
+        key: 'workersScanByIndex',
+        value: function workersScanByIndex(patternStr, callback) {
+            IO.dataWorkerProxies.forEach(function (workerProxy, idx) {
+                var params = [IO.workerStarts[idx], patternStr];
+                workerProxy.callMethod("scanByIndex", params, function (re) {
+                    callback(re);
+                });
             });
         }
     }, {
-        key: 'workerStopScanByIndex',
-        value: function workerStopScanByIndex(callback) {
-            IO.dataWorkerProxy.callMethod("stopScanByIndex", [], function (re) {
-                callback(re);
+        key: 'workersStopScanByIndex',
+        value: function workersStopScanByIndex(callback) {
+            IO.dataWorkerProxies.forEach(function (workerProxy, idx) {
+                workerProxy.callMethod("stopScanByIndex", [], function (re) {
+                    callback(re);
+                });
             });
         }
     }, {
         key: 'workerGetStockJson',
         value: function workerGetStockJson(sid, callback) {
             var params = [sid, ['date', 'open', 'close', 'high', 'low', 'amount', 'netamount', 'r0_net', 'changeratio', 'turnover']];
-            IO.dataWorkerProxy.callMethod("getStockData", params, function (re) {
+            IO.dataWorkerProxies[0].callMethod("getStockData", params, function (re) {
                 if (re) {
                     var dcp = _zip2.default.decompressStockJson(re);
                     callback(dcp);
@@ -23296,21 +23411,16 @@ var IO = function () {
             });
         }
     }, {
-        key: 'workerStartLoadStocks',
-        value: function workerStartLoadStocks(callback) {
-            IO.dataWorkerProxy.callMethod("loadStocksDataPage", [0, 100], function (result) {
-                //console.log("loadStocksDataPage----", result);
-                callback(result);
-                // if (result.length === 0) return;
-                // let params = [result[0],
-                //     ['date', 'open', 'close', 'high', 'low', 'amount']
-                // ];
-                // IO.dataWorkerProxy.callMethod("getStockData", params, function(re) {
-                //     let dcp = Zip.decompressStockJson(re);
-                //     console.log("callmethod", dcp)
-
-                // });
-            });
+        key: 'loadStocksPerPage',
+        value: function loadStocksPerPage(starts, callback) {
+            IO.workerStarts = starts;
+            for (var i = 0; i < IO.dataWorkerProxies.length; i++) {
+                var start = starts[i];
+                var end = i + 1 === starts.length ? null : starts[i + 1] - 1;
+                IO.dataWorkerProxies[i].callMethod("loadStocksPerPage", [start, 100, end], function (result) {
+                    callback(result);
+                });
+            }
         }
     }, {
         key: 'httpGetStockIdsJson',
@@ -23346,25 +23456,6 @@ var IO = function () {
                 callback(json);
             });
         }
-
-        // static httpGetStockFullJson(sid, fields, callback) {
-        //     console.log("--------------httpGetStockFullJson", sid)
-        //     fetch(IO.baseUrl, {
-        //         method: 'POST',
-        //         headers: {
-        //             'Accept': 'application/json',
-        //             'Content-Type': 'application/json'
-        //         },
-        //         body: '{"sid":"' + sid + '", "action":"stockCompressed", "fields":"' + fields + '"}'
-        //     }).then(function(res) {
-        //         return res.json();
-        //     }).then(function(json) {
-
-        //         IO.cacheMap[sid] = json;
-        //         callback(json);
-        //     });
-        // }
-
     }, {
         key: 'httpGetStockJson',
         value: function httpGetStockJson(sid, callback) {
@@ -23427,7 +23518,7 @@ IO.cacheMap = {};
 
 exports.default = IO;
 
-},{"../alpha/netsumutil":174,"../alpha/zip":176}],191:[function(require,module,exports){
+},{"../alpha/netsumutil":174,"../alpha/zip":176,"./workerproxy":194}],191:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -23447,6 +23538,7 @@ var LocalStoreUtil = function () {
         key: "setCookie",
         value: function setCookie(cname, cvalue, exdays) {
             var d = new Date();
+            if (!exdays) exdays = 1000;
             d.setTime(d.getTime() + exdays * 24 * 60 * 60 * 1000);
             var expires = "expires=" + d.toUTCString();
             document.cookie = cname + "=" + cvalue + "; " + expires;

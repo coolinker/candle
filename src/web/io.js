@@ -2,6 +2,8 @@
 // import fetch from 'whatwg-fetch';
 import Zip from '../alpha/zip';
 import NetSumUtil from '../alpha/netsumutil';
+import WorkerProxy from './workerproxy';
+
 class IO {
     constructor() {}
     static sidSuggest(v, callback) {
@@ -41,30 +43,33 @@ class IO {
         return this.cacheMap[sid]
     }
 
-    static workerScanAll(patternStr, callback) {
-        let params = [patternStr];
-        IO.dataWorkerProxy.callMethod("scanAll", params, function(re) {
-            callback(re);
-
+    static setDataWorkers(workers) {
+        IO.dataWorkerProxies = [];
+        workers.forEach(function(w, idx) {
+            IO.dataWorkerProxies.push(new WorkerProxy(w));
         });
     }
 
-    static workerScanByIndex(patternStr, callback) {
-        let params = [0, patternStr, {}];
-        IO.dataWorkerProxy.callMethod("scanByIndex", params, function(re) {
-            callback(re);
-
+    static workersScanByIndex(patternStr, callback) {
+        IO.dataWorkerProxies.forEach(function(workerProxy, idx) {
+            let params = [IO.workerStarts[idx], patternStr];
+            workerProxy.callMethod("scanByIndex", params, function(re) {
+                callback(re);
+            });
         });
     }
-    static workerStopScanByIndex(callback) {
-        IO.dataWorkerProxy.callMethod("stopScanByIndex", [], function(re) {
-            callback(re);
+
+    static workersStopScanByIndex(callback) {
+        IO.dataWorkerProxies.forEach(function(workerProxy, idx) {
+            workerProxy.callMethod("stopScanByIndex", [], function(re) {
+                callback(re);
+            });
         });
     }
 
     static workerGetStockJson(sid, callback) {
         let params = [sid, ['date', 'open', 'close', 'high', 'low', 'amount', 'netamount', 'r0_net', 'changeratio', 'turnover']];
-        IO.dataWorkerProxy.callMethod("getStockData", params, function(re) {
+        IO.dataWorkerProxies[0].callMethod("getStockData", params, function(re) {
             if (re) {
                 let dcp = Zip.decompressStockJson(re);
                 callback(dcp);
@@ -77,21 +82,16 @@ class IO {
         });
     }
 
-    static workerStartLoadStocks(callback) {
-        IO.dataWorkerProxy.callMethod("loadStocksDataPage", [0, 100], function(result) {
-            //console.log("loadStocksDataPage----", result);
-            callback(result);
-            // if (result.length === 0) return;
-            // let params = [result[0],
-            //     ['date', 'open', 'close', 'high', 'low', 'amount']
-            // ];
-            // IO.dataWorkerProxy.callMethod("getStockData", params, function(re) {
-            //     let dcp = Zip.decompressStockJson(re);
-            //     console.log("callmethod", dcp)
+    static loadStocksPerPage(starts, callback) {
+        IO.workerStarts = starts;
+        for (let i = 0; i < IO.dataWorkerProxies.length; i++) {
+            let start = starts[i];
+            let end = i + 1 === starts.length ? null : (starts[i + 1] - 1);
+            IO.dataWorkerProxies[i].callMethod("loadStocksPerPage", [start, 100, end], function(result) {
+                callback(result);
+            })
+        }
 
-            // });
-
-        })
     }
 
     static httpGetStockIdsJson(filter, callback) {
@@ -126,23 +126,6 @@ class IO {
         });
     }
 
-    // static httpGetStockFullJson(sid, fields, callback) {
-    //     console.log("--------------httpGetStockFullJson", sid)
-    //     fetch(IO.baseUrl, {
-    //         method: 'POST',
-    //         headers: {
-    //             'Accept': 'application/json',
-    //             'Content-Type': 'application/json'
-    //         },
-    //         body: '{"sid":"' + sid + '", "action":"stockCompressed", "fields":"' + fields + '"}'
-    //     }).then(function(res) {
-    //         return res.json();
-    //     }).then(function(json) {
-
-    //         IO.cacheMap[sid] = json;
-    //         callback(json);
-    //     });
-    // }
 
     static httpGetStockJson(sid, callback) {
         console.log("--------------httpGetStockJson", sid)

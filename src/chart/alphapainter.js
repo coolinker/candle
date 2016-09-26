@@ -4,11 +4,12 @@ module.exports = class AlphaPainter extends MassPainter {
     constructor(painterCore, canvas) {
         super(painterCore, canvas);
         this.topPadding = 25;
-        this.doOnValueRange = this.doOnValueRange.bind(this);
-        this.core.on("alphaRange", this.doOnValueRange);
+        this.doOnMatchCases = this.doOnMatchCases.bind(this);
+        this.core.on("matchCases", this.doOnMatchCases);
 
         this.doOnScan = this.doOnScan.bind(this);
         this.core.on("scan", this.doOnScan);
+
     }
 
     doOnScan() {
@@ -16,26 +17,17 @@ module.exports = class AlphaPainter extends MassPainter {
         this.clearDrawCache();
         this.draw(this.core.drawRangeStart, this.core.drawRangeEnd);
     }
-    doOnValueRange() {
+
+    doOnMatchCases() {
         if (this.updateHeightPerUnit()) {
-            console.log("AlphaPainter panter doOnValueRange----------------------clear draw")
+            //console.log("AlphaPainter panter doOnValueRange----------------------clear draw")
             this.clearDrawCache();
+            this.draw(this.core.drawRangeStart, this.core.drawRangeEnd);
         }
     }
 
     updateHeightPerUnit() {
         if (!this.canvas) return;
-        // let h = this.canvas.height - this.topPadding;
-        // let lastv = this.heightPerUnit;
-        // let ha = this.getAmountY(this.core.rangeFields.amount.high);
-        // if (this.heightPerUnit > 0 && ha > 0 && ha < 2 * this.topPadding) return false;
-        // this.heightPerUnit = h / this.core.rangeFields.amount.high;
-        // console.log("this.heightPerUnit", this.heightPerUnit)
-        // let r = Math.max(this.core.rangeFields.netsummax_r0.high, -this.core.rangeFields.netsummax_r0.low)
-        // this.heightPerNetSumMax_r0Unit = 0.5 * h / r;
-
-        // let dh = this.core.rangeFields.netsummax_r0_duration.high;
-        // this.heightPerNetSumMax_r0_DurationUnit = 0.5 * h / dh;
         return true;
     }
 
@@ -62,7 +54,22 @@ module.exports = class AlphaPainter extends MassPainter {
             ctx.stroke();
             ctx.setLineDash([]);
         }
+        //console.log("-----------------------", idx, x, data.date, data.matchCases)
+        if (data.matchCases) {
+            let cases = data.matchCases;
+            let totalcases = cases.pending.length + cases.bull.length + cases.bear.length;
+            let mcmax = Math.max(this.core.matchCasesRangeMax, 100);
 
+            let h = Math.round(totalcases * 0.8 * this.canvas.height / mcmax);
+            //let clr = Math.round(130 + 125 * cases.bull.length / totalcases);
+            //ctx.strokeStyle = 'rgba(' + clr + ', ' + clr + ', ' + clr + ', 1)';
+            ctx.strokeStyle = 'rgba(255,255,255, ' + (0.3 + 0.7 * cases.bull.length / totalcases) + ')';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(xp, this.canvas.height - h - 1);
+            ctx.lineTo(xp, this.canvas.height - 1);
+            ctx.stroke();
+        }
 
     }
 

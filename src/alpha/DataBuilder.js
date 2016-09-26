@@ -106,6 +106,7 @@ module.exports = class DataBuilder {
     }
 
     updateMarketMoneyFlow(startDate) {
+        this.tradingDays = this.dataSourceIO.readJsonSync('SH999999');
         let ids = this.dataSourceIO.allStockIDArray;
         let dateMapSZ = {};
         let dateMapSH = {};

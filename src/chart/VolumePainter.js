@@ -58,6 +58,7 @@ module.exports = class VolumePainter extends MassPainter {
         let data_pre = idx > 0 ? dataArr[idx - 1] : null;
         let ctx = this.canvas2DCtx;
         let w = this.core.unitWidth;
+        let cw = Math.max(1, w - 1);
         let xp = Math.floor(x + w / 2);
 
         if (data.netsummax_r0 !== undefined) {
@@ -66,7 +67,7 @@ module.exports = class VolumePainter extends MassPainter {
             grd.addColorStop(0, 'rgba(66, 66, 66, 0.5)');
             grd.addColorStop(1, 'rgba(66, 66,66, 0)');
             ctx.fillStyle = grd;
-            ctx.fillRect(x, 0, w - 1, nsmr0h);
+            ctx.fillRect(x, 0, cw, nsmr0h);
 
             let nsmh = Math.round(data.netsummax * this.heightPerNetSumMax_r0Unit);
             ctx.beginPath();
@@ -96,7 +97,7 @@ module.exports = class VolumePainter extends MassPainter {
             let color = close < open ? '#4caf50' : (close > open ? '#f44336' : (preclose > close ? '#4caf50' : '#f44336'));
             ctx.strokeStyle = color;
             ctx.fillStyle = color;
-            ctx.fillRect(x, this.canvas.height, w - 1, -Math.round(vol * this.heightPerUnit));
+            ctx.fillRect(x, this.canvas.height, cw, -Math.round(vol * this.heightPerUnit));
         }
         //    this.drawMoneyFlow(x, idx, dataArr);
         if (data.netamount !== undefined) {
@@ -104,10 +105,10 @@ module.exports = class VolumePainter extends MassPainter {
 
             ctx.fillStyle = data.r0_net > 0 ? '#B6B6B6' : '#727272';
             let r0_height = Math.round(Math.abs(data.r0_net) * this.heightPerUnit);
-            ctx.fillRect(x, this.canvas.height, w - 1, -r0_height);
+            ctx.fillRect(x, this.canvas.height, cw, -r0_height);
 
             ctx.fillStyle = rox_net > 0 ? '#FFEB3B' : '#FF9800';
-            ctx.fillRect(x, this.canvas.height - r0_height, w - 1, -Math.round(Math.abs(rox_net) * this.heightPerUnit));
+            ctx.fillRect(x, this.canvas.height - r0_height, cw, -Math.round(Math.abs(rox_net) * this.heightPerUnit));
 
         }
 

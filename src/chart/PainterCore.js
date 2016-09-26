@@ -9,17 +9,16 @@ module.exports = class PainterCore extends EventEmitter {
         super();
         this.reset();
         this.aves = [8, 13, 21, 55];
-        //this.avecolors = ["#FFEB3B", "#00BCD4", "#9C27B0", "#DBDBDB"];
+        this.unitWidth = 7;
         this.avecolors = ['rgba(255, 235, 60, 1)', "#00BCD4", "#9C27B0", "#DBDBDB"];
     }
 
     reset() {
         this.arrayData = null;
-        this.unitWidth = 7;
+        //this.unitWidth = 7;
         this.priceHigh = 0;
         this.priceLow = 10000;
-        // this.volumeHigh = -1;
-        // this.volumeLow = Number.MAX_SAFE_INTEGER;
+        this.matchCasesRangeMax = Number.MIN_SAFE_INTEGER;
         this.dateIndexMap = {};
         this.drawRangeStart = -1;
         this.drawRangeEnd = -1;
@@ -130,7 +129,7 @@ module.exports = class PainterCore extends EventEmitter {
                 if (data[att] < hl.low) hl.low = data[att];
             }
         }
-        
+
         if (this.priceHigh !== mhigh || this.priceLow !== mlow) {
             this.priceHigh = mhigh;
             this.priceLow = mlow;
@@ -150,12 +149,12 @@ module.exports = class PainterCore extends EventEmitter {
             //console.log("event-----", chnagedRange + "Range", rfds[chnagedRange])
         }
 
+        this.matchCasesRangeMax = this.getMatchCasesMax();
         // if (this.volumeHigh !== mvhigh || this.volumeLow !== mvlow) {
         //     this.volumeHigh = mvhigh;
         //     this.volumeLow = mvlow;
         //     this.emit("volumeRange", true);
         // }
-
         this.drawRangeStart = start;
         this.drawRangeEnd = end;
         //console.log("-----start/end", start, end, this.arrayData.length-1)
@@ -204,14 +203,65 @@ module.exports = class PainterCore extends EventEmitter {
         }
     }
 
+    addMatchCases(sid, matchOnDate) {
+        let data = this.arrayData;
+        for (let i = 0; i < data.length; i++) {
+            let d = data[i].date;
+            let r = matchOnDate[d];
+            if (r !== undefined) {
+                if (!data[i].matchCases) data[i].matchCases = {
+                    pending: [],
+                    bull: [],
+                    bear: []
+                };
+                if (r === 0) data[i].matchCases.pending.push(sid);
+                else if (r === 1) data[i].matchCases.bull.push(sid);
+                else if (r === -1) data[i].matchCases.bear.push(sid);
+                // data[i].matchCases.push(sid);
+
+            }
+        }
+
+        this.matchCasesRangeMax = this.getMatchCasesMax();
+        this.emit("matchCases")
+    }
+
+    getMatchCasesMax() {
+        let data = this.arrayData;
+        let max = Number.MIN_SAFE_INTEGER;
+        for (let i = this.drawRangeStart; i >= 0 && i <= this.drawRangeEnd; i++) {
+            if (!data[i].matchCases) continue;
+            let c = data[i].matchCases;
+            let t = c.bull.length + c.bear.length + c.pending.length;
+            if (t > max) max = t;
+        }
+
+        return max;
+    }
+
+    clearMatchCases() {
+        let data = this.arrayData;
+        for (let i = 0; i < data.length; i++) {
+            if (data[i].matchCases) data[i].matchCases = undefined;
+        }
+        this.emit("matchCases")
+    }
+
     loadData(kdata) {
+        let temp = this.arrayData;
         this.reset();
         let len = kdata.length;
         let i = len > 4500 ? len - 4500 : 0;
         this.arrayData = kdata.slice(i, len);
         UtilsPipe.build(0, this.arrayData.length - 1, this.arrayData);
-        for (; i < len; i++) {
-            this.dateIndexMap[kdata[i].date] = i;
+        for (let n = 0; n < this.arrayData.length; n++) {
+            this.dateIndexMap[this.arrayData[n].date] = n;
+        }
+
+        for (let j = 0; temp && j < temp.length; j++) {
+            let date = temp[j].date;
+            if (!this.dateIndexMap[date]) continue;
+            this.arrayData[this.dateIndexMap[date]].matchCases = temp[j].matchCases;
         }
         this.emit("data");
     }

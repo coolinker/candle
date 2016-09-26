@@ -15,14 +15,13 @@ module.exports = function(self) {
         let params = ev.data['params'];
         // console.log("worker on message", mn, module[mn]);
         params.push(function(result, finished) {
-                if (finished === undefined) finished = true;
-                self.postMessage({
-                    mkey: ev.data.mkey,
-                    result: result,
-                    finished: finished
-                });
-            })
-            // console.log("=====", mn, params)
+            if (finished === undefined) finished = true;
+            self.postMessage({
+                mkey: ev.data.mkey,
+                result: result,
+                finished: finished
+            });
+        })
         module[mn].apply(me, params)
             // IO.httpGetStockJson(sid, function(json) {
             //     self.postMessage();
@@ -36,9 +35,9 @@ module.stopScanByIndex = function stopScanByIndex(callback) {
     callback(stopScanFlag);
 }
 
-module.scanByIndex = function scanByIndex(idx, patternStr, countInDay, callback) {
+module.scanByIndex = function scanByIndex(idx, patternStr, callback) {
     let sid = StockIDs.getSidByIndex(idx);
-
+    let matchOnDate = {};
     let cmpdata = module.getStockDataSync(sid, stockFields);
     let m = {
         bull: 0,
@@ -48,17 +47,18 @@ module.scanByIndex = function scanByIndex(idx, patternStr, countInDay, callback)
     if (cmpdata) {
         let decmpdata = Zip.decompressStockJson(cmpdata);
         UtilsPipe.build(0, decmpdata.length - 1, decmpdata);
-        m = MatchFunctionUtil.scan(decmpdata, patternStr, countInDay);
+        m = MatchFunctionUtil.scan(decmpdata, patternStr, matchOnDate);
     }
 
     let total = StockIDs.getTotalCount();
     let finished = idx === (total - 1);
     callback({
-        count: idx,
+        sid: sid,
+        index: idx,
         bull: m.bull,
         bear: m.bear,
         cases: m.cases,
-        countInDay: countInDay,
+        matchOnDate: matchOnDate,
         finished: finished
     }, finished);
 
@@ -67,56 +67,44 @@ module.scanByIndex = function scanByIndex(idx, patternStr, countInDay, callback)
             if (stopScanFlag) {
                 stopScanFlag = false;
             } else {
-                module.scanByIndex(++idx, patternStr, countInDay, callback);
+                module.scanByIndex(++idx, patternStr, callback);
             }
 
         }, 0);
     }
 }
 
-
-module.scanAll = function scanAll(patternStr, callback) {
-    let total = StockIDs.getTotalCount();
-    let countInDay = {};
-    for (let i = 0; i < total; i++) {
-        let sid = StockIDs.getSidByIndex(i);
-        let cmpdata = module.getStockDataSync(sid, stockFields);
-        if (!cmpdata) {
-            console.log("data is null", sid, cmpdata)
-            continue;
-        }
-        let decmpdata = Zip.decompressStockJson(cmpdata);
-        UtilsPipe.build(0, decmpdata.length - 1, decmpdata);
-        let m = MatchFunctionUtil.scan(decmpdata, patternStr, countInDay);
-        //module.matchPattern(decmpdata, patternFun);
-        // console.log(sid, decmpdata.length, m)
-        let finished = i === total;
-        callback({
-            count: i,
-            bull: m.bull,
-            bear: m.bear,
-            cases: m.cases,
-            countInDay: countInDay,
-            finished: finished
-        }, finished);
+module.loadStocksPerPage = function loadStocksPerPage(start, count, end, callback) {
+        let total = end === null ? StockIDs.getTotalCount() : end;
+        let pageSize = count;
+        count = Math.min(count, total - start);
+        //console.log("loadStocksDataPage", start, count)
+        module.loadStockIds(start, count, stockFields, function(sids) {
+            // console.log(start, count, total)
+            if (start + count >= total) {
+                callback(start + count);
+                console.log('proxy load per page finished', count, start + count)
+            } else {
+                callback(start + count, false);
+                module.loadStocksPerPage(start + count, count, end, callback);
+            }
+        })
     }
+    // module.loadStocksDataPage = function loadStocksDataPage(start, count, callback) {
+    //     let total = StockIDs.getTotalCount();
+    //     let pageSize = count;
+    //     count = Math.min(count, total - start);
+    //     //console.log("loadStocksDataPage", start, count)
+    //     module.loadStockIds(start, count, stockFields, function(sids) {
 
-}
-module.loadStocksDataPage = function loadStocksDataPage(start, count, callback) {
-    let total = StockIDs.getTotalCount();
-    let pageSize = count;
-    count = Math.min(count, total - start);
-    //console.log("loadStocksDataPage", start, count)
-    module.loadStockIds(start, count, stockFields, function(sids) {
-
-        if (start + count >= total) {
-            callback(start + count);
-        } else {
-            callback(start + count, false);
-            module.loadStocksDataPage(start + count, count, callback);
-        }
-    })
-}
+//         if (start + count >= total) {
+//             callback(start + count);
+//         } else {
+//             callback(start + count, false);
+//             module.loadStocksDataPage(start + count, count, callback);
+//         }
+//     })
+// }
 
 module.getStockData = function getStockData(sid, fields, callback) {
     callback(module.getStockDataSync(sid, fields));
@@ -156,12 +144,13 @@ module.loadStockIds = function loadStockIds(start, count, fields, callback) {
     let sids = StockIDs.getIDsByIndex(start, count);
 
     IO.httpGetStocksCompressedJson(sids, fields.join(), function(json) {
-        //console.log("loadStockIds", sids.length, sids[0], sids[sids.length - 1])
+
         for (let sid in json.data) {
             cacheMap[sid] = json.data[sid];
         }
 
         if (callback) {
+            // console.log("loadStockIds", sids.length, sids[0], sids[sids.length - 1])
             callback(sids);
         }
 
