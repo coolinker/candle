@@ -40,9 +40,34 @@ class StockIDs {
     static getSidByIndex(idx) {
         return StockIDs.arrayData[idx];
     }
+
+    static divideToGroups(n) {
+        let len = StockIDs.getTotalCount();
+        let glen = Math.round(len / n);
+        let arr = [];
+        for (let i = 0; i < n; i++) {
+            arr.push(i * glen);
+        }
+        return arr;
+    }
 }
 
-IO.httpGetStockIdsJson("", function(json) {
+// IO.httpGetStockIdsJson("", function(json) {
+//     StockIDs.load(json);
+// });
+
+fetch(self.location.origin + '/api', {
+    method: 'POST',
+    headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+    },
+    body: '{"filter":"", "action":"stockIds"}'
+}).then(function(res) {
+    return res.json();
+}).then(function(json) {
+    console.log("httpGetStockIdsJson =>", json.length);
+    // callback(json);
     StockIDs.load(json);
 });
 

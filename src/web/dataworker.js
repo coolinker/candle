@@ -4,7 +4,7 @@ import StockIDs from './stockids';
 import Zip from '../alpha/zip';
 import MatchFunctionUtil from '../alpha/matchfunctionutil';
 import UtilsPipe from "../alpha/utilspipe";
-
+console.log("worker window-", self.location.href)
 let stockFields = ['date', 'open', 'close', 'high', 'low', 'amount', 'netamount', 'r0_net', 'changeratio', 'turnover'];
 let cacheMap = {};
 let stopScanFlag = false;
@@ -50,8 +50,10 @@ module.scanByIndex = function scanByIndex(idx, patternStr, callback) {
         m = MatchFunctionUtil.scan(decmpdata, patternStr, matchOnDate);
     }
 
-    let total = StockIDs.getTotalCount();
-    let finished = idx === (total - 1);
+    //let total = StockIDs.getTotalCount();
+    let nextsid = StockIDs.getNext(sid);
+    let finished = cacheMap[nextsid] === undefined;
+    if (finished) console.log(sid, nextsid, idx)
     callback({
         sid: sid,
         index: idx,
@@ -75,17 +77,24 @@ module.scanByIndex = function scanByIndex(idx, patternStr, callback) {
 }
 
 module.loadStocksPerPage = function loadStocksPerPage(start, count, end, callback) {
-        let total = end === null ? StockIDs.getTotalCount() : end;
+        let total = end === null ? StockIDs.getTotalCount() - 1 : end;
         let pageSize = count;
-        count = Math.min(count, total - start);
+        count = Math.min(count, total - start + 1);
         //console.log("loadStocksDataPage", start, count)
         module.loadStockIds(start, count, stockFields, function(sids) {
             // console.log(start, count, total)
             if (start + count >= total) {
-                callback(start + count);
+                callback({
+                    start: start,
+                    count: count
+                });
+
                 console.log('proxy load per page finished', count, start + count)
             } else {
-                callback(start + count, false);
+                callback({
+                    start: start,
+                    count: count
+                }, false);
                 module.loadStocksPerPage(start + count, count, end, callback);
             }
         })
@@ -120,7 +129,7 @@ module.getStockDataSync = function getStockDataSync(sid, fields) {
     }
 
     let fulldata = cacheMap[sid];
-    if (!fulldata) {
+    if (!fulldata || fulldata.length === 0) {
         return null;
     }
 

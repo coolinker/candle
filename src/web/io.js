@@ -3,6 +3,7 @@
 import Zip from '../alpha/zip';
 import NetSumUtil from '../alpha/netsumutil';
 import WorkerProxy from './workerproxy';
+import StockIDs from './stockids';
 
 class IO {
     constructor() {}
@@ -54,7 +55,10 @@ class IO {
         IO.dataWorkerProxies.forEach(function(workerProxy, idx) {
             let params = [IO.workerStarts[idx], patternStr];
             workerProxy.callMethod("scanByIndex", params, function(re) {
+                if (re.index % 100 === 0)
+                    console.log(idx, re.index, re.finished)
                 callback(re);
+
             });
         });
     }
@@ -69,7 +73,8 @@ class IO {
 
     static workerGetStockJson(sid, callback) {
         let params = [sid, ['date', 'open', 'close', 'high', 'low', 'amount', 'netamount', 'r0_net', 'changeratio', 'turnover']];
-        IO.dataWorkerProxies[0].callMethod("getStockData", params, function(re) {
+        let worker = IO.getWorkerBySid(sid);
+        worker.callMethod("getStockData", params, function(re) {
             if (re) {
                 let dcp = Zip.decompressStockJson(re);
                 callback(dcp);
@@ -82,8 +87,17 @@ class IO {
         });
     }
 
-    static loadStocksPerPage(starts, callback) {
-        IO.workerStarts = starts;
+    static getWorkerBySid(sid) {
+        let idx = StockIDs.idIndexMap[sid];
+        let i = 1
+        for (; i < IO.workerStarts.length; i++) {
+            if (IO.workerStarts[i] > idx) return IO.dataWorkerProxies[i - 1];
+        }
+        return IO.dataWorkerProxies[i - 1];
+    }
+
+    static loadStocksPerPage(callback) {
+        let starts = IO.workerStarts = StockIDs.divideToGroups(IO.dataWorkerProxies.length);
         for (let i = 0; i < IO.dataWorkerProxies.length; i++) {
             let start = starts[i];
             let end = i + 1 === starts.length ? null : (starts[i + 1] - 1);
@@ -91,7 +105,6 @@ class IO {
                 callback(result);
             })
         }
-
     }
 
     static httpGetStockIdsJson(filter, callback) {
@@ -177,8 +190,8 @@ class IO {
 
 }
 
-IO.baseUrl = 'http://localhost/api';
+IO.baseUrl = self.location.origin + '/api';
 IO.cacheMap = {};
-
+IO.workerStarts = [0];
 
 export default IO

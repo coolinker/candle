@@ -22436,12 +22436,16 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-var w0 = (0, _webworkify2.default)(require('./dataworker.js'));
-var w1 = (0, _webworkify2.default)(require('./dataworker.js'));
-var w2 = (0, _webworkify2.default)(require('./dataworker.js'));
-// IO.dataWorkerProxy = new WorkerProxy(w);
-_io2.default.setDataWorkers([w0, w1, w2]);
-var loadStockStarts = [0, 800, 1800];
+var cpus = window.location.search.match('[?&]cpus=([^&]+)')[1];
+cpus = Number(cpus);
+if (isNaN(cpus)) cpus = 4;
+var pworks = [];
+for (var i = 0; i < cpus; i++) {
+    var w = (0, _webworkify2.default)(require('./dataworker.js'));
+    pworks.push(w);
+}
+
+_io2.default.setDataWorkers(pworks);
 
 var PainterCore = require('../chart/paintercore');
 var painterCore = new PainterCore();
@@ -22592,7 +22596,7 @@ var CandleApp = function (_React$Component) {
                             } },
                         '0/0/0(Ctrl+Enter)'
                     ),
-                    _react2.default.createElement('textarea', { value: this.state.matchStr, style: { position: 'absolute', right: '20px', color: 'rgba(230, 230, 230, 1)', borderColor: 'rgba(230, 230, 230, 0.1)', top: '50px', zIndex: 100, width: '500px', height: '100px', background: 'transparent', 'fontSize': '10px' },
+                    _react2.default.createElement('textarea', { value: this.state.matchStr, style: { position: 'absolute', right: '20px', color: 'rgba(255, 255, 255, 1)', borderColor: 'rgba(230, 230, 230, 0.1)', top: '50px', zIndex: 100, width: '500px', height: '300px', background: 'rgba(0, 0, 0, 0.3)', 'fontSize': '10px' },
                         ref: function ref(_ref6) {
                             return _this2.matchTexArea = _ref6;
                         }, onChange: this.handleMatchTextAreaChange, onKeyUp: this.handleMatchTextAreaKeyUp, onKeyDown: function onKeyDown(e) {
@@ -22692,8 +22696,10 @@ var CandleApp = function (_React$Component) {
 
             this.loadDataBySid(sid, date);
             setTimeout(function () {
-                _io2.default.loadStocksPerPage(loadStockStarts, function (re) {
-                    me.info.innerHTML = re;
+                var count = 0;
+                _io2.default.loadStocksPerPage(function (re) {
+                    count += re.count;
+                    me.info.innerHTML = count;
                 });
             }, 3000);
         }
@@ -22719,7 +22725,7 @@ var CandleApp = function (_React$Component) {
             painterCore.clearMatchCases();
             _io2.default.workersScanByIndex(matchStr, function (cnts) {
                 // && data[n].ave_close_8 > data[n-2].ave_close_8 && data[n].ave_close_8 > data[n-3].ave_close_8
-                count = cnts.index;
+                count++; //= cnts.index;
                 bull += cnts.bull;
                 bear += cnts.bear;
                 cases += cnts.cases;
@@ -22787,11 +22793,11 @@ var CandleApp = function (_React$Component) {
                     var list = "",
                         count = 0,
                         ssid = void 0;
-                    for (var i = 0; i < arr.length; i++) {
-                        var sid = arr[i].sid.toUpperCase();
+                    for (var _i = 0; _i < arr.length; _i++) {
+                        var sid = arr[_i].sid.toUpperCase();
                         sid = _stockids2.default.validSid(sid);
                         if (sid) {
-                            list += sid + ' ' + arr[i].name + '<br/>';
+                            list += sid + ' ' + arr[_i].name + '<br/>';
                             count++;
                             ssid = sid;
                         }
@@ -22929,6 +22935,7 @@ var _utilspipe2 = _interopRequireDefault(_utilspipe);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
+console.log("worker window-", self.location.href);
 var stockFields = ['date', 'open', 'close', 'high', 'low', 'amount', 'netamount', 'r0_net', 'changeratio', 'turnover'];
 var cacheMap = {};
 var stopScanFlag = false;
@@ -22973,8 +22980,10 @@ module.scanByIndex = function scanByIndex(idx, patternStr, callback) {
         m = _matchfunctionutil2.default.scan(decmpdata, patternStr, matchOnDate);
     }
 
-    var total = _stockids2.default.getTotalCount();
-    var finished = idx === total - 1;
+    //let total = StockIDs.getTotalCount();
+    var nextsid = _stockids2.default.getNext(sid);
+    var finished = cacheMap[nextsid] === undefined;
+    if (finished) console.log(sid, nextsid, idx);
     callback({
         sid: sid,
         index: idx,
@@ -22997,17 +23006,24 @@ module.scanByIndex = function scanByIndex(idx, patternStr, callback) {
 };
 
 module.loadStocksPerPage = function loadStocksPerPage(start, count, end, callback) {
-    var total = end === null ? _stockids2.default.getTotalCount() : end;
+    var total = end === null ? _stockids2.default.getTotalCount() - 1 : end;
     var pageSize = count;
-    count = Math.min(count, total - start);
+    count = Math.min(count, total - start + 1);
     //console.log("loadStocksDataPage", start, count)
     module.loadStockIds(start, count, stockFields, function (sids) {
         // console.log(start, count, total)
         if (start + count >= total) {
-            callback(start + count);
+            callback({
+                start: start,
+                count: count
+            });
+
             console.log('proxy load per page finished', count, start + count);
         } else {
-            callback(start + count, false);
+            callback({
+                start: start,
+                count: count
+            }, false);
             module.loadStocksPerPage(start + count, count, end, callback);
         }
     });
@@ -23042,7 +23058,7 @@ module.getStockDataSync = function getStockDataSync(sid, fields) {
     }
 
     var fulldata = cacheMap[sid];
-    if (!fulldata) {
+    if (!fulldata || fulldata.length === 0) {
         return null;
     }
 
@@ -23321,6 +23337,10 @@ var _workerproxy = require('./workerproxy');
 
 var _workerproxy2 = _interopRequireDefault(_workerproxy);
 
+var _stockids = require('./stockids');
+
+var _stockids2 = _interopRequireDefault(_stockids);
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -23382,6 +23402,7 @@ var IO = function () {
             IO.dataWorkerProxies.forEach(function (workerProxy, idx) {
                 var params = [IO.workerStarts[idx], patternStr];
                 workerProxy.callMethod("scanByIndex", params, function (re) {
+                    if (re.index % 100 === 0) console.log(idx, re.index, re.finished);
                     callback(re);
                 });
             });
@@ -23399,7 +23420,8 @@ var IO = function () {
         key: 'workerGetStockJson',
         value: function workerGetStockJson(sid, callback) {
             var params = [sid, ['date', 'open', 'close', 'high', 'low', 'amount', 'netamount', 'r0_net', 'changeratio', 'turnover']];
-            IO.dataWorkerProxies[0].callMethod("getStockData", params, function (re) {
+            var worker = IO.getWorkerBySid(sid);
+            worker.callMethod("getStockData", params, function (re) {
                 if (re) {
                     var dcp = _zip2.default.decompressStockJson(re);
                     callback(dcp);
@@ -23411,9 +23433,19 @@ var IO = function () {
             });
         }
     }, {
+        key: 'getWorkerBySid',
+        value: function getWorkerBySid(sid) {
+            var idx = _stockids2.default.idIndexMap[sid];
+            var i = 1;
+            for (; i < IO.workerStarts.length; i++) {
+                if (IO.workerStarts[i] > idx) return IO.dataWorkerProxies[i - 1];
+            }
+            return IO.dataWorkerProxies[i - 1];
+        }
+    }, {
         key: 'loadStocksPerPage',
-        value: function loadStocksPerPage(starts, callback) {
-            IO.workerStarts = starts;
+        value: function loadStocksPerPage(callback) {
+            var starts = IO.workerStarts = _stockids2.default.divideToGroups(IO.dataWorkerProxies.length);
             for (var i = 0; i < IO.dataWorkerProxies.length; i++) {
                 var start = starts[i];
                 var end = i + 1 === starts.length ? null : starts[i + 1] - 1;
@@ -23513,12 +23545,13 @@ var IO = function () {
     return IO;
 }();
 
-IO.baseUrl = 'http://localhost/api';
+IO.baseUrl = self.location.origin + '/api';
 IO.cacheMap = {};
+IO.workerStarts = [0];
 
 exports.default = IO;
 
-},{"../alpha/netsumutil":174,"../alpha/zip":176,"./workerproxy":194}],191:[function(require,module,exports){
+},{"../alpha/netsumutil":174,"../alpha/zip":176,"./stockids":192,"./workerproxy":194}],191:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -23632,12 +23665,38 @@ var StockIDs = function () {
         value: function getSidByIndex(idx) {
             return StockIDs.arrayData[idx];
         }
+    }, {
+        key: 'divideToGroups',
+        value: function divideToGroups(n) {
+            var len = StockIDs.getTotalCount();
+            var glen = Math.round(len / n);
+            var arr = [];
+            for (var i = 0; i < n; i++) {
+                arr.push(i * glen);
+            }
+            return arr;
+        }
     }]);
 
     return StockIDs;
 }();
 
-_io2.default.httpGetStockIdsJson("", function (json) {
+// IO.httpGetStockIdsJson("", function(json) {
+//     StockIDs.load(json);
+// });
+
+fetch(self.location.origin + '/api', {
+    method: 'POST',
+    headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+    },
+    body: '{"filter":"", "action":"stockIds"}'
+}).then(function (res) {
+    return res.json();
+}).then(function (json) {
+    console.log("httpGetStockIdsJson =>", json.length);
+    // callback(json);
     StockIDs.load(json);
 });
 

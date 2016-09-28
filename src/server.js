@@ -153,6 +153,7 @@ let apiDispatcher = {
             if (content) {
                 obj.data[sid] = content.data;
             } else {
+                obj.data[sid] = [];
                 console.log("Can not find stockFull:" + sid);
             }
         }

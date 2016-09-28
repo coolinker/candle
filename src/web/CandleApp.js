@@ -1,16 +1,18 @@
 'use strict';
 import React from 'react';
 import IO from './io';
-
 import work from 'webworkify';
 
+let cpus = window.location.search.match('[?&]cpus=([^&]+)')[1];
+cpus = Number(cpus);
+if (isNaN(cpus)) cpus = 4;
+let pworks = [];
+for (let i = 0; i < cpus; i++) {
+    let w = work(require('./dataworker.js'));
+    pworks.push(w);
+}
 
-let w0 = work(require('./dataworker.js'));
-let w1 = work(require('./dataworker.js'));
-let w2 = work(require('./dataworker.js'));
-// IO.dataWorkerProxy = new WorkerProxy(w);
-IO.setDataWorkers([w0, w1, w2]);
-let loadStockStarts = [0, 800, 1800];
+IO.setDataWorkers(pworks);
 
 let PainterCore = require('../chart/paintercore');
 let painterCore = new PainterCore();
@@ -127,7 +129,7 @@ class CandleApp extends React.Component {
                 <div style = {{position: 'absolute', right: '40px',  color: '#f0f0f0', top:'30px'}} ref={(ref) => this.scanAllInfo = ref}>0/0/0</div>
                 <div style = {{position: 'absolute', right: '20px',  color: '#f44336', top:'30px'}} onClick={this.scanAllBtnClick} ref={(ref) => this.scanAllBtn = ref}>►</div>
                 <div style = {{position: 'absolute', right: '420px',  color: '#f0f0f0', top:'30px'}} ref={(ref) => this.scanInfo = ref}>0/0/0(Ctrl+Enter)</div>
-                <textarea value={this.state.matchStr} style = {{position: 'absolute', right: '20px',  color: 'rgba(230, 230, 230, 1)', borderColor: 'rgba(230, 230, 230, 0.1)', top:'50px', zIndex: 100, width: '500px', height: '100px', background: 'transparent', 'fontSize': '10px'}} 
+                <textarea value={this.state.matchStr} style = {{position: 'absolute', right: '20px',  color: 'rgba(255, 255, 255, 1)', borderColor: 'rgba(230, 230, 230, 0.1)', top:'50px', zIndex: 100, width: '500px', height: '300px', background: 'rgba(0, 0, 0, 0.3)', 'fontSize': '10px'}} 
                     ref={(ref) => this.matchTexArea = ref} onChange={this.handleMatchTextAreaChange} onKeyUp={this.handleMatchTextAreaKeyUp} onKeyDown ={function(e){e.nativeEvent.stopImmediatePropagation();}}></textarea>
             </div > 
             <ChartCanvas ref={(ref) => this.alphaChart = ref} width = "2000" height = { candleChartHeight } y = { candleChartY } > </ChartCanvas>  
@@ -208,8 +210,10 @@ class CandleApp extends React.Component {
 
         this.loadDataBySid(sid, date);
         setTimeout(function() {
-            IO.loadStocksPerPage(loadStockStarts, function(re) {
-                me.info.innerHTML = re;
+            let count = 0;
+            IO.loadStocksPerPage(function(re) {
+                count += re.count;
+                me.info.innerHTML = count;
             });
         }, 3000)
 
@@ -234,7 +238,7 @@ class CandleApp extends React.Component {
         let matchStr = this.matchTexArea.value;
         painterCore.clearMatchCases();
         IO.workersScanByIndex(matchStr, function(cnts) { // && data[n].ave_close_8 > data[n-2].ave_close_8 && data[n].ave_close_8 > data[n-3].ave_close_8
-            count = cnts.index;
+            count++; //= cnts.index;
             bull += cnts.bull;
             bear += cnts.bear;
             cases += cnts.cases;
