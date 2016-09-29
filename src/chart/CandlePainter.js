@@ -66,6 +66,15 @@ module.exports = class CandlePainter extends MassPainter {
             ctx.strokeText('E', xp - 5, this.canvas.height - 3);
         }
 
+        let dates = data.date.split('/');
+        if (dates[1] === '01') {
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = '#424242';
+            let datastr = '|' + dates[0] + '-' + dates[1];
+            if (dates[0] === "01") datastr += "-" + dates[2];
+            ctx.strokeText(datastr, xp - 2, 10);
+        }
+
         if (idx === 0) return;
         let data_pre = dataArr[idx - 1];
         let aves = this.core.aves; //[8, 13, 21, 55];
@@ -89,6 +98,7 @@ module.exports = class CandlePainter extends MassPainter {
 
             ctx.stroke();
         }
+
 
 
     }
