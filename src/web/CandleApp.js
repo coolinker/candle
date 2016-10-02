@@ -3,7 +3,10 @@ import React from 'react';
 import IO from './io';
 import work from 'webworkify';
 
-let cpus = window.location.search.match('[?&]cpus=([^&]+)')[1];
+let cpus = window.location.search.match('[?&]cpus=([^&]+)');
+if (cpus && cpus.length) cpus = cpus[1];
+else cpus = 4;
+
 cpus = Number(cpus);
 if (isNaN(cpus)) cpus = 4;
 let pworks = [];
@@ -37,9 +40,22 @@ pointerPainter.mouseDblclickHandler = function(e) {
     let data = painterCore.getDataByIndex(dataindex);
     console.log("mouseDblclickHandler", data)
 }
+
+pointerPainter.selectionHandler = function(x, y, endx, endy) {
+    let candleCanvasX = parseInt(candlePainter.canvas.style.left, 10);
+    let startindex = painterCore.getDataIndexByX(x - candleCanvasX);
+    let endindex = painterCore.getDataIndexByX(endx - candleCanvasX);
+    if (startindex > endindex) {
+        let temp = startindex;
+        startindex = endindex;
+        endindex = temp;
+    }
+
+    painterCore.zoom(startindex, endindex);
+}
+
 pointerPainter.mouseMoveHandler = function(e) {
     if (!painterCore.arrayData) return;
-
     let x = e.x;
     let y = e.y;
     let candleCanvasX = parseInt(candlePainter.canvas.style.left, 10);
@@ -56,7 +72,7 @@ pointerPainter.mouseMoveHandler = function(e) {
     let top = parseInt(volPainter.canvas.style.top) - parseInt(candlePainter.canvas.style.top);
     valuetoy.amount = top + Math.max(volPainter.getAmountY(data.amount), 10);
     valuetoy.amountStart = top;
-    pointerPainter.updatePointer(x, y - parseInt(candlePainter.canvas.style.top), dataindex, valuetoy);
+    pointerPainter.updatePointer(e.layerX, e.layerY, dataindex, valuetoy);
 }
 
 import ChartCanvas from './chartcanvas';
@@ -127,7 +143,7 @@ class CandleApp extends React.Component {
                     handleInputCompleted = { this.handleDateChanged } onKeyDownHandler ={function(e){e.nativeEvent.stopImmediatePropagation()}}/> 
                 <div style = {{position: 'absolute', right: '20px',  color: '#f0f0f0', top:'10px'}} ref={(ref) => this.info = ref}>Loading...</div>
                 <div style = {{position: 'absolute', right: '40px',  color: '#f0f0f0', top:'30px'}} ref={(ref) => this.scanAllInfo = ref}>0/0/0</div>
-                <div style = {{position: 'absolute', right: '20px',  color: '#f44336', top:'30px'}} onClick={this.scanAllBtnClick} ref={(ref) => this.scanAllBtn = ref}>►</div>
+                <div style = {{position: 'absolute', right: '10px',  color: '#f44336', top:'15px', 'fontSize': 'xx-large'}} onClick={this.scanAllBtnClick} ref={(ref) => this.scanAllBtn = ref}>▸</div>
                 <div style = {{position: 'absolute', right: '420px',  color: '#f0f0f0', top:'30px'}} ref={(ref) => this.scanInfo = ref}>0/0/0(Ctrl+Enter)</div>
                 <textarea value={this.state.matchStr} style = {{position: 'absolute', right: '20px',  color: 'rgba(255, 255, 255, 1)', borderColor: 'rgba(230, 230, 230, 0.1)', top:'50px', zIndex: 100, width: '500px', height: '300px', background: 'rgba(0, 0, 0, 0.3)', 'fontSize': '10px'}} 
                     ref={(ref) => this.matchTexArea = ref} onChange={this.handleMatchTextAreaChange} onKeyUp={this.handleMatchTextAreaKeyUp} onKeyDown ={function(e){e.nativeEvent.stopImmediatePropagation();}}></textarea>
@@ -198,7 +214,7 @@ class CandleApp extends React.Component {
         //document.addEventListener('keyup', function(e) {});
 
         painterCore.on("range", function() {
-            let date = painterCore.getDateOfCurrentRange();
+            let date = painterCore.getMiddleDateOfRange();
             // console.log("on range:", painterCore.drawRangeStart, date)
             me.refs.dateInput.updateState(date, false);
 
@@ -220,16 +236,16 @@ class CandleApp extends React.Component {
     }
 
     scanAllBtnClick() {
-        let start = this.scanAllBtn.innerHTML === '►';
+        let start = this.scanAllBtn.innerHTML === '▸';
         if (!start) {
-            this.scanAllBtn.innerHTML = '►';
-            IO.workerStopScanByIndex(function(re) {
+            this.scanAllBtn.innerHTML = '▸';
+            IO.workersStopScanByIndex(function(re) {
                 console.log("workerStopScanAll", re)
             });
             return;
         }
 
-        this.scanAllBtn.innerHTML = '□'; // '❚❚';
+        this.scanAllBtn.innerHTML = '◻'; //stop;
         let me = this;
         let count = 0,
             bull = 0,
@@ -246,7 +262,7 @@ class CandleApp extends React.Component {
             let per = bull + bear > 0 ? Math.round(100 * bull / (bull + bear)) : 0;
             me.scanAllInfo.innerHTML = per + '%/' + cases + '/' + count;
             if (cnts.finished) {
-                me.scanAllBtn.innerHTML = '►';
+                me.scanAllBtn.innerHTML = '▸';
             }
         })
     }
@@ -339,7 +355,7 @@ class CandleApp extends React.Component {
 
     doOnResize() {
         // console.log("doOnResize", e)
-        let date = painterCore.getDateOfCurrentRange();
+        let date = painterCore.getMiddleDateOfRange();
         painterCore.updateDrawPort(date, this.state.windowWidth);
     }
 

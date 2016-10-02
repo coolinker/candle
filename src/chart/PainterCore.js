@@ -4,6 +4,10 @@ import EventEmitter from 'events';
 import UtilsPipe from '../alpha/utilspipe';
 import MatchFunctionUtil from '../alpha/matchfunctionutil';
 //import MovingAverageUtil from "../alpha/movingaverageutil";
+
+//Canvas width maximum value in Chrome is 32767;
+let CHROME_CANVAS_MAX_LENGTH = 32767;
+let MAX_COLUMN_WIDTH = 7;
 module.exports = class PainterCore extends EventEmitter {
     constructor() {
         super();
@@ -51,16 +55,30 @@ module.exports = class PainterCore extends EventEmitter {
             }
         };
     }
+
+    zoom(start, end) {
+        if (end - start < 5) return;
+
+        let neww = Math.round(this.drawPortWidth / (end - start));
+        if (neww % 2 === 0) neww -= 1;
+        neww = Math.max(1, Math.min(MAX_COLUMN_WIDTH, neww));
+        if (neww === this.unitWidth) return;
+
+        if (neww * this.arrayData.length > CHROME_CANVAS_MAX_LENGTH) return;
+
+        this.unitWidth = neww;
+        this.emit("unitWidth", neww);
+        this.updateDrawPort(this.getMiddleDateOfRange(start, end), this.drawPortWidth);
+    }
+
     updateUnitWidth(n) {
         let neww = this.unitWidth + n * 2;
 
-        //Canvas width maximum value in Chrome is 32767;
-        if (neww * this.arrayData.length > 32767) return;
-
-        if (neww < 1 || neww > 15) return;
+        if (neww * this.arrayData.length > CHROME_CANVAS_MAX_LENGTH) return;
+        if (neww < 1 || neww > MAX_COLUMN_WIDTH) return;
         this.unitWidth = neww;
         this.emit("unitWidth", neww);
-        this.updateDrawPort(this.getDateOfCurrentRange(), this.drawPortWidth);
+        this.updateDrawPort(this.getMiddleDateOfRange(), this.drawPortWidth);
     }
 
     getCanvasWidth() {
@@ -77,7 +95,7 @@ module.exports = class PainterCore extends EventEmitter {
 
     updateDrawPort(dateStr, w) {
         if (!this.arrayData) return;
-        console.log("updateDrawPort", dateStr)
+        console.log("updateDrawPort", dateStr, w)
         let max = this.arrayData.length;
         let idx = this.dateIndexMap[dateStr];
         if (idx === undefined) {
@@ -165,10 +183,12 @@ module.exports = class PainterCore extends EventEmitter {
         this.emit("range", true)
     }
 
-    getDateOfCurrentRange() {
+    getMiddleDateOfRange(start, end) {
+        if (start === undefined) start = this.drawRangeStart;
+        if (end === undefined) end = this.drawRangeEnd;
+
         if (!this.arrayData) return;
-        let idx = this.drawRangeStart + Math.round((this.drawRangeEnd - this.drawRangeStart) / 2);
-        //console.log(this.drawRangeStart, this.arrayData[this.drawRangeStart].date, idx, this.arrayData[idx].date, this.drawRangeEnd, this.arrayData[this.drawRangeEnd].date)
+        let idx = start + Math.round((end - start) / 2);
         return this.arrayData[idx].date;
     }
 

@@ -4,6 +4,8 @@ module.exports = class PointerPainter {
     constructor(painterCore, canvas) {
         this.setCanvas(canvas);
         this.core = painterCore;
+        this.doMousedown = this.doMousedown.bind(this);
+        this.doMouseup = this.doMouseup.bind(this);
         this.doOnData = this.doOnData.bind(this);
         this.core.on("data", this.doOnData);
         this.doOnRange = this.doOnRange.bind(this);
@@ -53,6 +55,9 @@ module.exports = class PointerPainter {
     updatePointer(x, y, dataIndex, valueToY) {
         x = x - x % this.core.unitWidth;
         this.clear();
+        if (this.mousedownx !== undefined && this.mousedowny !== undefined) {
+            this.drawSelectionArea(x, y);
+        }
         let data = this.core.getDataByIndex(dataIndex);
         let pdata = this.core.getDataByIndex(dataIndex - 1);
         this.drawPointer(x, y);
@@ -63,31 +68,31 @@ module.exports = class PointerPainter {
         let voly = valueToY.amount;
         let xpos = x + this.core.unitWidth + 2;
         //this.drawNumber(vol , xpos, Ys.volume, "rgba(255, 255, 255, 0.5)");
-        this.drawNumber(Math.round(data.amount / 10000) + "万", xpos, Ys.amount, "rgba(255, 255, 255, 0.5)");
+        this.drawNumber(Math.round(data.amount / 10000) + "万", xpos, Ys.amount, "rgba(220, 220, 220, 0.6)");
         //this.drawNumberLine(x + this.core.unitWidth / 2, voly, xpos, Ys.volume);
 
-        this.drawNumber(data.open, xpos, Ys.open, "rgba(255, 255, 255, 0.5)");
+        this.drawNumber(data.open, xpos, Ys.open, "rgba(220, 220, 220, 0.6)");
         //this.drawNumberLine(x + this.core.unitWidth / 2, valueToY.open, xpos, Ys.open);
         //f44336  4caf50
         if (pdata) {
             let cls = data.close;
             let inc = Math.round(10000 * (cls - pdata.close) / pdata.close) / 100;
             let display = (inc === 0 ? cls : (cls + '(' + inc + '%)'));
-            let clr = inc === 0 ? "rgba(255, 255, 255, 0.8)" : (inc > 0 ? "rgba(244, 67, 54, 0.8)" : "rgba(76, 175, 80, 0.8)")
+            let clr = inc === 0 ? "rgba(255, 255, 255, 0.8)" : (inc > 0 ? "rgba(244, 67, 54, 1)" : "rgba(76, 175, 80, 1)")
             this.drawNumber(display, xpos, Ys.close, clr);
         } else {
-            this.drawNumber(data.close, xpos, Ys.close, "rgba(255, 255, 255, 1)");
+            this.drawNumber(data.close, xpos, Ys.close, "rgba(220, 220, 220, 0.6)");
         }
 
         //this.drawNumberLine(x + this.core.unitWidth / 2, valueToY.close, xpos, Ys.close);
 
-        this.drawNumber(data.high, xpos, Ys.high, "rgba(255, 255, 255, 0.5)");
+        this.drawNumber(data.high, xpos, Ys.high, "rgba(220, 220, 220, 0.6)");
         //this.drawNumberLine(x + this.core.unitWidth / 2, valueToY.high, xpos, Ys.high);
 
-        this.drawNumber(data.low, xpos, Ys.low, "rgba(255, 255, 255, 0.5)");
+        this.drawNumber(data.low, xpos, Ys.low, "rgba(220, 220, 220, 0.6)");
         //this.drawNumberLine(x + this.core.unitWidth / 2, valueToY.low, xpos, Ys.low);
 
-        this.drawNumber(data.date.split('/').join('-'), xpos, Ys.date, "rgba(255, 255, 255, 0.5)");
+        this.drawNumber(data.date.split('/').join('-'), xpos, Ys.date, "rgba(220, 220, 220, 0.6)");
         //this.drawNumberLine(x + this.core.unitWidth / 2, valueToY.date, xpos, Ys.date);
 
 
@@ -96,6 +101,15 @@ module.exports = class PointerPainter {
 
     clear() {
         this.canvas2DCtx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    }
+
+    drawSelectionArea(x, y) {
+        //console.log("drawSelectionArea", this.mousedownx, this.mousedowny, x, y)
+        let ctx = this.canvas2DCtx;
+        ctx.rect(this.mousedownx, this.mousedowny, x - this.mousedownx, y - this.mousedowny);
+        ctx.lineWidth = 0.5;
+        ctx.strokeStyle = "rgba(220, 220, 220, 1)";
+        ctx.stroke();
     }
 
     drawNumberLine(x, y, tox, toy) {
@@ -142,6 +156,19 @@ module.exports = class PointerPainter {
 
     }
 
+    doMousedown(event) {
+        this.mousedownx = event.layerX;
+        this.mousedowny = event.layerY;
+    }
+
+    doMouseup(event) {
+        if (this.selectionHandler) {
+            this.selectionHandler(this.mousedownx, this.mousedowny, event.layerX, event.layerY);
+        }
+        this.mousedownx = undefined;
+        this.mousedowny = undefined;
+    }
+
     setCanvas(canvas) {
         this.chartCanvas = canvas;
         if (!this.chartCanvas) return;
@@ -155,6 +182,10 @@ module.exports = class PointerPainter {
         if (this.mouseDblclickHandler) {
             this.canvas.addEventListener('dblclick', this.mouseDblclickHandler, false);
         }
+
+        this.canvas.addEventListener('mousedown', this.doMousedown, false);
+        this.canvas.addEventListener('mouseup', this.doMouseup, false);
+
     }
 
 

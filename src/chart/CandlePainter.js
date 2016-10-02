@@ -69,7 +69,7 @@ module.exports = class CandlePainter extends MassPainter {
         let dates = data.date.split('/');
         if (dates[1] === '01') {
             ctx.lineWidth = 1;
-            ctx.strokeStyle = '#424242';
+            ctx.strokeStyle = 'rgba(220, 220, 220, 0.6)';
             let datastr = '|' + dates[0] + '-' + dates[1];
             if (dates[0] === "01") datastr += "-" + dates[2];
             ctx.strokeText(datastr, xp - 2, 10);
