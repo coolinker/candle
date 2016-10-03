@@ -145,7 +145,7 @@ class CandleApp extends React.Component {
                 <div style = {{position: 'absolute', right: '40px',  color: '#f0f0f0', top:'30px'}} ref={(ref) => this.scanAllInfo = ref}>0/0/0</div>
                 <div style = {{position: 'absolute', right: '10px',  color: '#f44336', top:'15px', 'fontSize': 'xx-large'}} onClick={this.scanAllBtnClick} ref={(ref) => this.scanAllBtn = ref}>▸</div>
                 <div style = {{position: 'absolute', right: '420px',  color: '#f0f0f0', top:'30px'}} ref={(ref) => this.scanInfo = ref}>0/0/0(Ctrl+Enter)</div>
-                <textarea value={this.state.matchStr} style = {{position: 'absolute', right: '20px',  color: 'rgba(255, 255, 255, 1)', borderColor: 'rgba(230, 230, 230, 0.1)', top:'50px', zIndex: 100, width: '500px', height: '300px', background: 'rgba(0, 0, 0, 0.3)', 'fontSize': '10px'}} 
+                <textarea value={this.state.matchStr} style = {{position: 'absolute', right: '20px',  color: 'rgba(255, 255, 255, 1)', borderColor: 'rgba(230, 230, 230, 0.1)', top:'50px', zIndex: 100, width: '500px', height: '200px', background: 'rgba(0, 0, 0, 0.3)', 'fontSize': '10px'}} 
                     ref={(ref) => this.matchTexArea = ref} onChange={this.handleMatchTextAreaChange} onKeyUp={this.handleMatchTextAreaKeyUp} onKeyDown ={function(e){e.nativeEvent.stopImmediatePropagation();}}></textarea>
             </div > 
             <ChartCanvas ref={(ref) => this.alphaChart = ref} width = "2000" height = { candleChartHeight } y = { candleChartY } > </ChartCanvas>  

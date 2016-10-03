@@ -7,7 +7,7 @@ module.exports = class DataSourceIO {
     constructor(root) {
         this.dataSourceRoot = root === undefined ? "../../data" : root;
         this.allStockIDArray = this.getAllStockIds();
-        this.historyPageParams = ""; //"year=2016&jidu=2"; 
+        this.historyPageParams = ""; // "year=2016&jidu=3"; //"";
         this.stockCompressedCache = {};
         this.stockCompressedCacheFields = ['date', 'open', 'close', 'high', 'low', 'amount', 'netamount', 'r0_net', 'changeratio', 'turnover'];
         //this.loadToCache(this.stockCompressedCacheFields);
