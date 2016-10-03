@@ -1,5 +1,5 @@
 'use strict';
-let DataBuilder = require('./DataBuilder');
+let DataBuilder = require('./databuilder');
 let dataBuilder = new DataBuilder();
 let dateStr = '09/20/2016';
 // dataBuilder.updateStockJson("SZ399001", new Date("06/24/2016"), function(len) {

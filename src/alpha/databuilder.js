@@ -3,7 +3,7 @@
 module.exports = class DataBuilder {
     constructor() {
         this.dataSourceRoot = "../../datasource";
-        let DataSourceIO = require('./DataSourceIO');
+        let DataSourceIO = require('./datasourceio');
         this.dataSourceIO = new DataSourceIO();
         this.tradingDays = this.dataSourceIO.readJsonSync('SH999999');
     }
