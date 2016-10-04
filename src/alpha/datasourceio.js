@@ -40,7 +40,7 @@ module.exports = class DataSourceIO {
     readBaseSync(sid) {
         let kLineJson = [];
         let fs = require("fs");
-        let content = fs.readFileSync(this.dataSourceRoot + "/base/" + sid + ".TXT", "utf8");
+        let content = fs.readFileSync(this.dataSourceRoot + "/base/" + sid + ".txt", "utf8");
         let lines = content.split("\r\n");
         let count = 0;
         let lastNode;
