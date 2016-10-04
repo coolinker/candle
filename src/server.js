@@ -124,7 +124,7 @@ function errorMessage(msg) {
     };
 }
 
-let DataSourceIO = require("./alpha/datadourceio");
+let DataSourceIO = require("./alpha/datasourceio");
 let dataSourceIO = new DataSourceIO('../data');
 let apiDispatcher = {
     stockIds: function(params, outputCallback) {
