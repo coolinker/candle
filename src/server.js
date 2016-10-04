@@ -15,18 +15,26 @@ let server = http.createServer(function(req, res) {
     if (uri === "/api" && handleApiRequest(req, res)) {
         return;
     } else {
+        let cpus = req.url.match('[?&]cpus=([^&]+)');
         if (uri === '/') uri = '/index.html';
-        uri = "../build" + uri;
-        res.writeHead(200, {
-            'Content-Type': 'text/html;charset=UTF-8'
-        });
-        if (fs.existsSync(uri)) {
-            console.log(uri)
-            let content = fs.readFileSync(uri);
-            res.end(content);
+        if (uri === '/index.html' && cpus === null) {
+            res.writeHead(302, {
+                'Location': '/index.html?cpus=4'
+            });
+            res.end();
         } else {
-            console.log("file doesn't exists", uri);
-            res.end("");
+            uri = "../build" + uri;
+            res.writeHead(200, {
+                'Content-Type': 'text/html;charset=UTF-8'
+            });
+            if (fs.existsSync(uri)) {
+                console.log(uri)
+                let content = fs.readFileSync(uri);
+                res.end(content);
+            } else {
+                console.log("file doesn't exists", uri);
+                res.end("");
+            }
         }
 
     }
