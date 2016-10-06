@@ -1,5 +1,5 @@
 'use strict';
-let MassPainter = require('./MassPainter');
+let MassPainter = require('./masspainter');
 module.exports = class CandlePainter extends MassPainter {
     constructor(painterCore, canvas) {
         super(painterCore, canvas);

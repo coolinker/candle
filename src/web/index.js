@@ -2,11 +2,10 @@
 
 import React from "react";
 import ReactDOM from "react-dom";
-import CandleApp from './CandleApp';
+import CandleApp from './candleapp';
 
 
-let candleApp = ReactDOM.render( 
+let candleApp = ReactDOM.render(
     <CandleApp></CandleApp>,
     document.getElementById('app')
 );
-

@@ -21080,6 +21080,8 @@ module.exports = function () {
                         }
                         delete mf.date;
                     }
+                } else {
+                    break;
                 }
 
                 Object.assign(json, mf);
@@ -21189,164 +21191,6 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-module.exports = function () {
-    function MassPainter(painterCore, canvas) {
-        _classCallCheck(this, MassPainter);
-
-        this.canvas = canvas;
-        if (this.canvas) this.canvas2DCtx = canvas.getContext('2d');
-        this.heightPerUnit = null;
-        this.core = painterCore;
-        this.doOnData = this.doOnData.bind(this);
-        this.core.on("data", this.doOnData);
-        this.doOnRange = this.doOnRange.bind(this);
-        this.core.on("range", this.doOnRange);
-        this.doOnUnitWidth = this.doOnUnitWidth.bind(this);
-        this.core.on("unitWidth", this.doOnUnitWidth);
-
-        this.topBorder = 0;
-        this.bottomBorder = 0;
-        this.drawCache = [];
-        this.lastDrawHeight = -1;
-    }
-
-    _createClass(MassPainter, [{
-        key: 'doOnData',
-        value: function doOnData() {
-            if (!this.canvas) return;
-            this.canvas.width = this.core.getCanvasWidth();
-            // console.log("canvas width changed:", this.canvas.width)
-            this.clearDrawCache();
-            this.draw(this.core.drawRangeStart, this.core.drawRangeEnd);
-        }
-    }, {
-        key: 'doOnUnitWidth',
-        value: function doOnUnitWidth(w) {
-            if (!this.canvas) return;
-            this.canvas.width = this.core.getCanvasWidth();
-            this.clearDrawCache();
-            // console.log("MassPainter doOnUnitWidth:", this.canvas.width)
-            //this.draw(this.core.drawRangeStart, this.core.drawRangeEnd);
-            // this.doOnRange();
-        }
-    }, {
-        key: 'doOnRange',
-        value: function doOnRange() {
-            if (!this.canvas) return;
-            // console.log("MassPainter doOnRange", this.core.unitWidth)
-            this.draw(this.core.drawRangeStart, this.core.drawRangeEnd);
-            this.chartCanvas.updateX(this.core.drawRangeStart * this.core.unitWidth);
-        }
-    }, {
-        key: 'setCanvas',
-        value: function setCanvas(canvas) {
-            this.chartCanvas = canvas;
-            this.canvas = canvas.getDomCanvas();
-            if (this.canvas) this.canvas2DCtx = this.canvas.getContext('2d');
-        }
-    }, {
-        key: 'draw',
-        value: function draw(start, end) {
-            if (this.didDrawHeightChanged()) {
-                this.updateHeightPerUnit();
-                this.clearDrawCache();
-            }
-
-            // if (this.updateHeightPerUnit()) {
-            //     this.clearDrawCache();
-            //     this.canvas2DCtx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-            // }
-
-            var w = this.core.unitWidth;
-            var data = this.core.arrayData;
-            var drawcount = 0;
-            //console.log("draw", start, end, data.length, w)
-            for (var i = start; i <= end && i >= 0; i++) {
-                var x = i * w;
-                if (this.hasDrawCache(i)) continue;
-                drawcount++;
-                //this.drawSingle(x, data[i], i > 0 ? data[i - 1] : null);
-                this.drawSingle(x, i, data, start, end);
-                this.drawCache[i] = true;
-            }
-
-            // if (drawcount>1)
-            //     console.log("draw new signles", start, start*w, drawcount);
-            this.lastDrawHeight = this.canvas.height;
-        }
-    }, {
-        key: 'hasDrawCache',
-        value: function hasDrawCache(i) {
-            return this.drawCache[i];
-        }
-    }, {
-        key: 'didDrawHeightChanged',
-        value: function didDrawHeightChanged() {
-            //console.log("changed", this.canvas.height,  this.lastDrawHeight)
-            return this.canvas.height != this.lastDrawHeight;
-        }
-    }, {
-        key: 'clearDrawCache',
-        value: function clearDrawCache() {
-            this.drawCache = [];
-            this.canvas2DCtx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-            this.drawBorder();
-        }
-    }, {
-        key: 'drawBorder',
-        value: function drawBorder() {
-            //console.log("border draw", this.topBorder, this.bottomBorder)
-            var canvas = this.canvas;
-            var ctx = this.canvas2DCtx;
-            ctx.strokeStyle = '#424242';
-            if (this.topBorder > 0) {
-                ctx.beginPath();
-                ctx.moveTo(0, 0);
-                ctx.lineTo(canvas.width, 0);
-                ctx.lineWidth = this.topBorder;
-                ctx.stroke();
-            }
-            if (this.bottomBorder > 0) {
-                ctx.moveTo(0, canvas.height - 1);
-                ctx.lineTo(canvas.width, canvas.height - 1);
-                ctx.lineWidth = this.bottomBorder;
-                ctx.stroke();
-            }
-        }
-    }, {
-        key: 'drawSingle',
-        value: function drawSingle(x, idx, dataArr) {}
-    }, {
-        key: 'updateHeightPerUnit',
-        value: function updateHeightPerUnit() {
-            return true;
-        }
-
-        // getPriceByY(y) {
-        //     let low = this.core.priceLow;
-        //     return low + Math.round(y/this.heightPerUnit)/100;
-        // }
-
-        // getPriceY(price) {
-        //     return (this.core.priceHigh - price)*100*this.core.heightPerUnit;
-        // }
-
-        // getVolumeByY(y) {
-
-        // }
-
-    }]);
-
-    return MassPainter;
-}();
-
-},{}],178:[function(require,module,exports){
-'use strict';
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
 function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
@@ -21440,7 +21284,7 @@ module.exports = function (_MassPainter) {
     return AlphaPainter;
 }(MassPainter);
 
-},{"./masspainter":180}],179:[function(require,module,exports){
+},{"./masspainter":179}],178:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -21451,7 +21295,7 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-var MassPainter = require('./MassPainter');
+var MassPainter = require('./masspainter');
 module.exports = function (_MassPainter) {
     _inherits(CandlePainter, _MassPainter);
 
@@ -21526,6 +21370,15 @@ module.exports = function (_MassPainter) {
                 ctx.strokeText('E', xp - 5, this.canvas.height - 3);
             }
 
+            var dates = data.date.split('/');
+            if (dates[1] === '01') {
+                ctx.lineWidth = 1;
+                ctx.strokeStyle = 'rgba(220, 220, 220, 0.6)';
+                var datastr = '|' + dates[0] + '-' + dates[1];
+                if (dates[0] === "01") datastr += "-" + dates[2];
+                ctx.strokeText(datastr, xp - 2, 10);
+            }
+
             if (idx === 0) return;
             var data_pre = dataArr[idx - 1];
             var aves = this.core.aves; //[8, 13, 21, 55];
@@ -21560,7 +21413,7 @@ module.exports = function (_MassPainter) {
     return CandlePainter;
 }(MassPainter);
 
-},{"./MassPainter":177}],180:[function(require,module,exports){
+},{"./masspainter":179}],179:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -21718,7 +21571,7 @@ module.exports = function () {
     return MassPainter;
 }();
 
-},{}],181:[function(require,module,exports){
+},{}],180:[function(require,module,exports){
 'use strict';
 // const EventEmitter = require('events');
 
@@ -21745,6 +21598,10 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
 //import MovingAverageUtil from "../alpha/movingaverageutil";
+
+//Canvas width maximum value in Chrome is 32767;
+var CHROME_CANVAS_MAX_LENGTH = 32767;
+var MAX_COLUMN_WIDTH = 7;
 module.exports = function (_EventEmitter) {
     _inherits(PainterCore, _EventEmitter);
 
@@ -21803,17 +21660,31 @@ module.exports = function (_EventEmitter) {
             };
         }
     }, {
+        key: 'zoom',
+        value: function zoom(start, end) {
+            if (end - start < 5) return;
+
+            var neww = Math.round(this.drawPortWidth / (end - start));
+            if (neww % 2 === 0) neww -= 1;
+            neww = Math.max(1, Math.min(MAX_COLUMN_WIDTH, neww));
+            if (neww === this.unitWidth) return;
+
+            if (neww * this.arrayData.length > CHROME_CANVAS_MAX_LENGTH) return;
+
+            this.unitWidth = neww;
+            this.emit("unitWidth", neww);
+            this.updateDrawPort(this.getMiddleDateOfRange(start, end), this.drawPortWidth);
+        }
+    }, {
         key: 'updateUnitWidth',
         value: function updateUnitWidth(n) {
             var neww = this.unitWidth + n * 2;
 
-            //Canvas width maximum value in Chrome is 32767;
-            if (neww * this.arrayData.length > 32767) return;
-
-            if (neww < 1 || neww > 15) return;
+            if (neww * this.arrayData.length > CHROME_CANVAS_MAX_LENGTH) return;
+            if (neww < 1 || neww > MAX_COLUMN_WIDTH) return;
             this.unitWidth = neww;
             this.emit("unitWidth", neww);
-            this.updateDrawPort(this.getDateOfCurrentRange(), this.drawPortWidth);
+            this.updateDrawPort(this.getMiddleDateOfRange(), this.drawPortWidth);
         }
     }, {
         key: 'getCanvasWidth',
@@ -21833,7 +21704,7 @@ module.exports = function (_EventEmitter) {
         key: 'updateDrawPort',
         value: function updateDrawPort(dateStr, w) {
             if (!this.arrayData) return;
-            console.log("updateDrawPort", dateStr);
+            console.log("updateDrawPort", dateStr, w);
             var max = this.arrayData.length;
             var idx = this.dateIndexMap[dateStr];
             if (idx === undefined) {
@@ -21921,11 +21792,13 @@ module.exports = function (_EventEmitter) {
             this.emit("range", true);
         }
     }, {
-        key: 'getDateOfCurrentRange',
-        value: function getDateOfCurrentRange() {
+        key: 'getMiddleDateOfRange',
+        value: function getMiddleDateOfRange(start, end) {
+            if (start === undefined) start = this.drawRangeStart;
+            if (end === undefined) end = this.drawRangeEnd;
+
             if (!this.arrayData) return;
-            var idx = this.drawRangeStart + Math.round((this.drawRangeEnd - this.drawRangeStart) / 2);
-            //console.log(this.drawRangeStart, this.arrayData[this.drawRangeStart].date, idx, this.arrayData[idx].date, this.drawRangeEnd, this.arrayData[this.drawRangeEnd].date)
+            var idx = start + Math.round((end - start) / 2);
             return this.arrayData[idx].date;
         }
     }, {
@@ -22046,7 +21919,7 @@ module.exports = function (_EventEmitter) {
     return PainterCore;
 }(_events2.default);
 
-},{"../alpha/matchfunctionutil":172,"../alpha/utilspipe":175,"events":1}],182:[function(require,module,exports){
+},{"../alpha/matchfunctionutil":172,"../alpha/utilspipe":175,"events":1}],181:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -22059,6 +21932,8 @@ module.exports = function () {
 
         this.setCanvas(canvas);
         this.core = painterCore;
+        this.doMousedown = this.doMousedown.bind(this);
+        this.doMouseup = this.doMouseup.bind(this);
         this.doOnData = this.doOnData.bind(this);
         this.core.on("data", this.doOnData);
         this.doOnRange = this.doOnRange.bind(this);
@@ -22112,6 +21987,9 @@ module.exports = function () {
         value: function updatePointer(x, y, dataIndex, valueToY) {
             x = x - x % this.core.unitWidth;
             this.clear();
+            if (this.mousedownx !== undefined && this.mousedowny !== undefined) {
+                this.drawSelectionArea(x, y);
+            }
             var data = this.core.getDataByIndex(dataIndex);
             var pdata = this.core.getDataByIndex(dataIndex - 1);
             this.drawPointer(x, y);
@@ -22122,37 +22000,47 @@ module.exports = function () {
             var voly = valueToY.amount;
             var xpos = x + this.core.unitWidth + 2;
             //this.drawNumber(vol , xpos, Ys.volume, "rgba(255, 255, 255, 0.5)");
-            this.drawNumber(Math.round(data.amount / 10000) + "万", xpos, Ys.amount, "rgba(255, 255, 255, 0.5)");
+            this.drawNumber(Math.round(data.amount / 10000) + "万", xpos, Ys.amount, "rgba(220, 220, 220, 0.6)");
             //this.drawNumberLine(x + this.core.unitWidth / 2, voly, xpos, Ys.volume);
 
-            this.drawNumber(data.open, xpos, Ys.open, "rgba(255, 255, 255, 0.5)");
+            this.drawNumber(data.open, xpos, Ys.open, "rgba(220, 220, 220, 0.6)");
             //this.drawNumberLine(x + this.core.unitWidth / 2, valueToY.open, xpos, Ys.open);
             //f44336  4caf50
             if (pdata) {
                 var cls = data.close;
                 var inc = Math.round(10000 * (cls - pdata.close) / pdata.close) / 100;
                 var display = inc === 0 ? cls : cls + '(' + inc + '%)';
-                var clr = inc === 0 ? "rgba(255, 255, 255, 0.8)" : inc > 0 ? "rgba(244, 67, 54, 0.8)" : "rgba(76, 175, 80, 0.8)";
+                var clr = inc === 0 ? "rgba(255, 255, 255, 0.8)" : inc > 0 ? "rgba(244, 67, 54, 1)" : "rgba(76, 175, 80, 1)";
                 this.drawNumber(display, xpos, Ys.close, clr);
             } else {
-                this.drawNumber(data.close, xpos, Ys.close, "rgba(255, 255, 255, 1)");
+                this.drawNumber(data.close, xpos, Ys.close, "rgba(220, 220, 220, 0.6)");
             }
 
             //this.drawNumberLine(x + this.core.unitWidth / 2, valueToY.close, xpos, Ys.close);
 
-            this.drawNumber(data.high, xpos, Ys.high, "rgba(255, 255, 255, 0.5)");
+            this.drawNumber(data.high, xpos, Ys.high, "rgba(220, 220, 220, 0.6)");
             //this.drawNumberLine(x + this.core.unitWidth / 2, valueToY.high, xpos, Ys.high);
 
-            this.drawNumber(data.low, xpos, Ys.low, "rgba(255, 255, 255, 0.5)");
+            this.drawNumber(data.low, xpos, Ys.low, "rgba(220, 220, 220, 0.6)");
             //this.drawNumberLine(x + this.core.unitWidth / 2, valueToY.low, xpos, Ys.low);
 
-            this.drawNumber(data.date, xpos, Ys.date, "rgba(255, 255, 255, 0.5)");
+            this.drawNumber(data.date.split('/').join('-'), xpos, Ys.date, "rgba(220, 220, 220, 0.6)");
             //this.drawNumberLine(x + this.core.unitWidth / 2, valueToY.date, xpos, Ys.date);
         }
     }, {
         key: "clear",
         value: function clear() {
             this.canvas2DCtx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        }
+    }, {
+        key: "drawSelectionArea",
+        value: function drawSelectionArea(x, y) {
+            //console.log("drawSelectionArea", this.mousedownx, this.mousedowny, x, y)
+            var ctx = this.canvas2DCtx;
+            ctx.rect(this.mousedownx, this.mousedowny, x - this.mousedownx, y - this.mousedowny);
+            ctx.lineWidth = 0.5;
+            ctx.strokeStyle = "rgba(220, 220, 220, 1)";
+            ctx.stroke();
         }
     }, {
         key: "drawNumberLine",
@@ -22200,6 +22088,21 @@ module.exports = function () {
         key: "doOnRange",
         value: function doOnRange(redraw) {}
     }, {
+        key: "doMousedown",
+        value: function doMousedown(event) {
+            this.mousedownx = event.layerX;
+            this.mousedowny = event.layerY;
+        }
+    }, {
+        key: "doMouseup",
+        value: function doMouseup(event) {
+            if (this.selectionHandler) {
+                this.selectionHandler(this.mousedownx, this.mousedowny, event.layerX, event.layerY);
+            }
+            this.mousedownx = undefined;
+            this.mousedowny = undefined;
+        }
+    }, {
         key: "setCanvas",
         value: function setCanvas(canvas) {
             this.chartCanvas = canvas;
@@ -22214,13 +22117,16 @@ module.exports = function () {
             if (this.mouseDblclickHandler) {
                 this.canvas.addEventListener('dblclick', this.mouseDblclickHandler, false);
             }
+
+            this.canvas.addEventListener('mousedown', this.doMousedown, false);
+            this.canvas.addEventListener('mouseup', this.doMouseup, false);
         }
     }]);
 
     return PointerPainter;
 }();
 
-},{}],183:[function(require,module,exports){
+},{}],182:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -22231,7 +22137,7 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-var MassPainter = require('./MassPainter');
+var MassPainter = require('./masspainter');
 module.exports = function (_MassPainter) {
     _inherits(VolumePainter, _MassPainter);
 
@@ -22383,7 +22289,7 @@ module.exports = function (_MassPainter) {
     return VolumePainter;
 }(MassPainter);
 
-},{"./MassPainter":177}],184:[function(require,module,exports){
+},{"./masspainter":179}],183:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -22436,7 +22342,9 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-var cpus = window.location.search.match('[?&]cpus=([^&]+)')[1];
+var cpus = window.location.search.match('[?&]cpus=([^&]+)');
+if (cpus && cpus.length) cpus = cpus[1];else cpus = 4;
+
 cpus = Number(cpus);
 if (isNaN(cpus)) cpus = 4;
 var pworks = [];
@@ -22469,9 +22377,22 @@ pointerPainter.mouseDblclickHandler = function (e) {
     var data = painterCore.getDataByIndex(dataindex);
     console.log("mouseDblclickHandler", data);
 };
+
+pointerPainter.selectionHandler = function (x, y, endx, endy) {
+    var candleCanvasX = parseInt(candlePainter.canvas.style.left, 10);
+    var startindex = painterCore.getDataIndexByX(x - candleCanvasX);
+    var endindex = painterCore.getDataIndexByX(endx - candleCanvasX);
+    if (startindex > endindex) {
+        var temp = startindex;
+        startindex = endindex;
+        endindex = temp;
+    }
+
+    painterCore.zoom(startindex, endindex);
+};
+
 pointerPainter.mouseMoveHandler = function (e) {
     if (!painterCore.arrayData) return;
-
     var x = e.x;
     var y = e.y;
     var candleCanvasX = parseInt(candlePainter.canvas.style.left, 10);
@@ -22488,7 +22409,7 @@ pointerPainter.mouseMoveHandler = function (e) {
     var top = parseInt(volPainter.canvas.style.top) - parseInt(candlePainter.canvas.style.top);
     valuetoy.amount = top + Math.max(volPainter.getAmountY(data.amount), 10);
     valuetoy.amountStart = top;
-    pointerPainter.updatePointer(x, y - parseInt(candlePainter.canvas.style.top), dataindex, valuetoy);
+    pointerPainter.updatePointer(e.layerX, e.layerY, dataindex, valuetoy);
 };
 
 var CandleApp = function (_React$Component) {
@@ -22584,10 +22505,10 @@ var CandleApp = function (_React$Component) {
                     ),
                     _react2.default.createElement(
                         'div',
-                        { style: { position: 'absolute', right: '20px', color: '#f44336', top: '30px' }, onClick: this.scanAllBtnClick, ref: function ref(_ref4) {
+                        { style: { position: 'absolute', right: '10px', color: '#f44336', top: '15px', 'fontSize': 'xx-large' }, onClick: this.scanAllBtnClick, ref: function ref(_ref4) {
                                 return _this2.scanAllBtn = _ref4;
                             } },
-                        '►'
+                        '▸'
                     ),
                     _react2.default.createElement(
                         'div',
@@ -22596,7 +22517,7 @@ var CandleApp = function (_React$Component) {
                             } },
                         '0/0/0(Ctrl+Enter)'
                     ),
-                    _react2.default.createElement('textarea', { value: this.state.matchStr, style: { position: 'absolute', right: '20px', color: 'rgba(255, 255, 255, 1)', borderColor: 'rgba(230, 230, 230, 0.1)', top: '50px', zIndex: 100, width: '500px', height: '300px', background: 'rgba(0, 0, 0, 0.3)', 'fontSize': '10px' },
+                    _react2.default.createElement('textarea', { value: this.state.matchStr, style: { position: 'absolute', right: '20px', color: 'rgba(255, 255, 255, 1)', borderColor: 'rgba(230, 230, 230, 0.1)', top: '50px', zIndex: 100, width: '500px', height: '200px', background: 'rgba(0, 0, 0, 0.3)', 'fontSize': '10px' },
                         ref: function ref(_ref6) {
                             return _this2.matchTexArea = _ref6;
                         }, onChange: this.handleMatchTextAreaChange, onKeyUp: this.handleMatchTextAreaKeyUp, onKeyDown: function onKeyDown(e) {
@@ -22685,7 +22606,7 @@ var CandleApp = function (_React$Component) {
             //document.addEventListener('keyup', function(e) {});
 
             painterCore.on("range", function () {
-                var date = painterCore.getDateOfCurrentRange();
+                var date = painterCore.getMiddleDateOfRange();
                 // console.log("on range:", painterCore.drawRangeStart, date)
                 me.refs.dateInput.updateState(date, false);
             });
@@ -22701,21 +22622,21 @@ var CandleApp = function (_React$Component) {
                     count += re.count;
                     me.info.innerHTML = count;
                 });
-            }, 3000);
+            }, 5000);
         }
     }, {
         key: 'scanAllBtnClick',
         value: function scanAllBtnClick() {
-            var start = this.scanAllBtn.innerHTML === '►';
+            var start = this.scanAllBtn.innerHTML === '▸';
             if (!start) {
-                this.scanAllBtn.innerHTML = '►';
-                _io2.default.workerStopScanByIndex(function (re) {
+                this.scanAllBtn.innerHTML = '▸';
+                _io2.default.workersStopScanByIndex(function (re) {
                     console.log("workerStopScanAll", re);
                 });
                 return;
             }
 
-            this.scanAllBtn.innerHTML = '□'; // '❚❚';
+            this.scanAllBtn.innerHTML = '◻'; //stop;
             var me = this;
             var count = 0,
                 bull = 0,
@@ -22733,7 +22654,7 @@ var CandleApp = function (_React$Component) {
                 var per = bull + bear > 0 ? Math.round(100 * bull / (bull + bear)) : 0;
                 me.scanAllInfo.innerHTML = per + '%/' + cases + '/' + count;
                 if (cnts.finished) {
-                    me.scanAllBtn.innerHTML = '►';
+                    me.scanAllBtn.innerHTML = '▸';
                 }
             });
         }
@@ -22829,7 +22750,7 @@ var CandleApp = function (_React$Component) {
         key: 'doOnResize',
         value: function doOnResize() {
             // console.log("doOnResize", e)
-            var date = painterCore.getDateOfCurrentRange();
+            var date = painterCore.getMiddleDateOfRange();
             painterCore.updateDrawPort(date, this.state.windowWidth);
         }
     }]);
@@ -22839,7 +22760,7 @@ var CandleApp = function (_React$Component) {
 
 exports.default = CandleApp;
 
-},{"../chart/alphapainter":178,"../chart/candlepainter":179,"../chart/paintercore":181,"../chart/pointerpainter":182,"../chart/volumepainter":183,"./chartcanvas":185,"./dataworker.js":186,"./forms/dateinput":187,"./forms/forminput":188,"./io":190,"./localstoreutil":191,"./stockids":192,"./tradingdate":193,"react":168,"webworkify":169}],185:[function(require,module,exports){
+},{"../chart/alphapainter":177,"../chart/candlepainter":178,"../chart/paintercore":180,"../chart/pointerpainter":181,"../chart/volumepainter":182,"./chartcanvas":184,"./dataworker.js":185,"./forms/dateinput":186,"./forms/forminput":187,"./io":189,"./localstoreutil":190,"./stockids":191,"./tradingdate":192,"react":168,"webworkify":169}],184:[function(require,module,exports){
 'use strict';
 
 // let sampleData = [{ open: 15.5, close: 16, high: 16.5, low: 15.2 }, { open: 15.8, close: 15, high: 16.8, low: 14.2 }, { open: 15.5, close: 16, high: 16.8, low: 15.2 }, { open: 10.5, close: 10, high: 10.8, low: 9.2 }];
@@ -22910,7 +22831,7 @@ var ChartCanvas = function (_React$Component) {
 
 exports.default = ChartCanvas;
 
-},{"react":168}],186:[function(require,module,exports){
+},{"react":168}],185:[function(require,module,exports){
 'use strict';
 
 var _io = require('./io');
@@ -23093,7 +23014,7 @@ module.loadStockIds = function loadStockIds(start, count, fields, callback) {
     });
 };
 
-},{"../alpha/matchfunctionutil":172,"../alpha/utilspipe":175,"../alpha/zip":176,"./io":190,"./stockids":192}],187:[function(require,module,exports){
+},{"../alpha/matchfunctionutil":172,"../alpha/utilspipe":175,"../alpha/zip":176,"./io":189,"./stockids":191}],186:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -23189,7 +23110,7 @@ DateInput.defaultProps = { type: "date", width: 130 };
 
 exports.default = DateInput;
 
-},{"./forminput":188,"react":168}],188:[function(require,module,exports){
+},{"./forminput":187,"react":168}],187:[function(require,module,exports){
 'use strict';
 
 // let sampleData = [{ open: 15.5, close: 16, high: 16.5, low: 15.2 }, { open: 15.8, close: 15, high: 16.8, low: 14.2 }, { open: 15.5, close: 16, high: 16.8, low: 15.2 }, { open: 10.5, close: 10, high: 10.8, low: 9.2 }];
@@ -23296,7 +23217,7 @@ FormInput.defaultProps = {
 
 exports.default = FormInput;
 
-},{"react":168}],189:[function(require,module,exports){
+},{"react":168}],188:[function(require,module,exports){
 'use strict';
 
 var _react = require("react");
@@ -23307,15 +23228,15 @@ var _reactDom = require("react-dom");
 
 var _reactDom2 = _interopRequireDefault(_reactDom);
 
-var _CandleApp = require("./CandleApp");
+var _candleapp = require("./candleapp");
 
-var _CandleApp2 = _interopRequireDefault(_CandleApp);
+var _candleapp2 = _interopRequireDefault(_candleapp);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-var candleApp = _reactDom2.default.render(_react2.default.createElement(_CandleApp2.default, null), document.getElementById('app'));
+var candleApp = _reactDom2.default.render(_react2.default.createElement(_candleapp2.default, null), document.getElementById('app'));
 
-},{"./CandleApp":184,"react":168,"react-dom":30}],190:[function(require,module,exports){
+},{"./candleapp":183,"react":168,"react-dom":30}],189:[function(require,module,exports){
 'use strict';
 // import fetch from 'whatwg-fetch';
 
@@ -23419,15 +23340,18 @@ var IO = function () {
     }, {
         key: 'workerGetStockJson',
         value: function workerGetStockJson(sid, callback) {
-            var params = [sid, ['date', 'open', 'close', 'high', 'low', 'amount', 'netamount', 'r0_net', 'changeratio', 'turnover']];
+            var fields = ['date', 'open', 'close', 'high', 'low', 'amount', 'netamount', 'r0_net', 'changeratio', 'turnover'];
+            var params = [sid, fields];
             var worker = IO.getWorkerBySid(sid);
             worker.callMethod("getStockData", params, function (re) {
                 if (re) {
                     var dcp = _zip2.default.decompressStockJson(re);
                     callback(dcp);
                 } else {
-                    IO.httpGetStockJson(sid, function (json) {
-                        callback(json);
+                    IO.httpGetStockCompressedJson(sid, fields, function (cmpr) {
+                        //callback(json);
+                        var dcp = _zip2.default.decompressStockJson(cmpr);
+                        callback(dcp);
                     });
                 }
             });
@@ -23482,6 +23406,23 @@ var IO = function () {
                     'Content-Type': 'application/json'
                 },
                 body: '{"sids":"' + sids + '", "action":"stocksCompressed", "fields":"' + fields + '"}'
+            }).then(function (res) {
+                return res.json();
+            }).then(function (json) {
+                callback(json);
+            });
+        }
+    }, {
+        key: 'httpGetStockCompressedJson',
+        value: function httpGetStockCompressedJson(sid, fields, callback) {
+            //console.log("--------------httpGetStocksCompressedJson", sids[0], sids.length)
+            fetch(IO.baseUrl, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                body: '{"sid":"' + sid + '", "action":"stockCompressed", "fields":"' + fields + '"}'
             }).then(function (res) {
                 return res.json();
             }).then(function (json) {
@@ -23551,7 +23492,7 @@ IO.workerStarts = [0];
 
 exports.default = IO;
 
-},{"../alpha/netsumutil":174,"../alpha/zip":176,"./stockids":192,"./workerproxy":194}],191:[function(require,module,exports){
+},{"../alpha/netsumutil":174,"../alpha/zip":176,"./stockids":191,"./workerproxy":193}],190:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -23599,7 +23540,7 @@ var LocalStoreUtil = function () {
 
 exports.default = LocalStoreUtil;
 
-},{}],192:[function(require,module,exports){
+},{}],191:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -23705,7 +23646,7 @@ StockIDs.idIndexMap = {};
 
 exports.default = StockIDs;
 
-},{"./io":190}],193:[function(require,module,exports){
+},{"./io":189}],192:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -23765,7 +23706,7 @@ TradingDate.dateIndexMap = {};
 
 exports.default = TradingDate;
 
-},{"./io":190}],194:[function(require,module,exports){
+},{"./io":189}],193:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -23829,4 +23770,4 @@ var WorkerProxy = function () {
 
 exports.default = WorkerProxy;
 
-},{"whatwg-fetch":170}]},{},[189]);
+},{"whatwg-fetch":170}]},{},[188]);
