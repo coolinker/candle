@@ -72,15 +72,18 @@ class IO {
     }
 
     static workerGetStockJson(sid, callback) {
-        let params = [sid, ['date', 'open', 'close', 'high', 'low', 'amount', 'netamount', 'r0_net', 'changeratio', 'turnover']];
+        let fields = ['date', 'open', 'close', 'high', 'low', 'amount', 'netamount', 'r0_net', 'changeratio', 'turnover'];
+        let params = [sid, fields];
         let worker = IO.getWorkerBySid(sid);
         worker.callMethod("getStockData", params, function(re) {
             if (re) {
                 let dcp = Zip.decompressStockJson(re);
                 callback(dcp);
             } else {
-                IO.httpGetStockJson(sid, function(json) {
-                    callback(json);
+                IO.httpGetStockCompressedJson(sid, fields, function(cmpr) {
+                    //callback(json);
+                    let dcp = Zip.decompressStockJson(cmpr);
+                    callback(dcp);
                 })
             }
 
@@ -139,7 +142,21 @@ class IO {
         });
     }
 
-
+    static httpGetStockCompressedJson(sid, fields, callback) {
+        //console.log("--------------httpGetStocksCompressedJson", sids[0], sids.length)
+        fetch(IO.baseUrl, {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            body: '{"sid":"' + sid + '", "action":"stockCompressed", "fields":"' + fields + '"}'
+        }).then(function(res) {
+            return res.json();
+        }).then(function(json) {
+            callback(json);
+        });
+    }
     static httpGetStockJson(sid, callback) {
         console.log("--------------httpGetStockJson", sid)
         fetch(IO.baseUrl, {
@@ -156,6 +173,7 @@ class IO {
             callback(json);
         });
     }
+
     static httpGetStockMoneyFlowJson(sid, callback) {
         console.log("--------------httpGetStockMoneyFlowJson", sid)
         fetch(IO.baseUrl, {

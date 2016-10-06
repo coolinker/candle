@@ -73,6 +73,8 @@ module.exports = class Zip {
                     delete mf.date;
                 }
 
+            } else {
+                break;
             }
 
             Object.assign(json, mf)

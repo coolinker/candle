@@ -138,7 +138,7 @@ let apiDispatcher = {
     stockCompressed: function(params, outputCallback) {
         let sid = params.sid;
         let fields = params.fields.split(',');
-        let content = dataSourceIO.readStockFullJsonSync(sid.toUpperCase(), fields);
+        let content = dataSourceIO.readStockCompressedJsonSync(sid.toUpperCase(), fields);
         if (content) {
             let str = JSON.stringify(content);
             outputCallback(str, true);

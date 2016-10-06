@@ -231,7 +231,7 @@ class CandleApp extends React.Component {
                 count += re.count;
                 me.info.innerHTML = count;
             });
-        }, 3000)
+        }, 5000)
 
     }
 
