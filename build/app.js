@@ -23348,6 +23348,7 @@ var IO = function () {
                     var dcp = _zip2.default.decompressStockJson(re);
                     callback(dcp);
                 } else {
+
                     IO.httpGetStockCompressedJson(sid, fields, function (cmpr) {
                         //callback(json);
                         var dcp = _zip2.default.decompressStockJson(cmpr);
