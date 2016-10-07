@@ -158,7 +158,7 @@ module.exports = class DataSourceIO {
 
                 callback(jsonArr);
             }).catch(function(error) {
-                //console.log('request failed', error)
+                console.log('request failed', error)
                 callback(null);
             });
 
