@@ -22505,7 +22505,7 @@ var CandleApp = function (_React$Component) {
                     ),
                     _react2.default.createElement(
                         'div',
-                        { style: { position: 'absolute', right: '10px', color: '#f44336', top: '15px', 'fontSize': 'xx-large' }, onClick: this.scanAllBtnClick, ref: function ref(_ref4) {
+                        { style: { position: 'absolute', right: '20px', color: '#f44336', top: '22px', 'fontSize': 'xx-large' }, onClick: this.scanAllBtnClick, ref: function ref(_ref4) {
                                 return _this2.scanAllBtn = _ref4;
                             } },
                         '▸'
@@ -22620,8 +22620,18 @@ var CandleApp = function (_React$Component) {
                 var count = 0;
                 _io2.default.loadStocksPerPage(function (re) {
                     count += re.count;
-                    me.info.innerHTML = count;
                 });
+                var timer = 0;
+                var spinner = ['/', '—', '\\', '|'];
+                var interval = setInterval(function () {
+                    timer++;
+                    var per = Math.round(100 * (count / 2886));
+                    me.info.innerHTML = count + '(' + per + '%)' + spinner[timer % 4];
+                    if (count === 2886) {
+                        clearInterval(interval);
+                        me.info.innerHTML = count + '(' + per + '%)';
+                    }
+                }, 100);
             }, 5000);
         }
     }, {
@@ -22630,6 +22640,7 @@ var CandleApp = function (_React$Component) {
             var start = this.scanAllBtn.innerHTML === '▸';
             if (!start) {
                 this.scanAllBtn.innerHTML = '▸';
+                this.scanAllBtn.style.fontSize = 'xx-large';
                 _io2.default.workersStopScanByIndex(function (re) {
                     console.log("workerStopScanAll", re);
                 });
@@ -22637,6 +22648,7 @@ var CandleApp = function (_React$Component) {
             }
 
             this.scanAllBtn.innerHTML = '◻'; //stop;
+            this.scanAllBtn.style.fontSize = 'x-large';
             var me = this;
             var count = 0,
                 bull = 0,
@@ -22655,6 +22667,7 @@ var CandleApp = function (_React$Component) {
                 me.scanAllInfo.innerHTML = per + '%/' + cases + '/' + count;
                 if (cnts.finished) {
                     me.scanAllBtn.innerHTML = '▸';
+                    me.scanAllBtn.style.fontSize = 'xx-large';
                 }
             });
         }
