@@ -22482,7 +22482,7 @@ var CandleApp = function (_React$Component) {
                 _react2.default.createElement(
                     'div',
                     { ref: 'toolbar', height: toolbarHeight, style: toolbarStyle },
-                    _react2.default.createElement(_forminput2.default, { ref: 'sidInput', style: { color: '#c0c0c0', width: '65px', borderStyle: 'groove', borderColor: '#424242', backgroundColor: 'transparent' },
+                    _react2.default.createElement(_forminput2.default, { ref: 'sidInput', style: { color: '#c0c0c0', width: '75px', borderStyle: 'groove', borderColor: '#424242', backgroundColor: 'transparent' },
                         validRegex: "^(sh|sz|SH|SZ)\\d{6}$", value: 'SH000001',
                         handleInputChanged: this.handleSidInputChagned, onKeyDownHandler: function onKeyDownHandler(e) {
                             e.nativeEvent.stopImmediatePropagation();
@@ -22674,7 +22674,8 @@ var CandleApp = function (_React$Component) {
                 painterCore.addMatchCases(cnts.sid, cnts.matchOnDate);
                 var per = bull + bear > 0 ? Math.round(100 * bull / (bull + bear)) : 0;
                 me.scanAllInfo.innerHTML = per + '%/' + cases + '/' + count;
-                if (cnts.finished) {
+
+                if (cnts.finished && count === 2886) {
                     me.scanAllBtn.innerHTML = startChar;
                     me.scanAllBtn.style.fontSize = 'xx-large';
                     me.scanAllBtn.style.top = '17px';

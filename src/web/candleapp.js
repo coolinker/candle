@@ -137,7 +137,7 @@ class CandleApp extends React.Component {
         let sidinputleft = (this.state.windowWidth - sidwidth) / 2;
         return <div style = { divstyle } >
             <div ref = "toolbar" height = { toolbarHeight } style = { toolbarStyle } >
-                <FormInput ref = "sidInput" style={{color: '#c0c0c0', width: '65px', borderStyle: 'groove', borderColor: '#424242', backgroundColor: 'transparent',}} 
+                <FormInput ref = "sidInput" style={{color: '#c0c0c0', width: '75px', borderStyle: 'groove', borderColor: '#424242', backgroundColor: 'transparent',}} 
                     validRegex = {"^(sh|sz|SH|SZ)\\d{6}$"} value = "SH000001"
                     handleInputChanged = {this.handleSidInputChagned} onKeyDownHandler ={function(e){e.nativeEvent.stopImmediatePropagation()}}/>
                 <div style = {{position: 'absolute', top: '30px', color: '#c0c0c0', zIndex: 100}} ref={(ref) => this.suggest = ref}/>
@@ -280,7 +280,8 @@ class CandleApp extends React.Component {
             painterCore.addMatchCases(cnts.sid, cnts.matchOnDate)
             let per = bull + bear > 0 ? Math.round(100 * bull / (bull + bear)) : 0;
             me.scanAllInfo.innerHTML = per + '%/' + cases + '/' + count;
-            if (cnts.finished) {
+
+            if (cnts.finished && count === 2886) {
                 me.scanAllBtn.innerHTML = startChar;
                 me.scanAllBtn.style.fontSize = 'xx-large';
                 me.scanAllBtn.style.top = '17px';
