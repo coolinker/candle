@@ -21366,17 +21366,19 @@ module.exports = function (_MassPainter) {
 
             if (data.ex) {
                 ctx.lineWidth = 1;
-                ctx.strokeStyle = '#424242';
-                ctx.strokeText('E', xp - 5, this.canvas.height - 3);
+                ctx.fillStyle = '#424242';
+                ctx.font = "12px monospace";
+                ctx.fillText('E', xp - 5, this.canvas.height - 3);
             }
 
             var dates = data.date.split('/');
             if (dates[1] === '01') {
                 ctx.lineWidth = 1;
-                ctx.strokeStyle = 'rgba(220, 220, 220, 0.6)';
+                ctx.fillStyle = 'rgba(220, 220, 220, 0.6)';
                 var datastr = '|' + dates[0] + '-' + dates[1];
                 if (dates[0] === "01") datastr += "-" + dates[2];
-                ctx.strokeText(datastr, xp - 2, 10);
+                ctx.font = "12px monospace";
+                ctx.fillText(datastr, xp - 2, 10);
             }
 
             if (idx === 0) return;
@@ -22058,8 +22060,9 @@ module.exports = function () {
         value: function drawNumber(val, x, y, color) {
             var ctx = this.canvas2DCtx;
             ctx.lineWidth = 1;
-            ctx.strokeStyle = color;
-            ctx.strokeText(val, x, y);
+            ctx.fillStyle = color;
+            ctx.font = "12px monospace";
+            ctx.fillText(val, x, y);
         }
     }, {
         key: "drawPointer",
@@ -22507,10 +22510,10 @@ var CandleApp = function (_React$Component) {
                     ),
                     _react2.default.createElement(
                         'div',
-                        { style: { position: 'absolute', right: '20px', color: '#f44336', top: '22px', 'fontSize': 'xx-large', cursor: 'pointer' }, onClick: this.scanAllBtnClick, ref: function ref(_ref4) {
+                        { style: { position: 'absolute', right: '20px', color: '#f44336', top: '17px', 'fontSize': 'xx-large', cursor: 'pointer' }, onClick: this.scanAllBtnClick, ref: function ref(_ref4) {
                                 return _this2.scanAllBtn = _ref4;
                             } },
-                        '▸'
+                        '▹'
                     ),
                     _react2.default.createElement(
                         'div',
@@ -22640,10 +22643,12 @@ var CandleApp = function (_React$Component) {
     }, {
         key: 'scanAllBtnClick',
         value: function scanAllBtnClick() {
-            var start = this.scanAllBtn.innerHTML === '▸';
+            var startChar = '▹';
+            var start = this.scanAllBtn.innerHTML === startChar;
             if (!start) {
-                this.scanAllBtn.innerHTML = '▸';
+                this.scanAllBtn.innerHTML = startChar;
                 this.scanAllBtn.style.fontSize = 'xx-large';
+                this.scanAllBtn.style.top = '17px';
                 _io2.default.workersStopScanByIndex(function (re) {
                     console.log("workerStopScanAll", re);
                 });
@@ -22652,6 +22657,7 @@ var CandleApp = function (_React$Component) {
 
             this.scanAllBtn.innerHTML = '◻'; //stop;
             this.scanAllBtn.style.fontSize = 'x-large';
+            this.scanAllBtn.style.top = '22px';
             var me = this;
             var count = 0,
                 bull = 0,
@@ -22669,8 +22675,9 @@ var CandleApp = function (_React$Component) {
                 var per = bull + bear > 0 ? Math.round(100 * bull / (bull + bear)) : 0;
                 me.scanAllInfo.innerHTML = per + '%/' + cases + '/' + count;
                 if (cnts.finished) {
-                    me.scanAllBtn.innerHTML = '▸';
+                    me.scanAllBtn.innerHTML = startChar;
                     me.scanAllBtn.style.fontSize = 'xx-large';
+                    me.scanAllBtn.style.top = '17px';
                 }
             });
         }

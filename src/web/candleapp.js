@@ -145,7 +145,7 @@ class CandleApp extends React.Component {
                     handleInputCompleted = { this.handleDateChanged } onKeyDownHandler ={function(e){e.nativeEvent.stopImmediatePropagation()}}/> 
                 <div style = {{position: 'absolute', right: '20px',  color: '#f0f0f0', top:'10px'}} ref={(ref) => this.info = ref}>Loading...</div>
                 <div style = {{position: 'absolute', right: '40px',  color: '#f0f0f0', top:'30px'}} ref={(ref) => this.scanAllInfo = ref}>0/0/0</div>
-                <div style = {{position: 'absolute', right: '20px',  color: '#f44336', top:'22px', 'fontSize': 'xx-large' , cursor: 'pointer'}} onClick={this.scanAllBtnClick} ref={(ref) => this.scanAllBtn = ref}>▸</div>
+                <div style = {{position: 'absolute', right: '20px',  color: '#f44336', top:'17px', 'fontSize': 'xx-large' , cursor: 'pointer'}} onClick={this.scanAllBtnClick} ref={(ref) => this.scanAllBtn = ref}>▹</div>
                 <div style = {{position: 'absolute', right: '390px',  color: '#f0f0f0', top:'30px', cursor: 'pointer'}} ref={(ref) => this.scanInfo = ref} onClick={this.toggleMatchTextArea}>0/0/0/0(run:Ctrl+↵)</div>
                 <textarea value={this.state.matchStr} style = {{position: 'absolute', right: '20px',  color: 'rgba(255, 255, 255, 1)', borderColor: 'rgba(230, 230, 230, 0.1)', top:'50px', zIndex: 100, width: '500px', height: '500px', background: 'rgba(0, 0, 0, 0.3)', 'fontSize': '10px'}} 
                     ref={(ref) => this.matchTextArea = ref} onChange={this.handleMatchTextAreaChange} onKeyUp={this.handleMatchTextAreaKeyUp} onKeyDown ={function(e){e.nativeEvent.stopImmediatePropagation();}}></textarea>
@@ -250,10 +250,12 @@ class CandleApp extends React.Component {
     }
 
     scanAllBtnClick() {
-        let start = this.scanAllBtn.innerHTML === '▸';
+        let startChar = '▹';
+        let start = this.scanAllBtn.innerHTML === startChar;
         if (!start) {
-            this.scanAllBtn.innerHTML = '▸';
+            this.scanAllBtn.innerHTML = startChar;
             this.scanAllBtn.style.fontSize = 'xx-large';
+            this.scanAllBtn.style.top = '17px';
             IO.workersStopScanByIndex(function(re) {
                 console.log("workerStopScanAll", re)
             });
@@ -262,6 +264,7 @@ class CandleApp extends React.Component {
 
         this.scanAllBtn.innerHTML = '◻'; //stop;
         this.scanAllBtn.style.fontSize = 'x-large';
+        this.scanAllBtn.style.top = '22px';
         let me = this;
         let count = 0,
             bull = 0,
@@ -278,8 +281,9 @@ class CandleApp extends React.Component {
             let per = bull + bear > 0 ? Math.round(100 * bull / (bull + bear)) : 0;
             me.scanAllInfo.innerHTML = per + '%/' + cases + '/' + count;
             if (cnts.finished) {
-                me.scanAllBtn.innerHTML = '▸';
+                me.scanAllBtn.innerHTML = startChar;
                 me.scanAllBtn.style.fontSize = 'xx-large';
+                me.scanAllBtn.style.top = '17px';
             }
         })
     }

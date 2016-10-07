@@ -125,8 +125,9 @@ module.exports = class PointerPainter {
     drawNumber(val, x, y, color) {
         let ctx = this.canvas2DCtx;
         ctx.lineWidth = 1;
-        ctx.strokeStyle = color;
-        ctx.strokeText(val, x, y)
+        ctx.fillStyle = color;
+        ctx.font = "12px monospace";
+        ctx.fillText(val, x, y)
     }
 
     drawPointer(x, y) {
