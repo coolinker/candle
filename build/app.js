@@ -21075,7 +21075,7 @@ module.exports = function () {
                             // readStockFullJsonSync date mismatch! SH600832 04/09/2015 04/29/2015
                             // readStockFullJsonSync date mismatch! SH601299 04/09/2015 05/06/2015
                             // readStockFullJsonSync date mismatch! SZ000033 04/09/2015 04/29/2015
-                            console.error("compressedStockJson date mismatch!", json.date, mf.date);
+                            console.log("compressedStockJson date mismatch!", json.date, mf.date);
                             return null;
                         }
                         delete mf.date;
