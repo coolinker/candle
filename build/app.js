@@ -22693,7 +22693,7 @@ var CandleApp = function (_React$Component) {
                 var cases = result.cases;
                 var pct = bull / (bull + bear);
                 pct = isNaN(pct) ? 0 : Math.round(pct * 100) / 100;
-                this.scanInfo.innerHTML = pct + '/' + bull + '/' + bear + '/' + cases + '(run:Ctrl+↵) α';
+                this.scanInfo.innerHTML = pct + '/' + bull + '/' + bear + '/' + cases + '(run:Ctrl+↵)';
             }
         }
     }, {
