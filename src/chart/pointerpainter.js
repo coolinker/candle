@@ -92,7 +92,7 @@ module.exports = class PointerPainter {
         this.drawNumber(data.low, xpos, Ys.low, "rgba(220, 220, 220, 0.6)");
         //this.drawNumberLine(x + this.core.unitWidth / 2, valueToY.low, xpos, Ys.low);
 
-        this.drawNumber(data.date.split('/').join('-'), xpos, Ys.date, "rgba(220, 220, 220, 0.6)");
+        this.drawNumber(data.date.split('/').join('-'), xpos, Ys.date, "rgba(220, 220, 220, 1)");
         //this.drawNumberLine(x + this.core.unitWidth / 2, valueToY.date, xpos, Ys.date);
 
 

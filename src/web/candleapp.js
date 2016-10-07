@@ -87,6 +87,7 @@ class CandleApp extends React.Component {
         super(props);
         this.handleSidChanged = this.handleSidChanged.bind(this);
         this.handleSidInputChagned = this.handleSidInputChagned.bind(this);
+        this.toggleMatchTextArea = this.toggleMatchTextArea.bind(this);
         this.handleMatchTextAreaChange = this.handleMatchTextAreaChange.bind(this);
         this.handleMatchTextAreaKeyUp = this.handleMatchTextAreaKeyUp.bind(this);
         this.scanAllBtnClick = this.scanAllBtnClick.bind(this);
@@ -124,10 +125,11 @@ class CandleApp extends React.Component {
         };
 
         let toolbarHeight = 50;
-        let candleChartHeight = this.state.windowHeight - 250 - toolbarHeight;
+
+        let candleChartHeight = Math.floor((this.state.windowHeight - toolbarHeight) * 2 / 3);
         let candleChartY = toolbarHeight;
         let volChartY = candleChartY + candleChartHeight;
-        let volChartHeight = 250;
+        let volChartHeight = Math.floor((this.state.windowHeight - toolbarHeight) / 3);;
         let pointerCanvasY = candleChartY;
         let ponterCanvasHeight = candleChartHeight + volChartHeight;
 
@@ -136,17 +138,17 @@ class CandleApp extends React.Component {
         return <div style = { divstyle } >
             <div ref = "toolbar" height = { toolbarHeight } style = { toolbarStyle } >
                 <FormInput ref = "sidInput" style={{color: '#c0c0c0', width: '65px', borderStyle: 'groove', borderColor: '#424242', backgroundColor: 'transparent',}} 
-                    validRegex = {"^(sh|sz|SH|SZ)\\d{6}$"} value = "SH999999"
+                    validRegex = {"^(sh|sz|SH|SZ)\\d{6}$"} value = "SH000001"
                     handleInputChanged = {this.handleSidInputChagned} onKeyDownHandler ={function(e){e.nativeEvent.stopImmediatePropagation()}}/>
                 <div style = {{position: 'absolute', top: '30px', color: '#c0c0c0', zIndex: 100}} ref={(ref) => this.suggest = ref}/>
                 <DateInput ref = "dateInput" value = { '07/04/2016' } style={{color: '#c0c0c0', width: '130px', borderStyle: 'groove', borderColor: '#424242', backgroundColor: 'transparent',}} 
                     handleInputCompleted = { this.handleDateChanged } onKeyDownHandler ={function(e){e.nativeEvent.stopImmediatePropagation()}}/> 
                 <div style = {{position: 'absolute', right: '20px',  color: '#f0f0f0', top:'10px'}} ref={(ref) => this.info = ref}>Loading...</div>
                 <div style = {{position: 'absolute', right: '40px',  color: '#f0f0f0', top:'30px'}} ref={(ref) => this.scanAllInfo = ref}>0/0/0</div>
-                <div style = {{position: 'absolute', right: '20px',  color: '#f44336', top:'22px', 'fontSize': 'xx-large'}} onClick={this.scanAllBtnClick} ref={(ref) => this.scanAllBtn = ref}>▸</div>
-                <div style = {{position: 'absolute', right: '420px',  color: '#f0f0f0', top:'30px'}} ref={(ref) => this.scanInfo = ref}>0/0/0(Ctrl+Enter)</div>
-                <textarea value={this.state.matchStr} style = {{position: 'absolute', right: '20px',  color: 'rgba(255, 255, 255, 1)', borderColor: 'rgba(230, 230, 230, 0.1)', top:'50px', zIndex: 100, width: '500px', height: '200px', background: 'rgba(0, 0, 0, 0.3)', 'fontSize': '10px'}} 
-                    ref={(ref) => this.matchTexArea = ref} onChange={this.handleMatchTextAreaChange} onKeyUp={this.handleMatchTextAreaKeyUp} onKeyDown ={function(e){e.nativeEvent.stopImmediatePropagation();}}></textarea>
+                <div style = {{position: 'absolute', right: '20px',  color: '#f44336', top:'22px', 'fontSize': 'xx-large' , cursor: 'pointer'}} onClick={this.scanAllBtnClick} ref={(ref) => this.scanAllBtn = ref}>▸</div>
+                <div style = {{position: 'absolute', right: '390px',  color: '#f0f0f0', top:'30px', cursor: 'pointer'}} ref={(ref) => this.scanInfo = ref} onClick={this.toggleMatchTextArea}>0/0/0/0(run:Ctrl+↵)</div>
+                <textarea value={this.state.matchStr} style = {{position: 'absolute', right: '20px',  color: 'rgba(255, 255, 255, 1)', borderColor: 'rgba(230, 230, 230, 0.1)', top:'50px', zIndex: 100, width: '500px', height: '500px', background: 'rgba(0, 0, 0, 0.3)', 'fontSize': '10px'}} 
+                    ref={(ref) => this.matchTextArea = ref} onChange={this.handleMatchTextAreaChange} onKeyUp={this.handleMatchTextAreaKeyUp} onKeyDown ={function(e){e.nativeEvent.stopImmediatePropagation();}}></textarea>
             </div > 
             <ChartCanvas ref={(ref) => this.alphaChart = ref} width = "2000" height = { candleChartHeight } y = { candleChartY } > </ChartCanvas>  
             <ChartCanvas ref = "candleChart" width = "2000" height = { candleChartHeight } y = { candleChartY } > </ChartCanvas>  
@@ -222,9 +224,10 @@ class CandleApp extends React.Component {
 
         let sid = this.refs.sidInput.state.value;
         let date = this.refs.dateInput.state.value;
-        let matchStr = this.matchTexArea.value;
+        let matchStr = this.matchTextArea.value;
 
-        this.loadDataBySid(sid, date);
+        //this.loadDataBySid(sid, date);
+        this.handleSidInputChagned();
         setTimeout(function() {
             let count = 0;
             IO.loadStocksPerPage(function(re) {
@@ -264,7 +267,7 @@ class CandleApp extends React.Component {
             bull = 0,
             bear = 0,
             cases = 0;
-        let matchStr = this.matchTexArea.value;
+        let matchStr = this.matchTextArea.value;
         painterCore.clearMatchCases();
         IO.workersScanByIndex(matchStr, function(cnts) { // && data[n].ave_close_8 > data[n-2].ave_close_8 && data[n].ave_close_8 > data[n-3].ave_close_8
             count++; //= cnts.index;
@@ -290,15 +293,21 @@ class CandleApp extends React.Component {
             let cases = result.cases;
             let pct = bull / (bull + bear);
             pct = isNaN(pct) ? 0 : Math.round(pct * 100) / 100;
-            this.scanInfo.innerHTML = pct + '/' + bull + '/' + bear + '/' + cases + '(Ctrl+Enter)'
+            this.scanInfo.innerHTML = pct + '/' + bull + '/' + bear + '/' + cases + '(run:Ctrl+↵) α'
         }
 
     }
+
     handleMatchTextAreaChange(e) {
         this.setState({
             matchStr: e.target.value
         });
         LocalStoreUtil.setCookie('scanExp', escape(e.target.value));
+    }
+
+    toggleMatchTextArea() {
+        let display = this.matchTextArea.style.display;
+        this.matchTextArea.style.display = display === 'none' ? 'block' : 'none';
     }
 
     loadDataBySid(sid, date) {

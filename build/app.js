@@ -22024,7 +22024,7 @@ module.exports = function () {
             this.drawNumber(data.low, xpos, Ys.low, "rgba(220, 220, 220, 0.6)");
             //this.drawNumberLine(x + this.core.unitWidth / 2, valueToY.low, xpos, Ys.low);
 
-            this.drawNumber(data.date.split('/').join('-'), xpos, Ys.date, "rgba(220, 220, 220, 0.6)");
+            this.drawNumber(data.date.split('/').join('-'), xpos, Ys.date, "rgba(220, 220, 220, 1)");
             //this.drawNumberLine(x + this.core.unitWidth / 2, valueToY.date, xpos, Ys.date);
         }
     }, {
@@ -22422,6 +22422,7 @@ var CandleApp = function (_React$Component) {
 
         _this.handleSidChanged = _this.handleSidChanged.bind(_this);
         _this.handleSidInputChagned = _this.handleSidInputChagned.bind(_this);
+        _this.toggleMatchTextArea = _this.toggleMatchTextArea.bind(_this);
         _this.handleMatchTextAreaChange = _this.handleMatchTextAreaChange.bind(_this);
         _this.handleMatchTextAreaKeyUp = _this.handleMatchTextAreaKeyUp.bind(_this);
         _this.scanAllBtnClick = _this.scanAllBtnClick.bind(_this);
@@ -22462,10 +22463,11 @@ var CandleApp = function (_React$Component) {
             };
 
             var toolbarHeight = 50;
-            var candleChartHeight = this.state.windowHeight - 250 - toolbarHeight;
+
+            var candleChartHeight = Math.floor((this.state.windowHeight - toolbarHeight) * 2 / 3);
             var candleChartY = toolbarHeight;
             var volChartY = candleChartY + candleChartHeight;
-            var volChartHeight = 250;
+            var volChartHeight = Math.floor((this.state.windowHeight - toolbarHeight) / 3);;
             var pointerCanvasY = candleChartY;
             var ponterCanvasHeight = candleChartHeight + volChartHeight;
 
@@ -22478,7 +22480,7 @@ var CandleApp = function (_React$Component) {
                     'div',
                     { ref: 'toolbar', height: toolbarHeight, style: toolbarStyle },
                     _react2.default.createElement(_forminput2.default, { ref: 'sidInput', style: { color: '#c0c0c0', width: '65px', borderStyle: 'groove', borderColor: '#424242', backgroundColor: 'transparent' },
-                        validRegex: "^(sh|sz|SH|SZ)\\d{6}$", value: 'SH999999',
+                        validRegex: "^(sh|sz|SH|SZ)\\d{6}$", value: 'SH000001',
                         handleInputChanged: this.handleSidInputChagned, onKeyDownHandler: function onKeyDownHandler(e) {
                             e.nativeEvent.stopImmediatePropagation();
                         } }),
@@ -22505,21 +22507,21 @@ var CandleApp = function (_React$Component) {
                     ),
                     _react2.default.createElement(
                         'div',
-                        { style: { position: 'absolute', right: '20px', color: '#f44336', top: '22px', 'fontSize': 'xx-large' }, onClick: this.scanAllBtnClick, ref: function ref(_ref4) {
+                        { style: { position: 'absolute', right: '20px', color: '#f44336', top: '22px', 'fontSize': 'xx-large', cursor: 'pointer' }, onClick: this.scanAllBtnClick, ref: function ref(_ref4) {
                                 return _this2.scanAllBtn = _ref4;
                             } },
                         '▸'
                     ),
                     _react2.default.createElement(
                         'div',
-                        { style: { position: 'absolute', right: '420px', color: '#f0f0f0', top: '30px' }, ref: function ref(_ref5) {
+                        { style: { position: 'absolute', right: '390px', color: '#f0f0f0', top: '30px', cursor: 'pointer' }, ref: function ref(_ref5) {
                                 return _this2.scanInfo = _ref5;
-                            } },
-                        '0/0/0(Ctrl+Enter)'
+                            }, onClick: this.toggleMatchTextArea },
+                        '0/0/0/0(run:Ctrl+↵)'
                     ),
-                    _react2.default.createElement('textarea', { value: this.state.matchStr, style: { position: 'absolute', right: '20px', color: 'rgba(255, 255, 255, 1)', borderColor: 'rgba(230, 230, 230, 0.1)', top: '50px', zIndex: 100, width: '500px', height: '200px', background: 'rgba(0, 0, 0, 0.3)', 'fontSize': '10px' },
+                    _react2.default.createElement('textarea', { value: this.state.matchStr, style: { position: 'absolute', right: '20px', color: 'rgba(255, 255, 255, 1)', borderColor: 'rgba(230, 230, 230, 0.1)', top: '50px', zIndex: 100, width: '500px', height: '500px', background: 'rgba(0, 0, 0, 0.3)', 'fontSize': '10px' },
                         ref: function ref(_ref6) {
-                            return _this2.matchTexArea = _ref6;
+                            return _this2.matchTextArea = _ref6;
                         }, onChange: this.handleMatchTextAreaChange, onKeyUp: this.handleMatchTextAreaKeyUp, onKeyDown: function onKeyDown(e) {
                             e.nativeEvent.stopImmediatePropagation();
                         } })
@@ -22613,9 +22615,10 @@ var CandleApp = function (_React$Component) {
 
             var sid = this.refs.sidInput.state.value;
             var date = this.refs.dateInput.state.value;
-            var matchStr = this.matchTexArea.value;
+            var matchStr = this.matchTextArea.value;
 
-            this.loadDataBySid(sid, date);
+            //this.loadDataBySid(sid, date);
+            this.handleSidInputChagned();
             setTimeout(function () {
                 var count = 0;
                 _io2.default.loadStocksPerPage(function (re) {
@@ -22654,7 +22657,7 @@ var CandleApp = function (_React$Component) {
                 bull = 0,
                 bear = 0,
                 cases = 0;
-            var matchStr = this.matchTexArea.value;
+            var matchStr = this.matchTextArea.value;
             painterCore.clearMatchCases();
             _io2.default.workersScanByIndex(matchStr, function (cnts) {
                 // && data[n].ave_close_8 > data[n-2].ave_close_8 && data[n].ave_close_8 > data[n-3].ave_close_8
@@ -22682,7 +22685,7 @@ var CandleApp = function (_React$Component) {
                 var cases = result.cases;
                 var pct = bull / (bull + bear);
                 pct = isNaN(pct) ? 0 : Math.round(pct * 100) / 100;
-                this.scanInfo.innerHTML = pct + '/' + bull + '/' + bear + '/' + cases + '(Ctrl+Enter)';
+                this.scanInfo.innerHTML = pct + '/' + bull + '/' + bear + '/' + cases + '(run:Ctrl+↵) α';
             }
         }
     }, {
@@ -22692,6 +22695,12 @@ var CandleApp = function (_React$Component) {
                 matchStr: e.target.value
             });
             _localstoreutil2.default.setCookie('scanExp', escape(e.target.value));
+        }
+    }, {
+        key: 'toggleMatchTextArea',
+        value: function toggleMatchTextArea() {
+            var display = this.matchTextArea.style.display;
+            this.matchTextArea.style.display = display === 'none' ? 'block' : 'none';
         }
     }, {
         key: 'loadDataBySid',
