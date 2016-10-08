@@ -94,7 +94,8 @@ class CandleApp extends React.Component {
 
         let matchStr = LocalStoreUtil.getCookie('scanExp');
         if (!matchStr) {
-            matchStr = 'function(m1, m2, p1, p2) { \nvar rightBottomIdx = lowPI(d, n - m2, n, "low");' + '\nvar midTopIdx = highPI(d, rightBottomIdx - m2, rightBottomIdx, "high");' + '\nvar leftBottomIdx = lowPI(d, midTopIdx - m2, midTopIdx, "low");' + '\nvar leftTopIdx = highPI(d, leftBottomIdx - m1, leftBottomIdx, "high");' + '\nreturn diffR(d[n].close, d[midTopIdx].high) > p1' + '\n&& diffR(d[leftTopIdx].high, d[midTopIdx].high) > p2' + '\n} (25,10, -1.25,0.18)'
+            matchStr = 'n>81\n' + '&& diffR(dn.close, dn.ave_close_21) > 0.1 \n' + '&& function() { \n' + '    let right_lowidx = lowPI(d,n-8, n, "low");\n' + '    if(diffR(d[right_lowidx].low, d[right_lowidx].ave_close_8) < 1*priceCRA(d, right_lowidx, 8)) return false;\n\n' + '    let mid_highidx = highPI(d, right_lowidx-8, right_lowidx, "high");\n' + '    if (diffR(d[right_lowidx].low, d[mid_highidx].high) < 2* priceCRA(d, right_lowidx, 8)) return false;\n\n' + '    let left_lowidx = lowPI(d,mid_highidx -20, mid_highidx , "low");\n' + '    if(diffR(d[left_lowidx].low, d[left_lowidx].ave_close_8) < 1.5*priceCRA(d, right_lowidx, 8)) return false;\n\n' + '    if (d[left_lowidx].ave_close_8 > d[left_lowidx].ave_close_13) return false;\n\n' + '    return true\n' + '} ()'
+
         }
 
         this.state = {
@@ -147,7 +148,7 @@ class CandleApp extends React.Component {
                 <div style = {{position: 'absolute', right: '40px',  color: '#f0f0f0', top:'30px'}} ref={(ref) => this.scanAllInfo = ref}>0/0/0</div>
                 <div style = {{position: 'absolute', right: '20px',  color: '#f44336', top:'17px', 'fontSize': 'xx-large' , cursor: 'pointer'}} onClick={this.scanAllBtnClick} ref={(ref) => this.scanAllBtn = ref}>▹</div>
                 <div style = {{position: 'absolute', right: '390px',  color: '#f0f0f0', top:'30px', cursor: 'pointer'}} ref={(ref) => this.scanInfo = ref} onClick={this.toggleMatchTextArea}>0/0/0/0(run:Ctrl+↵)</div>
-                <textarea value={this.state.matchStr} style = {{position: 'absolute', right: '20px',  color: 'rgba(255, 255, 255, 1)', borderColor: 'rgba(230, 230, 230, 0.1)', top:'50px', zIndex: 100, width: '500px', height: '500px', background: 'rgba(0, 0, 0, 0.3)', 'fontSize': '10px'}} 
+                <textarea value={this.state.matchStr} style = {{position: 'absolute', right: '20px',  color: 'rgba(255, 255, 255, 1)', borderColor: 'rgba(230, 230, 230, 0.1)', top:'50px', zIndex: 100, width: '500px', height: '500px', background: 'rgba(0, 0, 0, 0.8)', 'fontSize': '12px', 'fontFamily':'微软雅黑'}} 
                     ref={(ref) => this.matchTextArea = ref} onChange={this.handleMatchTextAreaChange} onKeyUp={this.handleMatchTextAreaKeyUp} onKeyDown ={function(e){e.nativeEvent.stopImmediatePropagation();}}></textarea>
             </div > 
             <ChartCanvas ref={(ref) => this.alphaChart = ref} width = "2000" height = { candleChartHeight } y = { candleChartY } > </ChartCanvas>  

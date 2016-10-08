@@ -163,7 +163,7 @@ module.exports = class PointerPainter {
     }
 
     doMouseup(event) {
-        if (this.selectionHandler) {
+        if (this.selectionHandler && this.mousedownx !== undefined) {
             this.selectionHandler(this.mousedownx, this.mousedowny, event.layerX, event.layerY);
         }
         this.mousedownx = undefined;
