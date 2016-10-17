@@ -30,6 +30,10 @@ module.exports = function(self) {
 
 };
 
+module.reset = function reset(callback) {
+    stopScanFlag = false;
+    callback(stopScanFlag);
+}
 module.stopScanByIndex = function stopScanByIndex(callback) {
     stopScanFlag = true;
     callback(stopScanFlag);
@@ -67,12 +71,14 @@ module.scanByIndex = function scanByIndex(idx, patternStr, callback) {
     if (!finished) {
         setTimeout(function() {
             if (stopScanFlag) {
-                stopScanFlag = false;
+                //stopScanFlag = false;
             } else {
                 module.scanByIndex(++idx, patternStr, callback);
             }
 
         }, 0);
+    } else {
+
     }
 }
 

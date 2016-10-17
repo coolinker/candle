@@ -1,15 +1,46 @@
 'use strict';
 let tools = {
-    priceCR: function(data, n) {
+    wBottom: function () {
+        let right_lowidx = lowPI(d, n - 8, n, "low");
+        if (diffR(d[right_lowidx].low, d[right_lowidx].ave_close_8) < 1 * priceCRA(d, right_lowidx, 8)) return false;
+
+        let mid_highidx = highPI(d, right_lowidx - 8, right_lowidx, "high");
+        if (diffR(d[right_lowidx].low, d[mid_highidx].high) < 2 * priceCRA(d, right_lowidx, 8)) return false;
+
+        let left_lowidx = lowPI(d, mid_highidx - 20, mid_highidx, "low");
+        if (diffR(d[left_lowidx].low, d[left_lowidx].ave_close_8) < 1.5 * priceCRA(d, right_lowidx, 8)) return false;
+
+        if (d[left_lowidx].ave_close_8 > d[left_lowidx].ave_close_13) return false;
+
+        return true
+    },
+
+    nearDrop: function (data, n, period, maxdiff) {
+        for (let i = 0; i < period; i++) {
+            if (0.8 * data[n].amount < data[n - 1].ave_amount_8) continue;
+
+            let open = data[n - i].open;
+            let close = data[n - i].close;
+            let diff = (close - open) / open;
+            if (diff > maxdiff) continue;
+            let low = data[n - i].low;
+            let lowdiff = (low - close) / open;
+            if (lowdiff < maxdiff / 3) return true;
+        }
+        return false;
+
+    },
+
+    priceCR: function (data, n) {
         let base = n === 0 ? data[n.open] : data[n - 1].close;
         return (data[n].close - base) / base;
     },
 
-    diffR: function(val0, val1) {
+    diffR: function (val0, val1) {
         return (val1 - val0) / val0;
     },
 
-    priceCRA: function(data, n, period) {
+    priceCRA: function (data, n, period) {
         if (n < period) return null;
         let sum = 0;
         for (let i = n; i > n - period; i--) {
@@ -18,7 +49,7 @@ let tools = {
         return sum / period;
     },
 
-    aboveS: function(data, n, field, period) {
+    aboveS: function (data, n, field, period) {
         if (!period) return 0;
         let price = data[n].close;
         let sum = 0;
@@ -35,7 +66,7 @@ let tools = {
         return sum;
     },
 
-    bellowS: function(data, n, field, period) {
+    bellowS: function (data, n, field, period) {
         if (!period) return 0;
         let price = data[n].close;
         let sum = 0;
@@ -52,7 +83,7 @@ let tools = {
         return sum;
     },
 
-    sum: function(data, n, field, period) {
+    sum: function (data, n, field, period) {
         if (!period) return 0;
         let sum = 0;
         for (let i = n; i >= 0 && i > n - period; i--) {
@@ -61,7 +92,7 @@ let tools = {
         return sum;
     },
 
-    lowPI: function(data, start, end, field) {
+    lowPI: function (data, start, end, field) {
         let low = Number.MAX_SAFE_INTEGER;
         let lowidx = -1;
         for (let i = start; i <= end; i++) {
@@ -77,7 +108,7 @@ let tools = {
         return lowidx;
     },
 
-    highPI: function(data, start, end, field) {
+    highPI: function (data, start, end, field) {
         let high = Number.MIN_SAFE_INTEGER;
         let highidx = -1;
         for (let i = start; i <= end; i++) {
@@ -93,7 +124,7 @@ let tools = {
         return highidx;
     },
 
-    lowVI: function(data, start, end, field) {
+    lowVI: function (data, start, end, field) {
         let low = Number.MAX_SAFE_INTEGER;
         let lowidx = -1;
         for (let i = start; i <= end; i++) {
@@ -106,7 +137,7 @@ let tools = {
         return lowidx;
     },
 
-    highVI: function(data, start, end, field) {
+    highVI: function (data, start, end, field) {
         let high = Number.MIN_SAFE_INTEGER;
         let highidx = -1;
         for (let i = start; i <= end; i++) {
@@ -119,7 +150,7 @@ let tools = {
         return highidx;
     },
 
-    maxS: function(data, n, field, period) {
+    maxS: function (data, n, field, period) {
         if (!period) return 0;
         let sum = 0;
         let maxsum = Number.MIN_SAFE_INTEGER;
@@ -132,7 +163,7 @@ let tools = {
         return maxsum;
     },
 
-    maxSI: function(data, n, field, period) {
+    maxSI: function (data, n, field, period) {
         if (!period) return 0;
         let sum = 0;
         let maxsum = Number.MIN_SAFE_INTEGER;
@@ -149,7 +180,7 @@ let tools = {
 };
 
 module.exports = class MatchFunctionUtil {
-    constructor() {}
+    constructor() { }
 
     static composeFunction(returnStr) {
         try {
@@ -215,24 +246,10 @@ module.exports = class MatchFunctionUtil {
         };
     }
 
-    // static isBullBear(data, idx) {
-    //     //let re = Math.round(100 * Math.random()) % 2 === 0;
-    //     let inc = 0.1,
-    //         dec = -0.05,
-    //         price = data[idx].close;
-
-    //     for (let i = idx + 1; i < data.length; i++) {
-    //         let d = data[i];
-    //         if ((d.low - price) / price < dec) return -1;
-    //         if ((d.high - price) / price > inc) return 1;
-    //     }
-    //     return 0;
-    // }
 
     static testBullBear(data, idx) {
-        //let re = Math.round(100 * Math.random()) % 2 === 0;
         let price = data[idx].close,
-            almp = tools.priceCRA(data, idx, 10);
+            almp = tools.priceCRA(data, idx, 5);
         for (let i = idx + 1; i < data.length; i++) {
             let d = data[i];
             if (d.ex) {

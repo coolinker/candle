@@ -6,7 +6,7 @@ import WorkerProxy from './workerproxy';
 import StockIDs from './stockids';
 
 class IO {
-    constructor() {}
+    constructor() { }
     static sidSuggest(v, callback) {
         let url = 'http://suggest3.sinajs.cn/suggest/type=&key=' + v.toLowerCase() + '&name=suggestdata_' + (new Date().getTime())
         fetch(IO.baseUrl, {
@@ -16,9 +16,9 @@ class IO {
                 'Content-Type': 'application/json'
             },
             body: '{"url":"' + url + '", "http": "GET", "action":"thirdPartyAjaxAPI"}'
-        }).then(function(res) {
+        }).then(function (res) {
             return res.text();
-        }).then(function(text) {
+        }).then(function (text) {
             let result = text.split('"')[1];
             if (result === '') {
                 callback([]);
@@ -46,26 +46,31 @@ class IO {
 
     static setDataWorkers(workers) {
         IO.dataWorkerProxies = [];
-        workers.forEach(function(w, idx) {
+        workers.forEach(function (w, idx) {
             IO.dataWorkerProxies.push(new WorkerProxy(w));
         });
     }
 
     static workersScanByIndex(patternStr, callback) {
-        IO.dataWorkerProxies.forEach(function(workerProxy, idx) {
-            let params = [IO.workerStarts[idx], patternStr];
-            workerProxy.callMethod("scanByIndex", params, function(re) {
-                if (re.index % 100 === 0)
-                    console.log(idx, re.index, re.finished)
-                callback(re);
+        IO.dataWorkerProxies.forEach(function (workerProxy, idx) {
+            workerProxy.callMethod("reset", [], function (re) {
 
+                let params = [IO.workerStarts[idx], patternStr];
+                workerProxy.callMethod("scanByIndex", params, function (re) {
+                    if (re.index % 100 === 0)
+                        console.log(idx, re.index, re.finished)
+                    callback(re);
+
+                });
             });
+
+
         });
     }
 
     static workersStopScanByIndex(callback) {
-        IO.dataWorkerProxies.forEach(function(workerProxy, idx) {
-            workerProxy.callMethod("stopScanByIndex", [], function(re) {
+        IO.dataWorkerProxies.forEach(function (workerProxy, idx) {
+            workerProxy.callMethod("stopScanByIndex", [], function (re) {
                 callback(re);
             });
         });
@@ -75,12 +80,12 @@ class IO {
         let fields = ['date', 'open', 'close', 'high', 'low', 'amount', 'netamount', 'r0_net', 'changeratio', 'turnover'];
         let params = [sid, fields];
         let worker = IO.getWorkerBySid(sid);
-        worker.callMethod("getStockData", params, function(re) {
+        worker.callMethod("getStockData", params, function (re) {
             if (re) {
                 let dcp = Zip.decompressStockJson(re);
                 callback(dcp);
             } else {
-                IO.httpGetStockCompressedJson(sid, fields, function(cmpr) {
+                IO.httpGetStockCompressedJson(sid, fields, function (cmpr) {
                     //callback(json);
                     let dcp = Zip.decompressStockJson(cmpr);
                     callback(dcp);
@@ -104,7 +109,7 @@ class IO {
         for (let i = 0; i < IO.dataWorkerProxies.length; i++) {
             let start = starts[i];
             let end = i + 1 === starts.length ? null : (starts[i + 1] - 1);
-            IO.dataWorkerProxies[i].callMethod("loadStocksPerPage", [start, 100, end], function(result) {
+            IO.dataWorkerProxies[i].callMethod("loadStocksPerPage", [start, 100, end], function (result) {
                 callback(result);
             })
         }
@@ -118,9 +123,9 @@ class IO {
                 'Content-Type': 'application/json'
             },
             body: '{"filter":"' + filter + '", "action":"stockIds"}'
-        }).then(function(res) {
+        }).then(function (res) {
             return res.json();
-        }).then(function(json) {
+        }).then(function (json) {
             console.log("httpGetStockIdsJson =>", json.length);
             callback(json);
         });
@@ -135,9 +140,9 @@ class IO {
                 'Content-Type': 'application/json'
             },
             body: '{"sids":"' + sids + '", "action":"stocksCompressed", "fields":"' + fields + '"}'
-        }).then(function(res) {
+        }).then(function (res) {
             return res.json();
-        }).then(function(json) {
+        }).then(function (json) {
             callback(json);
         });
     }
@@ -151,9 +156,9 @@ class IO {
                 'Content-Type': 'application/json'
             },
             body: '{"sid":"' + sid + '", "action":"stockCompressed", "fields":"' + fields + '"}'
-        }).then(function(res) {
+        }).then(function (res) {
             return res.json();
-        }).then(function(json) {
+        }).then(function (json) {
             callback(json);
         });
     }
@@ -166,9 +171,9 @@ class IO {
                 'Content-Type': 'application/json'
             },
             body: '{"sid":"' + sid + '", "action":"stock"}'
-        }).then(function(res) {
+        }).then(function (res) {
             return res.json();
-        }).then(function(json) {
+        }).then(function (json) {
             IO.cacheMap[sid] = json;
             callback(json);
         });
@@ -183,9 +188,9 @@ class IO {
                 'Content-Type': 'application/json'
             },
             body: '{"sid":"' + sid + '", "action":"stockMoneyFlow"}'
-        }).then(function(res) {
+        }).then(function (res) {
             return res.json();
-        }).then(function(json) {
+        }).then(function (json) {
             console.log("httpGetStockMoneyFlowJson =>", sid, json.length);
             IO.mergeStockJson(sid, json);
             //IO.cacheMap[sid] = json;

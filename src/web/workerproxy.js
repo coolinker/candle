@@ -15,7 +15,7 @@ class WorkerProxy {
     callMethod(methodName, params, callback) {
         let mkey = this.getMethodKey(methodName);
         this.penddingCalls[mkey] = callback;
-        console.log("callMethod methodName", methodName)
+        // console.log("callMethod methodName", methodName)
         this.worker.postMessage({
             methodName: methodName,
             mkey: mkey,

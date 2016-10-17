@@ -279,7 +279,7 @@ class CandleApp extends React.Component {
             bear += cnts.bear;
             cases += cnts.cases;
             painterCore.addMatchCases(cnts.sid, cnts.matchOnDate)
-            let per = bull + bear > 0 ? Math.round(100 * bull / (bull + bear)) : 0;
+            let per = bull + bear > 0 ? Math.round(1000 * bull / (bull + bear))/10 : 0;
             me.scanAllInfo.innerHTML = per + '%/' + cases + '/' + count;
 
             if (cnts.finished && count === 2886) {
