@@ -3,18 +3,19 @@ import IO from './io';
 import StockIDs from './stockids';
 import Zip from '../alpha/zip';
 import MatchFunctionUtil from '../alpha/matchfunctionutil';
-import UtilsPipe from "../alpha/utilspipe";
-console.log("worker window-", self.location.href)
+import DataBuildPipe from "../alpha/databuildpipe";
+
 let stockFields = ['date', 'open', 'close', 'high', 'low', 'amount', 'netamount', 'r0_net', 'changeratio', 'turnover'];
-let cacheMap = {};
+let cacheCompressedMap = {};
+let cacheDecompressedMap = {};
 let stopScanFlag = false;
-module.exports = function(self) {
+module.exports = function (self) {
     let me = this;
-    self.addEventListener('message', function(ev) {
+    self.addEventListener('message', function (ev) {
         let mn = ev.data['methodName'];
         let params = ev.data['params'];
         // console.log("worker on message", mn, module[mn]);
-        params.push(function(result, finished) {
+        params.push(function (result, finished) {
             if (finished === undefined) finished = true;
             self.postMessage({
                 mkey: ev.data.mkey,
@@ -23,9 +24,9 @@ module.exports = function(self) {
             });
         })
         module[mn].apply(me, params)
-            // IO.httpGetStockJson(sid, function(json) {
-            //     self.postMessage();
-            // });
+        // IO.httpGetStockJson(sid, function(json) {
+        //     self.postMessage();
+        // });
     });
 
 };
@@ -48,15 +49,24 @@ module.scanByIndex = function scanByIndex(idx, patternStr, callback) {
         bear: 0,
         cases: 0
     };
+
     if (cmpdata) {
-        let decmpdata = Zip.decompressStockJson(cmpdata);
-        UtilsPipe.build(0, decmpdata.length - 1, decmpdata);
+
+        let decmpdata;
+        if (!cacheDecompressedMap[sid]) {
+            decmpdata = Zip.decompressStockJson(cmpdata);
+            DataBuildPipe.build(0, decmpdata.length - 1, decmpdata);
+            cacheDecompressedMap[sid] = decmpdata;
+        } else {
+            decmpdata = cacheDecompressedMap[sid];
+        }
+
         m = MatchFunctionUtil.scan(decmpdata, patternStr, matchOnDate);
     }
 
     //let total = StockIDs.getTotalCount();
     let nextsid = StockIDs.getNext(sid);
-    let finished = cacheMap[nextsid] === undefined;
+    let finished = cacheCompressedMap[nextsid] === undefined;
     if (finished) console.log(sid, nextsid, idx)
     callback({
         sid: sid,
@@ -69,7 +79,7 @@ module.scanByIndex = function scanByIndex(idx, patternStr, callback) {
     }, finished);
 
     if (!finished) {
-        setTimeout(function() {
+        setTimeout(function () {
             if (stopScanFlag) {
                 //stopScanFlag = false;
             } else {
@@ -83,43 +93,29 @@ module.scanByIndex = function scanByIndex(idx, patternStr, callback) {
 }
 
 module.loadStocksPerPage = function loadStocksPerPage(start, count, end, callback) {
-        let total = end === null ? StockIDs.getTotalCount() - 1 : end;
-        let pageSize = count;
-        count = Math.min(count, total - start + 1);
-        //console.log("loadStocksDataPage", start, count)
-        module.loadStockIds(start, count, stockFields, function(sids) {
-            // console.log(start, count, total)
-            if (start + count >= total) {
-                callback({
-                    start: start,
-                    count: count
-                });
+    let total = end === null ? StockIDs.getTotalCount() - 1 : end;
+    let pageSize = count;
+    count = Math.min(count, total - start + 1);
+    //console.log("loadStocksDataPage", start, count)
+    module.loadStockBatch(start, count, stockFields, function (sids) {
+        // console.log(start, count, total)
+        if (start + count >= total) {
+            callback({
+                start: start,
+                count: count
+            });
 
-                console.log('proxy load per page finished', count, start + count)
-            } else {
-                callback({
-                    start: start,
-                    count: count
-                }, false);
-                module.loadStocksPerPage(start + count, count, end, callback);
-            }
-        })
-    }
-    // module.loadStocksDataPage = function loadStocksDataPage(start, count, callback) {
-    //     let total = StockIDs.getTotalCount();
-    //     let pageSize = count;
-    //     count = Math.min(count, total - start);
-    //     //console.log("loadStocksDataPage", start, count)
-    //     module.loadStockIds(start, count, stockFields, function(sids) {
+            console.log('proxy load per page finished', count, start + count)
+        } else {
+            callback({
+                start: start,
+                count: count
+            }, false);
+            module.loadStocksPerPage(start + count, count, end, callback);
+        }
+    })
+}
 
-//         if (start + count >= total) {
-//             callback(start + count);
-//         } else {
-//             callback(start + count, false);
-//             module.loadStocksDataPage(start + count, count, callback);
-//         }
-//     })
-// }
 
 module.getStockData = function getStockData(sid, fields, callback) {
     callback(module.getStockDataSync(sid, fields));
@@ -134,7 +130,7 @@ module.getStockDataSync = function getStockDataSync(sid, fields) {
         }
     }
 
-    let fulldata = cacheMap[sid];
+    let fulldata = cacheCompressedMap[sid];
     if (!fulldata || fulldata.length === 0) {
         return null;
     }
@@ -155,21 +151,48 @@ module.getStockDataSync = function getStockDataSync(sid, fields) {
     };
 }
 
-module.loadStockIds = function loadStockIds(start, count, fields, callback) {
+module.loadStockBatch = function loadStockBatch(start, count, fields, callback) {
     let sids = StockIDs.getIDsByIndex(start, count);
 
-    IO.httpGetStocksCompressedJson(sids, fields.join(), function(json) {
+    IO.httpGetStocksCompressedJson(sids, fields.join(), function (json) {
 
         for (let sid in json.data) {
-            cacheMap[sid] = json.data[sid];
+            cacheCompressedMap[sid] = json.data[sid];
         }
 
         if (callback) {
-            // console.log("loadStockIds", sids.length, sids[0], sids[sids.length - 1])
+            // console.log("loadStockBatch", sids.length, sids[0], sids[sids.length - 1])
             callback(sids);
         }
 
     });
+
+
+}
+
+
+module.buildAnalysisData = function buildAnalysisData(callback) {
+    for (let sid in cacheCompressedMap) {
+        callback(sid, false);
+        if (cacheDecompressedMap[sid]) continue;
+        let data = Zip.decompressStockJson(cacheCompressedMap[sid])
+        DataBuildPipe.build(0, data.length - 1, data);
+        cacheDecompressedMap[sid] = data;
+    }
+
+    callback("finished", true);
+
+}
+
+module.scanMatchStatus = function scanMatchStatus(callback) {
+    for (let sid in cacheDecompressedMap) {
+        let data = cacheDecompressedMap[sid];
+        let status = MatchAnalyser.getMatchStatus(data);
+        callback({
+            sid: sid,
+            status: status
+        }, false);
+    }
 
 
 }

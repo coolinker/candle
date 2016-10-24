@@ -1,7 +1,7 @@
 'use strict';
 // const EventEmitter = require('events');
 import EventEmitter from 'events';
-import UtilsPipe from '../alpha/utilspipe';
+import DataBuildPipe from '../alpha/databuildpipe';
 import MatchFunctionUtil from '../alpha/matchfunctionutil';
 //import MovingAverageUtil from "../alpha/movingaverageutil";
 
@@ -273,7 +273,7 @@ module.exports = class PainterCore extends EventEmitter {
         let len = kdata.length;
         let i = len > 4500 ? len - 4500 : 0;
         this.arrayData = kdata.slice(i, len);
-        UtilsPipe.build(0, this.arrayData.length - 1, this.arrayData);
+        DataBuildPipe.build(0, this.arrayData.length - 1, this.arrayData);
         for (let n = 0; n < this.arrayData.length; n++) {
             this.dateIndexMap[this.arrayData[n].date] = n;
         }

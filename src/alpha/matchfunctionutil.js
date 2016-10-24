@@ -2,15 +2,19 @@
 let tools = {
     wBottom: function () {
         let right_lowidx = lowPI(d, n - 8, n, "low");
-        if (diffR(d[right_lowidx].low, d[right_lowidx].ave_close_8) < 1 * priceCRA(d, right_lowidx, 8)) return false;
+        let cra = 0.06;//priceCRA(d, right_lowidx, 8);
+        if (diffR(d[right_lowidx].low, d[right_lowidx].ave_close_8) < 1 * cra) return false;
 
         let mid_highidx = highPI(d, right_lowidx - 8, right_lowidx, "high");
-        if (diffR(d[right_lowidx].low, d[mid_highidx].high) < 2 * priceCRA(d, right_lowidx, 8)) return false;
+        if (diffR(d[right_lowidx].low, d[mid_highidx].high) < 2 * cra) return false;
 
         let left_lowidx = lowPI(d, mid_highidx - 20, mid_highidx, "low");
-        if (diffR(d[left_lowidx].low, d[left_lowidx].ave_close_8) < 1.5 * priceCRA(d, right_lowidx, 8)) return false;
+        if (diffR(d[left_lowidx].low, d[left_lowidx].ave_close_8) < 1.5 * cra) return false;
 
         if (d[left_lowidx].ave_close_8 > d[left_lowidx].ave_close_13) return false;
+
+        if (diffR(d[left_lowidx].low, d[right_lowidx].low) > -0.0) return false;
+        if (diffR(d[left_lowidx].ave_amount_55, d[right_lowidx].ave_amount_55) > -0) return false;
 
         return true
     },
@@ -222,7 +226,7 @@ module.exports = class MatchFunctionUtil {
                         result: 0
                     };
                     cases++;
-                    let re = MatchFunctionUtil.testBullBear(data, i);
+                    let re = data[i].bullbear;//MatchFunctionUtil.testBullBear(data, i);
                     if (re > 0) {
                         bull++;
                         matchInDay[d.date] = 1;
@@ -247,17 +251,18 @@ module.exports = class MatchFunctionUtil {
     }
 
 
-    static testBullBear(data, idx) {
-        let price = data[idx].close,
-            almp = tools.priceCRA(data, idx, 5);
-        for (let i = idx + 1; i < data.length; i++) {
-            let d = data[i];
-            if (d.ex) {
-                price = price * d.open / data[i - 1].close;
-            }
-            if ((d.low - price) / price < -3 * almp) return (d.low - price) / price;
-            if ((d.high - price) / price > 3 * almp) return (d.high - price) / price;
-        }
-        return 0;
-    }
+    // static testBullBear(data, idx) {
+        
+    //     // let price = data[idx].close,
+    //     //     almp = tools.priceCRA(data, idx, 5);
+    //     // for (let i = idx + 1; i < data.length; i++) {
+    //     //     let d = data[i];
+    //     //     if (d.ex) {
+    //     //         price = price * d.open / data[i - 1].close;
+    //     //     }
+    //     //     if ((d.low - price) / price < -3 * almp) return (d.low - price) / price;
+    //     //     if ((d.high - price) / price > 3 * almp) return (d.high - price) / price;
+    //     // }
+    //     // return 0;
+    // }
 }

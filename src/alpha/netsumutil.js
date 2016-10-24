@@ -15,14 +15,19 @@ module.exports = class NetSumUtil {
 
     static buildSingle(idx, period, data) {
         if (data[idx]['marketCap'] !== undefined || !data[idx]['turnover']) return;
-
+        let obj = data[idx];
         let netsum_r0 = 0,
-            netsummax_r0 = -100000000000,
+            netsummax_r0 = Number.MIN_SAFE_INTEGER,
+            netsummin_r0 = Number.MAX_SAFE_INTEGER,
+            netsummax_r0x = Number.MIN_SAFE_INTEGER,
+            netsummin_r0x = Number.MAX_SAFE_INTEGER,
             netsum_r0x = 0,
-            netsummax = -100000000000,
-            netsummax_r0_netsum_r0x = -100000000000,
+            netsummax = Number.MIN_SAFE_INTEGER,
+            netsummax_r0_netsum_r0x = Number.MIN_SAFE_INTEGER,
             netsummax_idx = -1,
             netsummax_idx_r0 = -1;
+
+
         for (let j = idx; j >= 0 && idx - j <= period; j--) {
             let klj = data[j];
             let r0x_net = klj.netamount - klj.r0_net;
@@ -38,11 +43,47 @@ module.exports = class NetSumUtil {
             if (netsum_r0 > netsummax_r0) {
                 netsummax_r0 = netsum_r0;
                 netsummax_idx_r0 = j;
-                netsummax_r0_netsum_r0x = netsum_r0x;
+                netsummax_r0_netsum_r0x = netsum_r0x;    
+            }
+
+            if (netsum_r0 < netsummin_r0) {
+                netsummin_r0 = netsum_r0;
+            }
+
+            if (netsum_r0x > netsummax_r0x) {
+                netsummax_r0x = netsum_r0x;
+            }
+            
+            if (netsum_r0x < netsummin_r0x) {
+                netsummin_r0x = netsum_r0x;
+            }
+
+
+            if (idx-j+1 === 8) {
+                obj.netsummax_r0_8 = netsummax_r0;
+                obj.netsummin_r0_8 = netsummin_r0;
+                obj.netsummax_r0x_8 = netsummax_r0x;
+                obj.netsummin_r0x_8 = netsummin_r0x;
+
+            }
+
+            if (idx-j+1 === 21) {
+                obj.netsummax_r0_21 = netsummax_r0;
+                obj.netsummin_r0_21 = netsummin_r0;
+                obj.netsummax_r0x_21 = netsummax_r0x;
+                obj.netsummin_r0x_21 = netsummin_r0x;
+
+            }
+
+            if (idx-j+1 === 55) {
+                obj.netsummax_r0_55 = netsummax_r0;
+                obj.netsummin_r0_55 = netsummin_r0;
+                obj.netsummax_r0x_55 = netsummax_r0x;
+                obj.netsummin_r0x_55 = netsummin_r0x;
+
             }
         }
 
-        let obj = data[idx];
         obj.marketCap = obj.close * (2 * obj.amount / (obj.high + obj.low)) / (obj.turnover / 10000)
         obj.netsummax_r0 = netsummax_r0;
         obj.netsummax = netsummax;

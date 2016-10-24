@@ -21585,6 +21585,108 @@ var _createClass = function () { function defineProperties(target, props) { for 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 module.exports = function () {
+    function BullBearUtil() {
+        _classCallCheck(this, BullBearUtil);
+    }
+
+    _createClass(BullBearUtil, null, [{
+        key: 'build',
+        value: function build(start, end, data) {
+            for (var i = start; i <= end; i++) {
+                BullBearUtil.buildSingle(i, data);
+            }
+            return data;
+        }
+    }, {
+        key: 'buildSingle',
+        value: function buildSingle(idx, data) {
+
+            var priceCRA = function priceCRA(data, n, period) {
+                if (n < period) return null;
+                var sum = 0;
+                for (var i = n; i > n - period; i--) {
+                    sum += (data[i].high - data[i].low) / data[i].open;
+                }
+                return sum / period;
+            };
+            var obj = data[idx];
+            obj.bullbear = 0;
+            var price = data[idx].close,
+                almp = priceCRA(data, idx, 5);
+            for (var i = idx + 1; i < data.length; i++) {
+                var d = data[i];
+                if (d.ex) {
+                    price = price * d.open / data[i - 1].close;
+                }
+
+                if ((d.low - price) / price < -3 * almp) {
+                    obj.bullbear = (d.low - price) / price;
+                } else if ((d.high - price) / price > 3 * almp) {
+                    obj.bullbear = (d.high - price) / price;
+                }
+            }
+        }
+    }]);
+
+    return BullBearUtil;
+}();
+
+},{}],176:[function(require,module,exports){
+'use strict';
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var EXDateUtil = require('./exdateutil');
+var MovingAverageUtil = require('./movingaverageutil');
+var NetSumUtil = require('./netsumutil');
+var BullBearUtil = require('./bullbearutil');
+module.exports = function () {
+    function DataBuildPipe() {
+        _classCallCheck(this, DataBuildPipe);
+    }
+
+    _createClass(DataBuildPipe, null, [{
+        key: 'build',
+        value: function build(start, end, data) {
+
+            for (var i = start; i <= end; i++) {
+                BullBearUtil.buildSingle(i, data);
+                NetSumUtil.buildSingle(i, 250, data);
+                EXDateUtil.buildSingle(i, data);
+
+                MovingAverageUtil.buildSingle(i, 8, data, 'close');
+                MovingAverageUtil.buildSingle(i, 13, data, 'close');
+                MovingAverageUtil.buildSingle(i, 21, data, 'close');
+                MovingAverageUtil.buildSingle(i, 55, data, 'close');
+
+                MovingAverageUtil.buildSingle(i, 8, data, 'amount');
+                MovingAverageUtil.buildSingle(i, 13, data, 'amount');
+                MovingAverageUtil.buildSingle(i, 21, data, 'amount');
+                MovingAverageUtil.buildSingle(i, 55, data, 'amount');
+
+                MovingAverageUtil.buildSingle(i, 8, data, 'turnover');
+                MovingAverageUtil.buildSingle(i, 13, data, 'turnover');
+                MovingAverageUtil.buildSingle(i, 21, data, 'turnover');
+                // if (data[i].date === '07/21/2016') console.log("-------------------", data[i])
+            }
+
+            return data;
+        }
+    }]);
+
+    return DataBuildPipe;
+}();
+
+},{"./bullbearutil":175,"./exdateutil":177,"./movingaverageutil":179,"./netsumutil":180}],177:[function(require,module,exports){
+'use strict';
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+module.exports = function () {
     function EXDateUtil() {
         _classCallCheck(this, EXDateUtil);
     }
@@ -21614,7 +21716,7 @@ module.exports = function () {
     return EXDateUtil;
 }();
 
-},{}],176:[function(require,module,exports){
+},{}],178:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -21624,15 +21726,19 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 var tools = {
     wBottom: function wBottom() {
         var right_lowidx = lowPI(d, n - 8, n, "low");
-        if (diffR(d[right_lowidx].low, d[right_lowidx].ave_close_8) < 1 * priceCRA(d, right_lowidx, 8)) return false;
+        var cra = 0.06; //priceCRA(d, right_lowidx, 8);
+        if (diffR(d[right_lowidx].low, d[right_lowidx].ave_close_8) < 1 * cra) return false;
 
         var mid_highidx = highPI(d, right_lowidx - 8, right_lowidx, "high");
-        if (diffR(d[right_lowidx].low, d[mid_highidx].high) < 2 * priceCRA(d, right_lowidx, 8)) return false;
+        if (diffR(d[right_lowidx].low, d[mid_highidx].high) < 2 * cra) return false;
 
         var left_lowidx = lowPI(d, mid_highidx - 20, mid_highidx, "low");
-        if (diffR(d[left_lowidx].low, d[left_lowidx].ave_close_8) < 1.5 * priceCRA(d, right_lowidx, 8)) return false;
+        if (diffR(d[left_lowidx].low, d[left_lowidx].ave_close_8) < 1.5 * cra) return false;
 
         if (d[left_lowidx].ave_close_8 > d[left_lowidx].ave_close_13) return false;
+
+        if (diffR(d[left_lowidx].low, d[right_lowidx].low) > -0.0) return false;
+        if (diffR(d[left_lowidx].ave_amount_55, d[right_lowidx].ave_amount_55) > -0) return false;
 
         return true;
     },
@@ -21848,7 +21954,7 @@ module.exports = function () {
                             result: 0
                         };
                         cases++;
-                        var re = MatchFunctionUtil.testBullBear(data, i);
+                        var re = data[i].bullbear; //MatchFunctionUtil.testBullBear(data, i);
                         if (re > 0) {
                             bull++;
                             matchInDay[_d.date] = 1;
@@ -21871,27 +21977,28 @@ module.exports = function () {
                 bear: bear
             };
         }
-    }, {
-        key: "testBullBear",
-        value: function testBullBear(data, idx) {
-            var price = data[idx].close,
-                almp = tools.priceCRA(data, idx, 5);
-            for (var i = idx + 1; i < data.length; i++) {
-                var _d2 = data[i];
-                if (_d2.ex) {
-                    price = price * _d2.open / data[i - 1].close;
-                }
-                if ((_d2.low - price) / price < -3 * almp) return (_d2.low - price) / price;
-                if ((_d2.high - price) / price > 3 * almp) return (_d2.high - price) / price;
-            }
-            return 0;
-        }
+
+        // static testBullBear(data, idx) {
+
+        //     // let price = data[idx].close,
+        //     //     almp = tools.priceCRA(data, idx, 5);
+        //     // for (let i = idx + 1; i < data.length; i++) {
+        //     //     let d = data[i];
+        //     //     if (d.ex) {
+        //     //         price = price * d.open / data[i - 1].close;
+        //     //     }
+        //     //     if ((d.low - price) / price < -3 * almp) return (d.low - price) / price;
+        //     //     if ((d.high - price) / price > 3 * almp) return (d.high - price) / price;
+        //     // }
+        //     // return 0;
+        // }
+
     }]);
 
     return MatchFunctionUtil;
 }();
 
-},{}],177:[function(require,module,exports){
+},{}],179:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -21986,7 +22093,7 @@ module.exports = function () {
     return MovingAverageUtil;
 }();
 
-},{}],178:[function(require,module,exports){
+},{}],180:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -22011,14 +22118,18 @@ module.exports = function () {
         key: 'buildSingle',
         value: function buildSingle(idx, period, data) {
             if (data[idx]['marketCap'] !== undefined || !data[idx]['turnover']) return;
-
+            var obj = data[idx];
             var netsum_r0 = 0,
-                netsummax_r0 = -100000000000,
+                netsummax_r0 = Number.MIN_SAFE_INTEGER,
+                netsummin_r0 = Number.MAX_SAFE_INTEGER,
+                netsummax_r0x = Number.MIN_SAFE_INTEGER,
+                netsummin_r0x = Number.MAX_SAFE_INTEGER,
                 netsum_r0x = 0,
-                netsummax = -100000000000,
-                netsummax_r0_netsum_r0x = -100000000000,
+                netsummax = Number.MIN_SAFE_INTEGER,
+                netsummax_r0_netsum_r0x = Number.MIN_SAFE_INTEGER,
                 netsummax_idx = -1,
                 netsummax_idx_r0 = -1;
+
             for (var j = idx; j >= 0 && idx - j <= period; j--) {
                 var klj = data[j];
                 var r0x_net = klj.netamount - klj.r0_net;
@@ -22036,9 +22147,41 @@ module.exports = function () {
                     netsummax_idx_r0 = j;
                     netsummax_r0_netsum_r0x = netsum_r0x;
                 }
+
+                if (netsum_r0 < netsummin_r0) {
+                    netsummin_r0 = netsum_r0;
+                }
+
+                if (netsum_r0x > netsummax_r0x) {
+                    netsummax_r0x = netsum_r0x;
+                }
+
+                if (netsum_r0x < netsummin_r0x) {
+                    netsummin_r0x = netsum_r0x;
+                }
+
+                if (idx - j + 1 === 8) {
+                    obj.netsummax_r0_8 = netsummax_r0;
+                    obj.netsummin_r0_8 = netsummin_r0;
+                    obj.netsummax_r0x_8 = netsummax_r0x;
+                    obj.netsummin_r0x_8 = netsummin_r0x;
+                }
+
+                if (idx - j + 1 === 21) {
+                    obj.netsummax_r0_21 = netsummax_r0;
+                    obj.netsummin_r0_21 = netsummin_r0;
+                    obj.netsummax_r0x_21 = netsummax_r0x;
+                    obj.netsummin_r0x_21 = netsummin_r0x;
+                }
+
+                if (idx - j + 1 === 55) {
+                    obj.netsummax_r0_55 = netsummax_r0;
+                    obj.netsummin_r0_55 = netsummin_r0;
+                    obj.netsummax_r0x_55 = netsummax_r0x;
+                    obj.netsummin_r0x_55 = netsummin_r0x;
+                }
             }
 
-            var obj = data[idx];
             obj.marketCap = obj.close * (2 * obj.amount / (obj.high + obj.low)) / (obj.turnover / 10000);
             obj.netsummax_r0 = netsummax_r0;
             obj.netsummax = netsummax;
@@ -22052,47 +22195,7 @@ module.exports = function () {
     return NetSumUtil;
 }();
 
-},{}],179:[function(require,module,exports){
-'use strict';
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-var EXDateUtil = require('./exdateutil');
-var MovingAverageUtil = require('./movingaverageutil');
-var NetSumUtil = require('./netsumutil');
-module.exports = function () {
-    function UtilsPipe() {
-        _classCallCheck(this, UtilsPipe);
-    }
-
-    _createClass(UtilsPipe, null, [{
-        key: 'build',
-        value: function build(start, end, data) {
-
-            for (var i = start; i <= end; i++) {
-                NetSumUtil.buildSingle(i, 250, data);
-                EXDateUtil.buildSingle(i, data);
-                MovingAverageUtil.buildSingle(i, 8, data, 'close');
-                MovingAverageUtil.buildSingle(i, 13, data, 'close');
-                MovingAverageUtil.buildSingle(i, 21, data, 'close');
-                MovingAverageUtil.buildSingle(i, 55, data, 'close');
-                MovingAverageUtil.buildSingle(i, 8, data, 'amount');
-                MovingAverageUtil.buildSingle(i, 13, data, 'amount');
-                MovingAverageUtil.buildSingle(i, 21, data, 'amount');
-                MovingAverageUtil.buildSingle(i, 55, data, 'amount');
-                // if (data[i].date === '07/21/2016') console.log("-------------------", data[i])
-            }
-
-            return data;
-        }
-    }]);
-
-    return UtilsPipe;
-}();
-
-},{"./exdateutil":175,"./movingaverageutil":177,"./netsumutil":178}],180:[function(require,module,exports){
+},{}],181:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -22277,7 +22380,7 @@ module.exports = function () {
     return Zip;
 }();
 
-},{}],181:[function(require,module,exports){
+},{}],182:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -22377,7 +22480,7 @@ module.exports = function (_MassPainter) {
     return AlphaPainter;
 }(MassPainter);
 
-},{"./masspainter":183}],182:[function(require,module,exports){
+},{"./masspainter":184}],183:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -22508,7 +22611,7 @@ module.exports = function (_MassPainter) {
     return CandlePainter;
 }(MassPainter);
 
-},{"./masspainter":183}],183:[function(require,module,exports){
+},{"./masspainter":184}],184:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -22666,7 +22769,7 @@ module.exports = function () {
     return MassPainter;
 }();
 
-},{}],184:[function(require,module,exports){
+},{}],185:[function(require,module,exports){
 'use strict';
 // const EventEmitter = require('events');
 
@@ -22676,9 +22779,9 @@ var _events = require('events');
 
 var _events2 = _interopRequireDefault(_events);
 
-var _utilspipe = require('../alpha/utilspipe');
+var _databuildpipe = require('../alpha/databuildpipe');
 
-var _utilspipe2 = _interopRequireDefault(_utilspipe);
+var _databuildpipe2 = _interopRequireDefault(_databuildpipe);
 
 var _matchfunctionutil = require('../alpha/matchfunctionutil');
 
@@ -22981,7 +23084,7 @@ module.exports = function (_EventEmitter) {
             var len = kdata.length;
             var i = len > 4500 ? len - 4500 : 0;
             this.arrayData = kdata.slice(i, len);
-            _utilspipe2.default.build(0, this.arrayData.length - 1, this.arrayData);
+            _databuildpipe2.default.build(0, this.arrayData.length - 1, this.arrayData);
             for (var n = 0; n < this.arrayData.length; n++) {
                 this.dateIndexMap[this.arrayData[n].date] = n;
             }
@@ -23014,7 +23117,7 @@ module.exports = function (_EventEmitter) {
     return PainterCore;
 }(_events2.default);
 
-},{"../alpha/matchfunctionutil":176,"../alpha/utilspipe":179,"events":1}],185:[function(require,module,exports){
+},{"../alpha/databuildpipe":176,"../alpha/matchfunctionutil":178,"events":1}],186:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -23223,7 +23326,7 @@ module.exports = function () {
     return PointerPainter;
 }();
 
-},{}],186:[function(require,module,exports){
+},{}],187:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -23386,7 +23489,7 @@ module.exports = function (_MassPainter) {
     return VolumePainter;
 }(MassPainter);
 
-},{"./masspainter":183}],187:[function(require,module,exports){
+},{"./masspainter":184}],188:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -23885,7 +23988,7 @@ var CandleApp = function (_React$Component) {
 
 exports.default = CandleApp;
 
-},{"../chart/alphapainter":181,"../chart/candlepainter":182,"../chart/paintercore":184,"../chart/pointerpainter":185,"../chart/volumepainter":186,"./chartcanvas":188,"./dataworker.js":189,"./forms/dateinput":190,"./forms/forminput":191,"./io":193,"./localstoreutil":194,"./stockids":195,"./tradingdate":196,"react":172,"webworkify":173}],188:[function(require,module,exports){
+},{"../chart/alphapainter":182,"../chart/candlepainter":183,"../chart/paintercore":185,"../chart/pointerpainter":186,"../chart/volumepainter":187,"./chartcanvas":189,"./dataworker.js":190,"./forms/dateinput":191,"./forms/forminput":192,"./io":194,"./localstoreutil":195,"./stockids":196,"./tradingdate":197,"react":172,"webworkify":173}],189:[function(require,module,exports){
 'use strict';
 
 // let sampleData = [{ open: 15.5, close: 16, high: 16.5, low: 15.2 }, { open: 15.8, close: 15, high: 16.8, low: 14.2 }, { open: 15.5, close: 16, high: 16.8, low: 15.2 }, { open: 10.5, close: 10, high: 10.8, low: 9.2 }];
@@ -23956,7 +24059,7 @@ var ChartCanvas = function (_React$Component) {
 
 exports.default = ChartCanvas;
 
-},{"react":172}],189:[function(require,module,exports){
+},{"react":172}],190:[function(require,module,exports){
 'use strict';
 
 var _io = require('./io');
@@ -23975,15 +24078,15 @@ var _matchfunctionutil = require('../alpha/matchfunctionutil');
 
 var _matchfunctionutil2 = _interopRequireDefault(_matchfunctionutil);
 
-var _utilspipe = require('../alpha/utilspipe');
+var _databuildpipe = require('../alpha/databuildpipe');
 
-var _utilspipe2 = _interopRequireDefault(_utilspipe);
+var _databuildpipe2 = _interopRequireDefault(_databuildpipe);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-console.log("worker window-", self.location.href);
 var stockFields = ['date', 'open', 'close', 'high', 'low', 'amount', 'netamount', 'r0_net', 'changeratio', 'turnover'];
-var cacheMap = {};
+var cacheCompressedMap = {};
+var cacheDecompressedMap = {};
 var stopScanFlag = false;
 module.exports = function (self) {
     var me = this;
@@ -24024,15 +24127,24 @@ module.scanByIndex = function scanByIndex(idx, patternStr, callback) {
         bear: 0,
         cases: 0
     };
+
     if (cmpdata) {
-        var decmpdata = _zip2.default.decompressStockJson(cmpdata);
-        _utilspipe2.default.build(0, decmpdata.length - 1, decmpdata);
+
+        var decmpdata = void 0;
+        if (!cacheDecompressedMap[sid]) {
+            decmpdata = _zip2.default.decompressStockJson(cmpdata);
+            _databuildpipe2.default.build(0, decmpdata.length - 1, decmpdata);
+            cacheDecompressedMap[sid] = decmpdata;
+        } else {
+            decmpdata = cacheDecompressedMap[sid];
+        }
+
         m = _matchfunctionutil2.default.scan(decmpdata, patternStr, matchOnDate);
     }
 
     //let total = StockIDs.getTotalCount();
     var nextsid = _stockids2.default.getNext(sid);
-    var finished = cacheMap[nextsid] === undefined;
+    var finished = cacheCompressedMap[nextsid] === undefined;
     if (finished) console.log(sid, nextsid, idx);
     callback({
         sid: sid,
@@ -24060,7 +24172,7 @@ module.loadStocksPerPage = function loadStocksPerPage(start, count, end, callbac
     var pageSize = count;
     count = Math.min(count, total - start + 1);
     //console.log("loadStocksDataPage", start, count)
-    module.loadStockIds(start, count, stockFields, function (sids) {
+    module.loadStockBatch(start, count, stockFields, function (sids) {
         // console.log(start, count, total)
         if (start + count >= total) {
             callback({
@@ -24078,21 +24190,6 @@ module.loadStocksPerPage = function loadStocksPerPage(start, count, end, callbac
         }
     });
 };
-// module.loadStocksDataPage = function loadStocksDataPage(start, count, callback) {
-//     let total = StockIDs.getTotalCount();
-//     let pageSize = count;
-//     count = Math.min(count, total - start);
-//     //console.log("loadStocksDataPage", start, count)
-//     module.loadStockIds(start, count, stockFields, function(sids) {
-
-//         if (start + count >= total) {
-//             callback(start + count);
-//         } else {
-//             callback(start + count, false);
-//             module.loadStocksDataPage(start + count, count, callback);
-//         }
-//     })
-// }
 
 module.getStockData = function getStockData(sid, fields, callback) {
     callback(module.getStockDataSync(sid, fields));
@@ -24107,7 +24204,7 @@ module.getStockDataSync = function getStockDataSync(sid, fields) {
         }
     }
 
-    var fulldata = cacheMap[sid];
+    var fulldata = cacheCompressedMap[sid];
     if (!fulldata || fulldata.length === 0) {
         return null;
     }
@@ -24127,23 +24224,46 @@ module.getStockDataSync = function getStockDataSync(sid, fields) {
     };
 };
 
-module.loadStockIds = function loadStockIds(start, count, fields, callback) {
+module.loadStockBatch = function loadStockBatch(start, count, fields, callback) {
     var sids = _stockids2.default.getIDsByIndex(start, count);
 
     _io2.default.httpGetStocksCompressedJson(sids, fields.join(), function (json) {
 
         for (var sid in json.data) {
-            cacheMap[sid] = json.data[sid];
+            cacheCompressedMap[sid] = json.data[sid];
         }
 
         if (callback) {
-            // console.log("loadStockIds", sids.length, sids[0], sids[sids.length - 1])
+            // console.log("loadStockBatch", sids.length, sids[0], sids[sids.length - 1])
             callback(sids);
         }
     });
 };
 
-},{"../alpha/matchfunctionutil":176,"../alpha/utilspipe":179,"../alpha/zip":180,"./io":193,"./stockids":195}],190:[function(require,module,exports){
+module.buildAnalysisData = function buildAnalysisData(callback) {
+    for (var sid in cacheCompressedMap) {
+        callback(sid, false);
+        if (cacheDecompressedMap[sid]) continue;
+        var data = _zip2.default.decompressStockJson(cacheCompressedMap[sid]);
+        _databuildpipe2.default.build(0, data.length - 1, data);
+        cacheDecompressedMap[sid] = data;
+    }
+
+    callback("finished", true);
+};
+
+module.scanMatchStatus = function scanMatchStatus(callback) {
+    for (var sid in cacheDecompressedMap) {
+        var data = cacheDecompressedMap[sid];
+        var status = MatchAnalyser.getMatchStatus(data);
+        callback({
+            sid: sid,
+            status: status
+        }, false);
+    }
+};
+
+},{"../alpha/databuildpipe":176,"../alpha/matchfunctionutil":178,"../alpha/zip":181,"./io":194,"./stockids":196}],191:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -24239,7 +24359,7 @@ DateInput.defaultProps = { type: "date", width: 130 };
 
 exports.default = DateInput;
 
-},{"./forminput":191,"react":172}],191:[function(require,module,exports){
+},{"./forminput":192,"react":172}],192:[function(require,module,exports){
 'use strict';
 
 // let sampleData = [{ open: 15.5, close: 16, high: 16.5, low: 15.2 }, { open: 15.8, close: 15, high: 16.8, low: 14.2 }, { open: 15.5, close: 16, high: 16.8, low: 15.2 }, { open: 10.5, close: 10, high: 10.8, low: 9.2 }];
@@ -24346,7 +24466,7 @@ FormInput.defaultProps = {
 
 exports.default = FormInput;
 
-},{"react":172}],192:[function(require,module,exports){
+},{"react":172}],193:[function(require,module,exports){
 'use strict';
 
 var _react = require("react");
@@ -24365,7 +24485,7 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 var candleApp = _reactDom2.default.render(_react2.default.createElement(_candleapp2.default, null), document.getElementById('app'));
 
-},{"./candleapp":187,"react":172,"react-dom":29}],193:[function(require,module,exports){
+},{"./candleapp":188,"react":172,"react-dom":29}],194:[function(require,module,exports){
 'use strict';
 // import fetch from 'whatwg-fetch';
 
@@ -24624,7 +24744,7 @@ IO.workerStarts = [0];
 
 exports.default = IO;
 
-},{"../alpha/netsumutil":178,"../alpha/zip":180,"./stockids":195,"./workerproxy":197}],194:[function(require,module,exports){
+},{"../alpha/netsumutil":180,"../alpha/zip":181,"./stockids":196,"./workerproxy":198}],195:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -24672,7 +24792,7 @@ var LocalStoreUtil = function () {
 
 exports.default = LocalStoreUtil;
 
-},{}],195:[function(require,module,exports){
+},{}],196:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -24778,7 +24898,7 @@ StockIDs.idIndexMap = {};
 
 exports.default = StockIDs;
 
-},{"./io":193}],196:[function(require,module,exports){
+},{"./io":194}],197:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -24838,7 +24958,7 @@ TradingDate.dateIndexMap = {};
 
 exports.default = TradingDate;
 
-},{"./io":193}],197:[function(require,module,exports){
+},{"./io":194}],198:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -24902,4 +25022,4 @@ var WorkerProxy = function () {
 
 exports.default = WorkerProxy;
 
-},{"whatwg-fetch":174}]},{},[192]);
+},{"whatwg-fetch":174}]},{},[193]);
