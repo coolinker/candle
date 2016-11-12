@@ -11,9 +11,9 @@ module.exports = class DataBuildPipe {
     static build(start, end, data) {
 
         for (let i = start; i <= end; i++) {
-            BullBearUtil.buildSingle(i, data)
-            NetSumUtil.buildSingle(i, 250, data);
             EXDateUtil.buildSingle(i, data);
+            NetSumUtil.buildSingle(i, 250, data);
+            
 
             MovingAverageUtil.buildSingle(i, 8, data, 'close');
             MovingAverageUtil.buildSingle(i, 13, data, 'close');
@@ -30,6 +30,8 @@ module.exports = class DataBuildPipe {
             MovingAverageUtil.buildSingle(i, 21, data, 'turnover');
             // if (data[i].date === '07/21/2016') console.log("-------------------", data[i])
         }
+
+        BullBearUtil.build(start, end, data);
 
         return data;
     }

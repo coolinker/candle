@@ -57,8 +57,6 @@ class IO {
 
                 let params = [IO.workerStarts[idx], patternStr];
                 workerProxy.callMethod("scanByIndex", params, function (re) {
-                    if (re.index % 100 === 0)
-                        console.log(idx, re.index, re.finished)
                     callback(re);
 
                 });
@@ -75,6 +73,67 @@ class IO {
             });
         });
     }
+
+
+    static workersBuildAndAnalyse(patternStr, callback) {
+        let finishedCount = 0;
+        let matchSum = {bull:0, bear:0, cases:0};
+        IO.dataWorkerProxies.forEach(function (workerProxy, idx) {
+            workerProxy.callMethod("reset", [], function (re) {
+                let params = [patternStr];
+                workerProxy.callMethod("buildForAnalysis", params, function (re) {
+                    if (re.finished) {
+                        finishedCount++;
+                        let m = re.matchSum;
+                        matchSum.bull += m.bull;
+                        matchSum.bear += m.bear;
+                        matchSum.cases += m.cases;
+                        console.log("buildForAnalysis finished", m, matchSum)
+                        
+                    }
+
+                    if (finishedCount === IO.dataWorkerProxies.length) {
+                        callback(matchSum);
+                        
+
+                    }
+                });
+            });
+
+
+        });
+
+    }
+
+    static workersAnalyseBullConditions(bullRate, minNumber, filterArr2, callback) {
+        let finishedCount = 0;
+        let result = {};
+        IO.dataWorkerProxies.forEach(function (workerProxy, idx) {
+            workerProxy.callMethod("reset", [], function (re) {
+                let params = [bullRate, minNumber, filterArr2];
+                
+                workerProxy.callMethod("analyseBullConditions", params, function (re) {
+                    
+                    finishedCount++;
+                    for (let att in re) {
+                        if (!result[att]) result[att] = re[att];
+                        else {
+
+                        }
+                    }
+                    if (finishedCount === IO.dataWorkerProxies.length) {
+                        callback(result);
+                        
+                    }
+                });
+            });
+
+
+        });
+
+    }
+
+    
 
     static workerGetStockJson(sid, callback) {
         let fields = ['date', 'open', 'close', 'high', 'low', 'amount', 'netamount', 'r0_net', 'changeratio', 'turnover'];

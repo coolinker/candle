@@ -21598,21 +21598,23 @@ module.exports = function () {
             return data;
         }
     }, {
+        key: 'priceCRA',
+        value: function priceCRA(data, n, period) {
+            if (n < period) return null;
+            var sum = 0;
+            for (var i = n; i > n - period; i--) {
+                sum += (data[i].high - data[i].low) / data[i].open;
+            }
+            return sum / period;
+        }
+    }, {
         key: 'buildSingle',
         value: function buildSingle(idx, data) {
 
-            var priceCRA = function priceCRA(data, n, period) {
-                if (n < period) return null;
-                var sum = 0;
-                for (var i = n; i > n - period; i--) {
-                    sum += (data[i].high - data[i].low) / data[i].open;
-                }
-                return sum / period;
-            };
             var obj = data[idx];
             obj.bullbear = 0;
             var price = data[idx].close,
-                almp = priceCRA(data, idx, 5);
+                almp = BullBearUtil.priceCRA(data, idx, 5);
             for (var i = idx + 1; i < data.length; i++) {
                 var d = data[i];
                 if (d.ex) {
@@ -21621,8 +21623,10 @@ module.exports = function () {
 
                 if ((d.low - price) / price < -3 * almp) {
                     obj.bullbear = (d.low - price) / price;
+                    return;
                 } else if ((d.high - price) / price > 3 * almp) {
                     obj.bullbear = (d.high - price) / price;
+                    return;
                 }
             }
         }
@@ -21652,9 +21656,8 @@ module.exports = function () {
         value: function build(start, end, data) {
 
             for (var i = start; i <= end; i++) {
-                BullBearUtil.buildSingle(i, data);
-                NetSumUtil.buildSingle(i, 250, data);
                 EXDateUtil.buildSingle(i, data);
+                NetSumUtil.buildSingle(i, 250, data);
 
                 MovingAverageUtil.buildSingle(i, 8, data, 'close');
                 MovingAverageUtil.buildSingle(i, 13, data, 'close');
@@ -21672,6 +21675,8 @@ module.exports = function () {
                 // if (data[i].date === '07/21/2016') console.log("-------------------", data[i])
             }
 
+            BullBearUtil.build(start, end, data);
+
             return data;
         }
     }]);
@@ -21679,7 +21684,7 @@ module.exports = function () {
     return DataBuildPipe;
 }();
 
-},{"./bullbearutil":175,"./exdateutil":177,"./movingaverageutil":179,"./netsumutil":180}],177:[function(require,module,exports){
+},{"./bullbearutil":175,"./exdateutil":177,"./movingaverageutil":180,"./netsumutil":181}],177:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -21717,6 +21722,283 @@ module.exports = function () {
 }();
 
 },{}],178:[function(require,module,exports){
+'use strict';
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var conditions = [["dn.ave_close_21/dn.close", [0.99, 1, 1.01, 1.03]], ["dn.ave_close_8/dn.close", [1.03]], ["dn.ave_amount_21/dn.ave_amount_8", [1]], ["dn.ave_amount_21/dn.amount", [1.5]], ["dn.netsummin_r0_21", [0, 0]], ["dn.netsummax_r0_8", [0, 0]], ["dn.ave_turnover_8/dn.ave_turnover_21", [1]], ["dn.netsum_r0_below/dn.ave_amount_21", [0, 0]], ["dn.netsum_r0_below/dn.ave_amount_21", [0.02, 0.04]], ["dn.marketCap", [2000000000, 3000000000, 5000000000, 10000000000]]];
+
+module.exports = function () {
+    function MatchAnalyser() {
+        _classCallCheck(this, MatchAnalyser);
+
+        this.matchConditionsCount = conditions.length;
+        this.matchConditions = this.composeMatchFunction(conditions);
+    }
+
+    _createClass(MatchAnalyser, [{
+        key: "C",
+        value: function C(arr, num) {
+            var r = [];
+            (function f(t, a, n) {
+                if (n == 0) return r.push(t);
+                for (var i = 0, l = a.length; i <= l - n; i++) {
+                    f(t.concat(a[i]), a.slice(i + 1), n - 1);
+                }
+            })([], arr, num);
+            return r;
+        }
+    }, {
+        key: "CArr",
+        value: function CArr(n, r) {
+            var arr = [];
+            for (var i = 0; i < n; i++) {
+                arr.push(i);
+            }
+            return this.C(arr, r);
+        }
+    }, {
+        key: "getValueRange",
+        value: function getValueRange(val, ranges, expression) {
+            if (isNaN(val)) {
+                //console.log(expression)
+                return null;
+            }
+            for (var i = ranges.length - 1; i >= 0; i--) {
+                if (val >= ranges[i]) return i + 1;
+            }
+            return 0;
+        }
+    }, {
+        key: "composeMatchFunction",
+        value: function composeMatchFunction(conditions) {
+            // let dn = d[n];
+            // reArr[offset + 0] = this.getValueRange(dn.amount_ave_21 / dn.amount, [1.5]);
+            // reArr[offset + 1] = this.getValueRange(dn.netsum_r0_below_60 / dn.amount_ave_21, [0, 0]);
+
+            var funstr = "let dn = d[n];";
+            var i = 0;
+            for (; i < conditions.length; i++) {
+                funstr += "arr[offset+" + i + "] = this.getValueRange(" + conditions[i][0] + ", [" + conditions[i][1] + "], '" + conditions[i][0] + "');\n";
+            }
+
+            funstr += "arr[offset+" + i + "] = dn.bullbear>=0?Math.ceil(dn.bullbear):Math.floor(dn.bullbear);";
+            return new Function('d', 'n', 'arr', 'offset', funstr);
+        }
+    }, {
+        key: "generateConditionCombinations",
+        value: function generateConditionCombinations(buflen, data, filterFun, callback) {
+            var sublen = this.matchConditionsCount + 1;
+            var byteArr = new Int8Array(buflen * sublen);
+            var offset = 0;
+
+            var len = data.length;
+            for (var i = 0; i < len; i++) {
+                var dn = data[i];
+                if (!filterFun(dn)) continue;
+
+                this.matchConditions(data, i, byteArr, offset);
+                offset += sublen;
+            }
+
+            return byteArr;
+        }
+    }, {
+        key: "Arr2Dto1D",
+        value: function Arr2Dto1D(arr2d) {
+            if (!(arr2d[0] instanceof Int8Array)) return arr2d;
+            var len = 0;
+            for (var i = 0; i < arr2d.length; i++) {
+                len += arr2d[i].length;
+            }
+
+            var byteArr = new Int8Array(len);
+            var c = 0;
+            for (var _i = 0; _i < arr2d.length; _i++) {
+                var arr = arr2d[_i];
+                for (var j = 0; j < arr.length; j++) {
+                    byteArr[c++] = arr[j];
+                }
+            }
+            return byteArr;
+        }
+    }, {
+        key: "searchBullConditions",
+        value: function searchBullConditions(statusArr, bullRate, minNumer, reFilter) {
+            statusArr = this.Arr2Dto1D(statusArr);
+            console.log("\nsearchBullConditions", statusArr.length);
+            var sublen = this.matchConditionsCount + 1;
+            var totalcases = statusArr.length / sublen;
+            var slen = statusArr.length;
+            var re = [];
+            var remap = {};
+            for (var idx = 0; idx < sublen - 1; idx++) {
+                if (this.isConditionExisted(idx, reFilter)) continue;
+                var subre = [];
+                for (var offset = 0; offset < slen; offset += sublen) {
+                    if (!this.matchFilter(statusArr, offset, reFilter)) continue;
+                    var bb = statusArr[offset + sublen - 1];
+                    var sidx = offset + idx;
+                    var sec = statusArr[sidx];
+                    if (sec === null) continue;
+                    if (!subre[sec]) subre[sec] = { '1': 0, '0': 0, '-1': 0 };
+                    subre[sec][bb]++;
+                }
+
+                //console.log("------------------------", subre[0], subre[1], subre.length)
+
+                this.filterValidRanges(idx, subre, bullRate, minNumer, remap);
+                //if (validArr.length>0) re[idx] = validArr;
+
+                //console.log("searchBullConditions--------------", idx, JSON.stringify(remap))
+            }
+
+            return remap;
+        }
+    }, {
+        key: "filterValidRanges",
+        value: function filterValidRanges(idx, secBullBearMap, bullrate, minNumber, remap) {
+            var re = { '1': 0, '0': 0, '-1': 0 };
+            var arr = [];
+            for (var sec in secBullBearMap) {
+                arr.push(sec);
+            }
+
+            arr.sort(function (v0, v1) {
+                var bbo_0 = secBullBearMap[v0];
+                var r_0 = bbo_0['1'] / (bbo_0['1'] + bbo_0['0'] + bbo_0['-1']);
+
+                var bbo_1 = secBullBearMap[v1];
+                var r_1 = bbo_1['1'] / (bbo_1['1'] + bbo_1['0'] + bbo_1['-1']);
+                if (r_0 > r_1) return -1;
+                if (r_0 === r_1) return 0;
+                if (r_0 < r_1) return 1;
+            });
+
+            var validarr = [];
+            var sumobj = { '1': 0, '0': 0, '-1': 0 };
+            var rekey = void 0;
+            for (var i = 0; i < arr.length; i++) {
+                var _sec = arr[i];
+
+                var badflag = false;
+                var bbo = secBullBearMap[_sec];
+
+                var sumr = (sumobj['1'] + bbo['1']) / (sumobj['1'] + sumobj['0'] + sumobj['-1'] + bbo['1'] + bbo['0'] + bbo['-1']);
+                if (sumr >= bullrate) {
+                    if (rekey === undefined) rekey = '' + _sec;else rekey += '_' + _sec;
+
+                    var bull = sumobj['1'] += bbo['1'];
+                    var pending = sumobj['0'] += bbo['0'];
+                    var bear = sumobj['-1'] += bbo['-1'];
+
+                    if (bull + pending + bear < minNumber) badflag = true;
+
+                    for (var att_idx in remap) {
+                        if (badflag) break;
+
+                        var idxmap = remap[att_idx];
+                        for (var att_secs in idxmap) {
+                            var secsobj = idxmap[att_secs];
+                            var b = secsobj['1'];
+                            var r = b / (secsobj['1'] + secsobj['0'] + secsobj['-1']);
+                            if (bull > b && sumr > r) {
+                                console.log("filterValidRanges delete", att_idx, att_secs, idxmap[att_secs]);
+                                delete idxmap[att_secs];
+                            } else if (b > bull && r > sumr) {
+                                badflag = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!badflag) {
+                        if (!remap[idx]) remap[idx] = {};
+                        remap[idx][rekey] = {
+                            '1': bull,
+                            '0': pending,
+                            '-1': bear
+                        };
+
+                        console.log("filterValidRanges add", idx, rekey, sumr, bullrate, remap[idx][rekey]);
+                    }
+                }
+            }
+        }
+
+        /* 
+            {
+             0:{
+                 1:{'1':
+                        '0':
+                        '-1':
+                    }
+                1_2:{'1':
+                        '0':
+                        '-1':
+                    }  
+             }
+        
+            }
+        */
+
+    }, {
+        key: "isConditionExisted",
+        value: function isConditionExisted(idx, filter) {
+            return filter[idx] !== undefined && filter[idx].length === 1;
+        }
+    }, {
+        key: "matchFilter",
+        value: function matchFilter(statusArr, offset, filter) {
+
+            for (var i = 0; i < filter.length; i++) {
+                if (!filter[i]) continue;
+                var subidx = i;
+                var subvals = filter[i];
+                var v = statusArr[offset + subidx];
+                if (subvals.indexOf(v) < 0) return false;
+            }
+
+            return true;
+        }
+
+        // simplifyConditionCombinations(statusArr, conditionNumber) {
+        //     let carr = this.CArr(this.matchConditionsCount, conditionNumber);
+        //     let slen = statusArr.length;
+        //     let sublen = this.matchConditionsCount + 1;
+        //     let offset = 0;
+        //     let statusObj = {};
+
+        //     for (let i = 0; i < carr.length; i++) {
+        //         let arr = carr[i];
+        //         for (let j = 0; j < slen; j += offset) {
+        //             let str_cc = "";
+        //             for (let n = 0; n < arr.length; n++) {
+        //                 str_cc += n;
+        //                 str_cc += statusArr[j + arr[n]];
+        //             }
+        //             if (!statusObj[str_cc]) {
+        //                 statusObj[str_cc] = { '0': 0, '1': 0, '-1': 0 };
+        //             }
+        //             let bb = statusArr[j + offset - 1];
+        //             statusObj[str_cc][bb]++;
+
+        //         }
+
+        //     }
+
+        //     return statusObj;
+        // }
+
+
+    }]);
+
+    return MatchAnalyser;
+}();
+
+},{}],179:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -21954,7 +22236,7 @@ module.exports = function () {
                             result: 0
                         };
                         cases++;
-                        var re = data[i].bullbear; //MatchFunctionUtil.testBullBear(data, i);
+                        var re = data[i].bullbear;
                         if (re > 0) {
                             bull++;
                             matchInDay[_d.date] = 1;
@@ -21977,28 +22259,28 @@ module.exports = function () {
                 bear: bear
             };
         }
+    }, {
+        key: "testBullBear",
+        value: function testBullBear(data, idx) {
 
-        // static testBullBear(data, idx) {
-
-        //     // let price = data[idx].close,
-        //     //     almp = tools.priceCRA(data, idx, 5);
-        //     // for (let i = idx + 1; i < data.length; i++) {
-        //     //     let d = data[i];
-        //     //     if (d.ex) {
-        //     //         price = price * d.open / data[i - 1].close;
-        //     //     }
-        //     //     if ((d.low - price) / price < -3 * almp) return (d.low - price) / price;
-        //     //     if ((d.high - price) / price > 3 * almp) return (d.high - price) / price;
-        //     // }
-        //     // return 0;
-        // }
-
+            var price = data[idx].close,
+                almp = tools.priceCRA(data, idx, 5);
+            for (var i = idx + 1; i < data.length; i++) {
+                var _d2 = data[i];
+                if (_d2.ex) {
+                    price = price * _d2.open / data[i - 1].close;
+                }
+                if ((_d2.low - price) / price < -3 * almp) return (_d2.low - price) / price;
+                if ((_d2.high - price) / price > 3 * almp) return (_d2.high - price) / price;
+            }
+            return 0;
+        }
     }]);
 
     return MatchFunctionUtil;
 }();
 
-},{}],179:[function(require,module,exports){
+},{}],180:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -22093,7 +22375,7 @@ module.exports = function () {
     return MovingAverageUtil;
 }();
 
-},{}],180:[function(require,module,exports){
+},{}],181:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -22119,6 +22401,8 @@ module.exports = function () {
         value: function buildSingle(idx, period, data) {
             if (data[idx]['marketCap'] !== undefined || !data[idx]['turnover']) return;
             var obj = data[idx];
+            var price = obj.close;
+
             var netsum_r0 = 0,
                 netsummax_r0 = Number.MIN_SAFE_INTEGER,
                 netsummin_r0 = Number.MAX_SAFE_INTEGER,
@@ -22128,7 +22412,11 @@ module.exports = function () {
                 netsummax = Number.MIN_SAFE_INTEGER,
                 netsummax_r0_netsum_r0x = Number.MIN_SAFE_INTEGER,
                 netsummax_idx = -1,
-                netsummax_idx_r0 = -1;
+                netsummax_idx_r0 = -1,
+                netsum_r0_below = 0,
+                netsum_r0_above = 0,
+                netsum_r0x_below = 0,
+                netsum_r0x_above = 0;
 
             for (var j = idx; j >= 0 && idx - j <= period; j--) {
                 var klj = data[j];
@@ -22136,6 +22424,14 @@ module.exports = function () {
 
                 netsum_r0 += klj.r0_net;
                 netsum_r0x += r0x_net;
+
+                if (klj.close >= price) {
+                    netsum_r0_above += klj.r0_net;
+                    netsum_r0x_above += r0x_net;
+                } else {
+                    netsum_r0_below += klj.r0_net;
+                    netsum_r0x_below += r0x_net;
+                }
 
                 if (netsum_r0 + netsum_r0x > netsummax) {
                     netsummax = netsum_r0 + netsum_r0x;
@@ -22165,6 +22461,10 @@ module.exports = function () {
                     obj.netsummin_r0_8 = netsummin_r0;
                     obj.netsummax_r0x_8 = netsummax_r0x;
                     obj.netsummin_r0x_8 = netsummin_r0x;
+                    obj.netsum_r0_above_8 = netsum_r0_above;
+                    obj.netsum_r0x_above_8 = netsum_r0x_above;
+                    obj.netsum_r0_below_8 = netsum_r0_below;
+                    obj.netsum_r0x_below_8 = netsum_r0x_below;
                 }
 
                 if (idx - j + 1 === 21) {
@@ -22172,6 +22472,10 @@ module.exports = function () {
                     obj.netsummin_r0_21 = netsummin_r0;
                     obj.netsummax_r0x_21 = netsummax_r0x;
                     obj.netsummin_r0x_21 = netsummin_r0x;
+                    obj.netsum_r0_above_21 = netsum_r0_above;
+                    obj.netsum_r0x_above_21 = netsum_r0x_above;
+                    obj.netsum_r0_below_21 = netsum_r0_below;
+                    obj.netsum_r0x_below_21 = netsum_r0x_below;
                 }
 
                 if (idx - j + 1 === 55) {
@@ -22179,6 +22483,10 @@ module.exports = function () {
                     obj.netsummin_r0_55 = netsummin_r0;
                     obj.netsummax_r0x_55 = netsummax_r0x;
                     obj.netsummin_r0x_55 = netsummin_r0x;
+                    obj.netsum_r0_above_55 = netsum_r0_above;
+                    obj.netsum_r0x_above_55 = netsum_r0x_above;
+                    obj.netsum_r0_below_55 = netsum_r0_below;
+                    obj.netsum_r0x_below_55 = netsum_r0x_below;
                 }
             }
 
@@ -22189,13 +22497,17 @@ module.exports = function () {
 
             obj.netsummax_r0_duration = idx - netsummax_idx_r0;
             obj.netsummax_r0_netsum_r0x = netsummax_r0_netsum_r0x;
+            obj.netsum_r0_above = netsum_r0_above;
+            obj.netsum_r0x_above = netsum_r0x_above;
+            obj.netsum_r0_below = netsum_r0_below;
+            obj.netsum_r0x_below = netsum_r0x_below;
         }
     }]);
 
     return NetSumUtil;
 }();
 
-},{}],181:[function(require,module,exports){
+},{}],182:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -22380,7 +22692,7 @@ module.exports = function () {
     return Zip;
 }();
 
-},{}],182:[function(require,module,exports){
+},{}],183:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -22480,7 +22792,7 @@ module.exports = function (_MassPainter) {
     return AlphaPainter;
 }(MassPainter);
 
-},{"./masspainter":184}],183:[function(require,module,exports){
+},{"./masspainter":185}],184:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -22611,7 +22923,7 @@ module.exports = function (_MassPainter) {
     return CandlePainter;
 }(MassPainter);
 
-},{"./masspainter":184}],184:[function(require,module,exports){
+},{"./masspainter":185}],185:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -22769,7 +23081,7 @@ module.exports = function () {
     return MassPainter;
 }();
 
-},{}],185:[function(require,module,exports){
+},{}],186:[function(require,module,exports){
 'use strict';
 // const EventEmitter = require('events');
 
@@ -23117,7 +23429,7 @@ module.exports = function (_EventEmitter) {
     return PainterCore;
 }(_events2.default);
 
-},{"../alpha/databuildpipe":176,"../alpha/matchfunctionutil":178,"events":1}],186:[function(require,module,exports){
+},{"../alpha/databuildpipe":176,"../alpha/matchfunctionutil":179,"events":1}],187:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -23326,7 +23638,7 @@ module.exports = function () {
     return PointerPainter;
 }();
 
-},{}],187:[function(require,module,exports){
+},{}],188:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -23489,7 +23801,7 @@ module.exports = function (_MassPainter) {
     return VolumePainter;
 }(MassPainter);
 
-},{"./masspainter":184}],188:[function(require,module,exports){
+},{"./masspainter":185}],189:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -23626,6 +23938,7 @@ var CandleApp = function (_React$Component) {
         _this.handleMatchTextAreaChange = _this.handleMatchTextAreaChange.bind(_this);
         _this.handleMatchTextAreaKeyUp = _this.handleMatchTextAreaKeyUp.bind(_this);
         _this.scanAllBtnClick = _this.scanAllBtnClick.bind(_this);
+        _this.doAnalyseClick = _this.doAnalyseClick.bind(_this);
 
         var matchStr = _localstoreutil2.default.getCookie('scanExp');
         if (!matchStr) {
@@ -23701,36 +24014,43 @@ var CandleApp = function (_React$Component) {
                     ),
                     _react2.default.createElement(
                         'div',
-                        { style: { position: 'absolute', right: '40px', color: '#f0f0f0', top: '30px' }, ref: function ref(_ref3) {
+                        { style: { position: 'absolute', right: '70px', color: '#f0f0f0', top: '30px' }, ref: function ref(_ref3) {
                                 return _this2.scanAllInfo = _ref3;
                             } },
                         '0/0/0'
                     ),
                     _react2.default.createElement(
                         'div',
-                        { style: { position: 'absolute', right: '20px', color: '#f44336', top: '17px', 'fontSize': 'xx-large', cursor: 'pointer' }, onClick: this.scanAllBtnClick, ref: function ref(_ref4) {
+                        { style: { position: 'absolute', right: '50px', color: '#f44336', top: '15px', 'fontSize': 'xx-large', cursor: 'pointer' }, onClick: this.scanAllBtnClick, ref: function ref(_ref4) {
                                 return _this2.scanAllBtn = _ref4;
                             } },
                         '\u25B9'
                     ),
                     _react2.default.createElement(
                         'div',
-                        { style: { position: 'absolute', right: '390px', color: '#f0f0f0', top: '30px', cursor: 'pointer' }, ref: function ref(_ref5) {
-                                return _this2.scanInfo = _ref5;
+                        { style: { position: 'absolute', right: '20px', color: '#f44336', top: '20px', 'fontSize': 'xx-large', cursor: 'pointer' }, onClick: this.doAnalyseClick, ref: function ref(_ref5) {
+                                return _this2.analyseBtn = _ref5;
+                            } },
+                        '\u03B1'
+                    ),
+                    _react2.default.createElement(
+                        'div',
+                        { style: { position: 'absolute', right: '390px', color: '#f0f0f0', top: '30px', cursor: 'pointer' }, ref: function ref(_ref6) {
+                                return _this2.scanInfo = _ref6;
                             }, onClick: this.toggleMatchTextArea },
                         '0/0/0/0(run:Ctrl+\u21B5)'
                     ),
                     _react2.default.createElement('textarea', { value: this.state.matchStr, style: { position: 'absolute', right: '20px', color: 'rgba(255, 255, 255, 1)', borderColor: 'rgba(230, 230, 230, 0.1)', top: '50px', zIndex: 100, width: '500px', height: '500px', background: 'rgba(0, 0, 0, 0.8)', 'fontSize': '12px', 'fontFamily': '微软雅黑' },
-                        ref: function ref(_ref6) {
-                            return _this2.matchTextArea = _ref6;
+                        ref: function ref(_ref7) {
+                            return _this2.matchTextArea = _ref7;
                         }, onChange: this.handleMatchTextAreaChange, onKeyUp: this.handleMatchTextAreaKeyUp, onKeyDown: function onKeyDown(e) {
                             e.nativeEvent.stopImmediatePropagation();
                         } })
                 ),
                 _react2.default.createElement(
                     _chartcanvas2.default,
-                    { ref: function ref(_ref7) {
-                            return _this2.alphaChart = _ref7;
+                    { ref: function ref(_ref8) {
+                            return _this2.alphaChart = _ref8;
                         }, width: '2000', height: candleChartHeight, y: candleChartY },
                     ' '
                 ),
@@ -23839,6 +24159,14 @@ var CandleApp = function (_React$Component) {
             }, 5000);
         }
     }, {
+        key: 'doAnalyseClick',
+        value: function doAnalyseClick() {
+            var matchStr = this.matchTextArea.value;
+            _io2.default.workersBuildAndAnalyse(matchStr, function (re) {
+                console.log("workersBuildAndAnalyse", re);
+            });
+        }
+    }, {
         key: 'scanAllBtnClick',
         value: function scanAllBtnClick() {
             var startChar = '▹';
@@ -23870,13 +24198,14 @@ var CandleApp = function (_React$Component) {
                 bear += cnts.bear;
                 cases += cnts.cases;
                 painterCore.addMatchCases(cnts.sid, cnts.matchOnDate);
-                var per = bull + bear > 0 ? Math.round(1000 * bull / (bull + bear)) / 10 : 0;
+                var per = bull + bear > 0 ? Math.round(1000 * bull / cases) / 10 : 0;
                 me.scanAllInfo.innerHTML = per + '%/' + cases + '/' + count;
 
                 if (cnts.finished && count === 2886) {
                     me.scanAllBtn.innerHTML = startChar;
                     me.scanAllBtn.style.fontSize = 'xx-large';
                     me.scanAllBtn.style.top = '17px';
+                    console.log("-------------------------bull/bear/cases:", bull, bear, cases);
                 }
             });
         }
@@ -23988,7 +24317,7 @@ var CandleApp = function (_React$Component) {
 
 exports.default = CandleApp;
 
-},{"../chart/alphapainter":182,"../chart/candlepainter":183,"../chart/paintercore":185,"../chart/pointerpainter":186,"../chart/volumepainter":187,"./chartcanvas":189,"./dataworker.js":190,"./forms/dateinput":191,"./forms/forminput":192,"./io":194,"./localstoreutil":195,"./stockids":196,"./tradingdate":197,"react":172,"webworkify":173}],189:[function(require,module,exports){
+},{"../chart/alphapainter":183,"../chart/candlepainter":184,"../chart/paintercore":186,"../chart/pointerpainter":187,"../chart/volumepainter":188,"./chartcanvas":190,"./dataworker.js":191,"./forms/dateinput":192,"./forms/forminput":193,"./io":195,"./localstoreutil":196,"./stockids":197,"./tradingdate":198,"react":172,"webworkify":173}],190:[function(require,module,exports){
 'use strict';
 
 // let sampleData = [{ open: 15.5, close: 16, high: 16.5, low: 15.2 }, { open: 15.8, close: 15, high: 16.8, low: 14.2 }, { open: 15.5, close: 16, high: 16.8, low: 15.2 }, { open: 10.5, close: 10, high: 10.8, low: 9.2 }];
@@ -24059,7 +24388,7 @@ var ChartCanvas = function (_React$Component) {
 
 exports.default = ChartCanvas;
 
-},{"react":172}],190:[function(require,module,exports){
+},{"react":172}],191:[function(require,module,exports){
 'use strict';
 
 var _io = require('./io');
@@ -24074,6 +24403,10 @@ var _zip = require('../alpha/zip');
 
 var _zip2 = _interopRequireDefault(_zip);
 
+var _matchanalyser = require('../alpha/matchanalyser');
+
+var _matchanalyser2 = _interopRequireDefault(_matchanalyser);
+
 var _matchfunctionutil = require('../alpha/matchfunctionutil');
 
 var _matchfunctionutil2 = _interopRequireDefault(_matchfunctionutil);
@@ -24087,7 +24420,11 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 var stockFields = ['date', 'open', 'close', 'high', 'low', 'amount', 'netamount', 'r0_net', 'changeratio', 'turnover'];
 var cacheCompressedMap = {};
 var cacheDecompressedMap = {};
+var analysisBufferLength = 0;
 var stopScanFlag = false;
+var matchAnalyser = new _matchanalyser2.default();
+var statusArrAll = [];
+
 module.exports = function (self) {
     var me = this;
     self.addEventListener('message', function (ev) {
@@ -24130,14 +24467,10 @@ module.scanByIndex = function scanByIndex(idx, patternStr, callback) {
 
     if (cmpdata) {
 
-        var decmpdata = void 0;
-        if (!cacheDecompressedMap[sid]) {
-            decmpdata = _zip2.default.decompressStockJson(cmpdata);
-            _databuildpipe2.default.build(0, decmpdata.length - 1, decmpdata);
-            cacheDecompressedMap[sid] = decmpdata;
-        } else {
-            decmpdata = cacheDecompressedMap[sid];
-        }
+        var decmpdata = _zip2.default.decompressStockJson(cmpdata);
+        _databuildpipe2.default.build(0, decmpdata.length - 1, decmpdata);
+        //cacheDecompressedMap[sid] = decmpdata;
+
 
         m = _matchfunctionutil2.default.scan(decmpdata, patternStr, matchOnDate);
     }
@@ -24171,9 +24504,7 @@ module.loadStocksPerPage = function loadStocksPerPage(start, count, end, callbac
     var total = end === null ? _stockids2.default.getTotalCount() - 1 : end;
     var pageSize = count;
     count = Math.min(count, total - start + 1);
-    //console.log("loadStocksDataPage", start, count)
     module.loadStockBatch(start, count, stockFields, function (sids) {
-        // console.log(start, count, total)
         if (start + count >= total) {
             callback({
                 start: start,
@@ -24240,30 +24571,65 @@ module.loadStockBatch = function loadStockBatch(start, count, fields, callback) 
     });
 };
 
-module.buildAnalysisData = function buildAnalysisData(callback) {
+module.buildForAnalysis = function buildAnalysisData(patternStr, callback) {
+    console.log("buildForAnalysis");
+    var analysisBufferLength = 0;
+    var matchBufferLength = 0;
+    statusArrAll = [];
+    var start = new Date();
+    var matchSum = { bull: 0, bear: 0, cases: 0 };
     for (var sid in cacheCompressedMap) {
-        callback(sid, false);
-        if (cacheDecompressedMap[sid]) continue;
-        var data = _zip2.default.decompressStockJson(cacheCompressedMap[sid]);
+        var cmpdata = module.getStockDataSync(sid, stockFields);
+        if (!cmpdata) {
+            console.log(sid, "is null");
+            continue;
+        }
+        var data = _zip2.default.decompressStockJson(cmpdata);
         _databuildpipe2.default.build(0, data.length - 1, data);
-        cacheDecompressedMap[sid] = data;
-    }
 
-    callback("finished", true);
-};
+        var m = _matchfunctionutil2.default.scan(data, patternStr, {});
+        matchSum.bull += m.bull;
+        matchSum.bear += m.bear;
+        matchSum.cases += m.cases;
 
-module.scanMatchStatus = function scanMatchStatus(callback) {
-    for (var sid in cacheDecompressedMap) {
-        var data = cacheDecompressedMap[sid];
-        var status = MatchAnalyser.getMatchStatus(data);
+        if (m.cases > 0) {
+            var statusArr = matchAnalyser.generateConditionCombinations(m.cases, data, function (dn) {
+                return !!dn.match;
+            });
+
+            statusArrAll.push(statusArr);
+            matchBufferLength += statusArr.length;
+        }
+
+        analysisBufferLength += data.length;
+
         callback({
             sid: sid,
-            status: status
+            analysisBufferLength: analysisBufferLength,
+            matchBufferLength: matchBufferLength,
+            match: m
         }, false);
     }
+
+    console.log("====================buildForAnalysis callback");
+    callback({
+        matchSum: matchSum,
+        analysisBufferLength: analysisBufferLength,
+        matchBufferLength: matchBufferLength,
+        finished: true
+    }, true);
 };
 
-},{"../alpha/databuildpipe":176,"../alpha/matchfunctionutil":178,"../alpha/zip":181,"./io":194,"./stockids":196}],191:[function(require,module,exports){
+module.analyseBullConditions = function analyseBullConditions(bullRate, minNumber, filterArr2, callback) {
+
+    console.log("analyseBullConditions--------------", bullRate);
+
+    var bc = matchAnalyser.searchBullConditions(statusArrAll, bullRate, minNum, filterArr2);
+    console.log("bullRate", bullRate, bc);
+    callback(bc);
+};
+
+},{"../alpha/databuildpipe":176,"../alpha/matchanalyser":178,"../alpha/matchfunctionutil":179,"../alpha/zip":182,"./io":195,"./stockids":197}],192:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -24359,7 +24725,7 @@ DateInput.defaultProps = { type: "date", width: 130 };
 
 exports.default = DateInput;
 
-},{"./forminput":192,"react":172}],192:[function(require,module,exports){
+},{"./forminput":193,"react":172}],193:[function(require,module,exports){
 'use strict';
 
 // let sampleData = [{ open: 15.5, close: 16, high: 16.5, low: 15.2 }, { open: 15.8, close: 15, high: 16.8, low: 14.2 }, { open: 15.5, close: 16, high: 16.8, low: 15.2 }, { open: 10.5, close: 10, high: 10.8, low: 9.2 }];
@@ -24466,7 +24832,7 @@ FormInput.defaultProps = {
 
 exports.default = FormInput;
 
-},{"react":172}],193:[function(require,module,exports){
+},{"react":172}],194:[function(require,module,exports){
 'use strict';
 
 var _react = require("react");
@@ -24485,7 +24851,7 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 var candleApp = _reactDom2.default.render(_react2.default.createElement(_candleapp2.default, null), document.getElementById('app'));
 
-},{"./candleapp":188,"react":172,"react-dom":29}],194:[function(require,module,exports){
+},{"./candleapp":189,"react":172,"react-dom":29}],195:[function(require,module,exports){
 'use strict';
 // import fetch from 'whatwg-fetch';
 
@@ -24574,7 +24940,6 @@ var IO = function () {
 
                     var params = [IO.workerStarts[idx], patternStr];
                     workerProxy.callMethod("scanByIndex", params, function (re) {
-                        if (re.index % 100 === 0) console.log(idx, re.index, re.finished);
                         callback(re);
                     });
                 });
@@ -24586,6 +24951,53 @@ var IO = function () {
             IO.dataWorkerProxies.forEach(function (workerProxy, idx) {
                 workerProxy.callMethod("stopScanByIndex", [], function (re) {
                     callback(re);
+                });
+            });
+        }
+    }, {
+        key: 'workersBuildAndAnalyse',
+        value: function workersBuildAndAnalyse(patternStr, callback) {
+            var finishedCount = 0;
+            var matchSum = { bull: 0, bear: 0, cases: 0 };
+            IO.dataWorkerProxies.forEach(function (workerProxy, idx) {
+                workerProxy.callMethod("reset", [], function (re) {
+                    var params = [patternStr];
+                    workerProxy.callMethod("buildForAnalysis", params, function (re) {
+                        if (re.finished) {
+                            finishedCount++;
+                            var m = re.matchSum;
+                            matchSum.bull += m.bull;
+                            matchSum.bear += m.bear;
+                            matchSum.cases += m.cases;
+                            console.log("buildForAnalysis finished", m, matchSum);
+                        }
+
+                        if (finishedCount === IO.dataWorkerProxies.length) {
+                            callback(matchSum);
+                        }
+                    });
+                });
+            });
+        }
+    }, {
+        key: 'workersAnalyseBullConditions',
+        value: function workersAnalyseBullConditions(bullRate, minNumber, filterArr2, callback) {
+            var finishedCount = 0;
+            var result = {};
+            IO.dataWorkerProxies.forEach(function (workerProxy, idx) {
+                workerProxy.callMethod("reset", [], function (re) {
+                    var params = [bullRate, minNumber, filterArr2];
+
+                    workerProxy.callMethod("analyseBullConditions", params, function (re) {
+
+                        finishedCount++;
+                        for (var att in re) {
+                            if (!result[att]) result[att] = re[att];else {}
+                        }
+                        if (finishedCount === IO.dataWorkerProxies.length) {
+                            callback(result);
+                        }
+                    });
                 });
             });
         }
@@ -24744,7 +25156,7 @@ IO.workerStarts = [0];
 
 exports.default = IO;
 
-},{"../alpha/netsumutil":180,"../alpha/zip":181,"./stockids":196,"./workerproxy":198}],195:[function(require,module,exports){
+},{"../alpha/netsumutil":181,"../alpha/zip":182,"./stockids":197,"./workerproxy":199}],196:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -24792,7 +25204,7 @@ var LocalStoreUtil = function () {
 
 exports.default = LocalStoreUtil;
 
-},{}],196:[function(require,module,exports){
+},{}],197:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -24898,7 +25310,7 @@ StockIDs.idIndexMap = {};
 
 exports.default = StockIDs;
 
-},{"./io":194}],197:[function(require,module,exports){
+},{"./io":195}],198:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -24958,7 +25370,7 @@ TradingDate.dateIndexMap = {};
 
 exports.default = TradingDate;
 
-},{"./io":194}],198:[function(require,module,exports){
+},{"./io":195}],199:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -25022,4 +25434,4 @@ var WorkerProxy = function () {
 
 exports.default = WorkerProxy;
 
-},{"whatwg-fetch":174}]},{},[193]);
+},{"whatwg-fetch":174}]},{},[194]);

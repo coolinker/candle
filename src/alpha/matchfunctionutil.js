@@ -226,7 +226,7 @@ module.exports = class MatchFunctionUtil {
                         result: 0
                     };
                     cases++;
-                    let re = data[i].bullbear;//MatchFunctionUtil.testBullBear(data, i);
+                    let re = data[i].bullbear;
                     if (re > 0) {
                         bull++;
                         matchInDay[d.date] = 1;
@@ -251,18 +251,20 @@ module.exports = class MatchFunctionUtil {
     }
 
 
-    // static testBullBear(data, idx) {
+    static testBullBear(data, idx) {
         
-    //     // let price = data[idx].close,
-    //     //     almp = tools.priceCRA(data, idx, 5);
-    //     // for (let i = idx + 1; i < data.length; i++) {
-    //     //     let d = data[i];
-    //     //     if (d.ex) {
-    //     //         price = price * d.open / data[i - 1].close;
-    //     //     }
-    //     //     if ((d.low - price) / price < -3 * almp) return (d.low - price) / price;
-    //     //     if ((d.high - price) / price > 3 * almp) return (d.high - price) / price;
-    //     // }
-    //     // return 0;
-    // }
+        let price = data[idx].close,
+            almp = tools.priceCRA(data, idx, 5);
+        for (let i = idx + 1; i < data.length; i++) {
+            let d = data[i];
+            if (d.ex) {
+                price = price * d.open / data[i - 1].close;
+            }
+            if ((d.low - price) / price < -3 * almp) return (d.low - price) / price;
+            if ((d.high - price) / price > 3 * almp) return (d.high - price) / price;
+        }
+        return 0;
+    }
+
+
 }

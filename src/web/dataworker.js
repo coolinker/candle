@@ -2,13 +2,18 @@
 import IO from './io';
 import StockIDs from './stockids';
 import Zip from '../alpha/zip';
+import MatchAnalyser from '../alpha/matchanalyser';
 import MatchFunctionUtil from '../alpha/matchfunctionutil';
 import DataBuildPipe from "../alpha/databuildpipe";
 
 let stockFields = ['date', 'open', 'close', 'high', 'low', 'amount', 'netamount', 'r0_net', 'changeratio', 'turnover'];
 let cacheCompressedMap = {};
 let cacheDecompressedMap = {};
+let analysisBufferLength = 0;
 let stopScanFlag = false;
+let matchAnalyser = new MatchAnalyser();
+let statusArrAll = [];
+
 module.exports = function (self) {
     let me = this;
     self.addEventListener('message', function (ev) {
@@ -52,14 +57,10 @@ module.scanByIndex = function scanByIndex(idx, patternStr, callback) {
 
     if (cmpdata) {
 
-        let decmpdata;
-        if (!cacheDecompressedMap[sid]) {
-            decmpdata = Zip.decompressStockJson(cmpdata);
-            DataBuildPipe.build(0, decmpdata.length - 1, decmpdata);
-            cacheDecompressedMap[sid] = decmpdata;
-        } else {
-            decmpdata = cacheDecompressedMap[sid];
-        }
+        let decmpdata = Zip.decompressStockJson(cmpdata);
+        DataBuildPipe.build(0, decmpdata.length - 1, decmpdata);
+        //cacheDecompressedMap[sid] = decmpdata;
+
 
         m = MatchFunctionUtil.scan(decmpdata, patternStr, matchOnDate);
     }
@@ -96,9 +97,7 @@ module.loadStocksPerPage = function loadStocksPerPage(start, count, end, callbac
     let total = end === null ? StockIDs.getTotalCount() - 1 : end;
     let pageSize = count;
     count = Math.min(count, total - start + 1);
-    //console.log("loadStocksDataPage", start, count)
     module.loadStockBatch(start, count, stockFields, function (sids) {
-        // console.log(start, count, total)
         if (start + count >= total) {
             callback({
                 start: start,
@@ -171,28 +170,66 @@ module.loadStockBatch = function loadStockBatch(start, count, fields, callback) 
 }
 
 
-module.buildAnalysisData = function buildAnalysisData(callback) {
+module.buildForAnalysis = function buildAnalysisData(patternStr, callback) {
+    console.log("buildForAnalysis")
+    let analysisBufferLength = 0;
+    let matchBufferLength = 0;
+    statusArrAll = [];
+    let start = new Date();
+    let matchSum = { bull: 0, bear: 0, cases: 0 };
     for (let sid in cacheCompressedMap) {
-        callback(sid, false);
-        if (cacheDecompressedMap[sid]) continue;
-        let data = Zip.decompressStockJson(cacheCompressedMap[sid])
+        let cmpdata = module.getStockDataSync(sid, stockFields);
+        if (!cmpdata) {
+            console.log(sid, "is null")
+            continue;
+        }
+        let data = Zip.decompressStockJson(cmpdata)
         DataBuildPipe.build(0, data.length - 1, data);
-        cacheDecompressedMap[sid] = data;
-    }
 
-    callback("finished", true);
 
-}
+        let m = MatchFunctionUtil.scan(data, patternStr, {});
+        matchSum.bull += m.bull;
+        matchSum.bear += m.bear;
+        matchSum.cases += m.cases;
 
-module.scanMatchStatus = function scanMatchStatus(callback) {
-    for (let sid in cacheDecompressedMap) {
-        let data = cacheDecompressedMap[sid];
-        let status = MatchAnalyser.getMatchStatus(data);
+        if (m.cases > 0) {
+            let statusArr = matchAnalyser.generateConditionCombinations(m.cases, data, function (dn) {
+                return !!dn.match;
+            });
+
+            statusArrAll.push(statusArr);
+            matchBufferLength += statusArr.length;
+        }
+
+        analysisBufferLength += data.length;
+
+
         callback({
             sid: sid,
-            status: status
+            analysisBufferLength: analysisBufferLength,
+            matchBufferLength: matchBufferLength,
+            match: m
         }, false);
     }
 
+
+    console.log("====================buildForAnalysis callback")
+    callback({
+        matchSum: matchSum,
+        analysisBufferLength: analysisBufferLength,
+        matchBufferLength: matchBufferLength,
+        finished: true
+    }, true);
+
+
+}
+
+module.analyseBullConditions = function analyseBullConditions(bullRate, minNumber, filterArr2, callback) {
+
+    console.log("analyseBullConditions--------------", bullRate);
+
+    let bc = matchAnalyser.searchBullConditions(statusArrAll, bullRate, minNum, filterArr2);
+    console.log("bullRate", bullRate, bc);
+    callback(bc);
 
 }

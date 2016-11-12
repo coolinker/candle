@@ -91,7 +91,8 @@ class CandleApp extends React.Component {
         this.handleMatchTextAreaChange = this.handleMatchTextAreaChange.bind(this);
         this.handleMatchTextAreaKeyUp = this.handleMatchTextAreaKeyUp.bind(this);
         this.scanAllBtnClick = this.scanAllBtnClick.bind(this);
-
+        this.doAnalyseClick = this.doAnalyseClick.bind(this);
+        
         let matchStr = LocalStoreUtil.getCookie('scanExp');
         if (!matchStr) {
             matchStr = 'n>81\n' + '&& diffR(dn.close, dn.ave_close_21) > 0.1 \n' + '&& function() { \n' + '    let right_lowidx = lowPI(d,n-8, n, "low");\n' + '    if(diffR(d[right_lowidx].low, d[right_lowidx].ave_close_8) < 1*priceCRA(d, right_lowidx, 8)) return false;\n\n' + '    let mid_highidx = highPI(d, right_lowidx-8, right_lowidx, "high");\n' + '    if (diffR(d[right_lowidx].low, d[mid_highidx].high) < 2* priceCRA(d, right_lowidx, 8)) return false;\n\n' + '    let left_lowidx = lowPI(d,mid_highidx -20, mid_highidx , "low");\n' + '    if(diffR(d[left_lowidx].low, d[left_lowidx].ave_close_8) < 1.5*priceCRA(d, right_lowidx, 8)) return false;\n\n' + '    if (d[left_lowidx].ave_close_8 > d[left_lowidx].ave_close_13) return false;\n\n' + '    return true\n' + '} ()'
@@ -145,8 +146,9 @@ class CandleApp extends React.Component {
                 <DateInput ref = "dateInput" value = { '07/04/2016' } style={{color: '#c0c0c0', width: '130px', borderStyle: 'groove', borderColor: '#424242', backgroundColor: 'transparent',}} 
                     handleInputCompleted = { this.handleDateChanged } onKeyDownHandler ={function(e){e.nativeEvent.stopImmediatePropagation()}}/> 
                 <div style = {{position: 'absolute', right: '20px',  color: '#f0f0f0', top:'10px'}} ref={(ref) => this.info = ref}>Loading...</div>
-                <div style = {{position: 'absolute', right: '40px',  color: '#f0f0f0', top:'30px'}} ref={(ref) => this.scanAllInfo = ref}>0/0/0</div>
-                <div style = {{position: 'absolute', right: '20px',  color: '#f44336', top:'17px', 'fontSize': 'xx-large' , cursor: 'pointer'}} onClick={this.scanAllBtnClick} ref={(ref) => this.scanAllBtn = ref}>▹</div>
+                <div style = {{position: 'absolute', right: '70px',  color: '#f0f0f0', top:'30px'}} ref={(ref) => this.scanAllInfo = ref}>0/0/0</div>
+                <div style = {{position: 'absolute', right: '50px',  color: '#f44336', top:'15px', 'fontSize': 'xx-large' , cursor: 'pointer'}} onClick={this.scanAllBtnClick} ref={(ref) => this.scanAllBtn = ref}>▹</div>
+                <div style = {{position: 'absolute', right: '20px',  color: '#f44336', top:'20px', 'fontSize': 'xx-large' , cursor: 'pointer'}} onClick={this.doAnalyseClick} ref={(ref) => this.analyseBtn = ref}>α</div>
                 <div style = {{position: 'absolute', right: '390px',  color: '#f0f0f0', top:'30px', cursor: 'pointer'}} ref={(ref) => this.scanInfo = ref} onClick={this.toggleMatchTextArea}>0/0/0/0(run:Ctrl+↵)</div>
                 <textarea value={this.state.matchStr} style = {{position: 'absolute', right: '20px',  color: 'rgba(255, 255, 255, 1)', borderColor: 'rgba(230, 230, 230, 0.1)', top:'50px', zIndex: 100, width: '500px', height: '500px', background: 'rgba(0, 0, 0, 0.8)', 'fontSize': '12px', 'fontFamily':'微软雅黑'}} 
                     ref={(ref) => this.matchTextArea = ref} onChange={this.handleMatchTextAreaChange} onKeyUp={this.handleMatchTextAreaKeyUp} onKeyDown ={function(e){e.nativeEvent.stopImmediatePropagation();}}></textarea>
@@ -250,6 +252,13 @@ class CandleApp extends React.Component {
 
     }
 
+    doAnalyseClick(){
+        let matchStr = this.matchTextArea.value;
+        IO.workersBuildAndAnalyse(matchStr, function(re) {
+                console.log("workersBuildAndAnalyse", re)
+            });
+    }
+
     scanAllBtnClick() {
         let startChar = '▹';
         let start = this.scanAllBtn.innerHTML === startChar;
@@ -279,13 +288,14 @@ class CandleApp extends React.Component {
             bear += cnts.bear;
             cases += cnts.cases;
             painterCore.addMatchCases(cnts.sid, cnts.matchOnDate)
-            let per = bull + bear > 0 ? Math.round(1000 * bull / (bull + bear))/10 : 0;
+            let per = bull + bear > 0 ? Math.round(1000 * bull / cases)/10 : 0;
             me.scanAllInfo.innerHTML = per + '%/' + cases + '/' + count;
 
             if (cnts.finished && count === 2886) {
                 me.scanAllBtn.innerHTML = startChar;
                 me.scanAllBtn.style.fontSize = 'xx-large';
                 me.scanAllBtn.style.top = '17px';
+                console.log("-------------------------bull/bear/cases:", bull, bear, cases)
             }
         })
     }
