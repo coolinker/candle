@@ -21789,7 +21789,7 @@ module.exports = function () {
         }
     }, {
         key: "generateConditionCombinations",
-        value: function generateConditionCombinations(buflen, data, filterFun, callback) {
+        value: function generateConditionCombinations(buflen, data, sectionBBSum, filterFun, callback) {
             var sublen = this.matchConditionsCount + 1;
             var byteArr = new Int8Array(buflen * sublen);
             var offset = 0;
@@ -21800,6 +21800,16 @@ module.exports = function () {
                 if (!filterFun(dn)) continue;
 
                 this.matchConditions(data, i, byteArr, offset);
+                var bb = byteArr[offset + sublen - 1];
+                for (var n = 0; n < sublen - 1; n++) {
+                    var idx = offset + n;
+                    var sec = byteArr[idx];
+
+                    if (!sectionBBSum[n]) sectionBBSum[n] = {};
+                    if (!sectionBBSum[n][sec]) sectionBBSum[n][sec] = { '-1': 0, '0': 0, '1': 0 };
+
+                    sectionBBSum[n][sec][bb]++;
+                }
                 offset += sublen;
             }
 
@@ -21830,7 +21840,6 @@ module.exports = function () {
             statusArr = this.Arr2Dto1D(statusArr);
             console.log("\nsearchBullConditions", statusArr.length);
             var sublen = this.matchConditionsCount + 1;
-            var totalcases = statusArr.length / sublen;
             var slen = statusArr.length;
             var re = [];
             var remap = {};
@@ -21847,86 +21856,46 @@ module.exports = function () {
                     subre[sec][bb]++;
                 }
 
-                //console.log("------------------------", subre[0], subre[1], subre.length)
-
-                this.filterValidRanges(idx, subre, bullRate, minNumer, remap);
+                MatchAnalyser.filterValidRanges(idx, subre, bullRate, minNumer, remap);
                 //if (validArr.length>0) re[idx] = validArr;
 
-                //console.log("searchBullConditions--------------", idx, JSON.stringify(remap))
+                console.log("searchBullConditions--------------", idx, JSON.stringify(remap));
             }
 
             return remap;
         }
     }, {
-        key: "filterValidRanges",
-        value: function filterValidRanges(idx, secBullBearMap, bullrate, minNumber, remap) {
-            var re = { '1': 0, '0': 0, '-1': 0 };
-            var arr = [];
-            for (var sec in secBullBearMap) {
-                arr.push(sec);
-            }
-
-            arr.sort(function (v0, v1) {
-                var bbo_0 = secBullBearMap[v0];
-                var r_0 = bbo_0['1'] / (bbo_0['1'] + bbo_0['0'] + bbo_0['-1']);
-
-                var bbo_1 = secBullBearMap[v1];
-                var r_1 = bbo_1['1'] / (bbo_1['1'] + bbo_1['0'] + bbo_1['-1']);
-                if (r_0 > r_1) return -1;
-                if (r_0 === r_1) return 0;
-                if (r_0 < r_1) return 1;
-            });
-
-            var validarr = [];
-            var sumobj = { '1': 0, '0': 0, '-1': 0 };
-            var rekey = void 0;
-            for (var i = 0; i < arr.length; i++) {
-                var _sec = arr[i];
-
-                var badflag = false;
-                var bbo = secBullBearMap[_sec];
-
-                var sumr = (sumobj['1'] + bbo['1']) / (sumobj['1'] + sumobj['0'] + sumobj['-1'] + bbo['1'] + bbo['0'] + bbo['-1']);
-                if (sumr >= bullrate) {
-                    if (rekey === undefined) rekey = '' + _sec;else rekey += '_' + _sec;
-
-                    var bull = sumobj['1'] += bbo['1'];
-                    var pending = sumobj['0'] += bbo['0'];
-                    var bear = sumobj['-1'] += bbo['-1'];
-
-                    if (bull + pending + bear < minNumber) badflag = true;
-
-                    for (var att_idx in remap) {
-                        if (badflag) break;
-
-                        var idxmap = remap[att_idx];
-                        for (var att_secs in idxmap) {
-                            var secsobj = idxmap[att_secs];
-                            var b = secsobj['1'];
-                            var r = b / (secsobj['1'] + secsobj['0'] + secsobj['-1']);
-                            if (bull > b && sumr > r) {
-                                console.log("filterValidRanges delete", att_idx, att_secs, idxmap[att_secs]);
-                                delete idxmap[att_secs];
-                            } else if (b > bull && r > sumr) {
-                                badflag = true;
-                                break;
-                            }
-                        }
-                    }
-
-                    if (!badflag) {
-                        if (!remap[idx]) remap[idx] = {};
-                        remap[idx][rekey] = {
-                            '1': bull,
-                            '0': pending,
-                            '-1': bear
-                        };
-
-                        console.log("filterValidRanges add", idx, rekey, sumr, bullrate, remap[idx][rekey]);
-                    }
+        key: "generateSectionStatus",
+        value: function generateSectionStatus(statusArr, filter) {
+            statusArr = this.Arr2Dto1D(statusArr);
+            //console.log("\generateSectionStatus", statusArr.length);
+            var sublen = this.matchConditionsCount + 1;
+            var slen = statusArr.length;
+            var re = [];
+            var remap = {};
+            for (var idx = 0; idx < sublen - 1; idx++) {
+                if (this.isConditionExisted(idx, filter)) continue;
+                var subre = [];
+                for (var offset = 0; offset < slen; offset += sublen) {
+                    if (!this.matchFilter(statusArr, offset, filter)) continue;
+                    var bb = statusArr[offset + sublen - 1];
+                    var sidx = offset + idx;
+                    var sec = statusArr[sidx];
+                    if (sec === null) continue;
+                    if (!subre[sec]) subre[sec] = { '1': 0, '0': 0, '-1': 0 };
+                    subre[sec][bb]++;
                 }
+
+                remap[idx] = subre;
+                //console.log("generateSectionStatus--------------", idx, JSON.stringify(subre))
             }
+            //console.log("generateSectionStatus--------------", JSON.stringify(remap))
+
+            return remap;
         }
+    }, {
+        key: "isConditionExisted",
+
 
         /* 
             {
@@ -21944,8 +21913,6 @@ module.exports = function () {
             }
         */
 
-    }, {
-        key: "isConditionExisted",
         value: function isConditionExisted(idx, filter) {
             return filter[idx] !== undefined && filter[idx].length === 1;
         }
@@ -21993,6 +21960,122 @@ module.exports = function () {
         // }
 
 
+    }], [{
+        key: "cloneFilters",
+        value: function cloneFilters(filters) {
+            var str = JSON.stringify(filters);
+            var arr = JSON.parse(str);
+            for (var i = 0; i < arr.length; i++) {
+                if (arr[i] === null && filters[i] === undefined) arr[i] = undefined;
+            }
+            return arr;
+        }
+    }, {
+        key: "isSubSections",
+        value: function isSubSections(sec0, sec1, seperator) {
+            var arr0 = sec0.split(seperator);
+            var arr1 = sec1.split(seperator);
+            for (var i = 0; i < arr0.length; i++) {
+                if (arr1.indexOf(arr0[i]) < 0) return false;
+            }
+
+            return true;
+        }
+    }, {
+        key: "rangesObjToArr2D",
+        value: function rangesObjToArr2D(ranges) {
+            var att2d = [];
+            for (var idx in ranges) {
+                var idxobj = ranges[idx];
+                for (var secs in idxobj) {
+                    att2d.push([idx, secs.split('_').map(Number)]);
+                }
+            }
+            return att2d;
+        }
+    }, {
+        key: "filterValidRanges",
+        value: function filterValidRanges(idx, secBullBearMap, bullrate, minNumber, remap) {
+            idx = Number(idx);
+            var re = { '1': 0, '0': 0, '-1': 0 };
+            var arr = [];
+            for (var sec in secBullBearMap) {
+                arr.push(sec);
+            }
+            arr.sort(function (v0, v1) {
+                var bbo_0 = secBullBearMap[v0];
+                var r_0 = bbo_0['1'] / (bbo_0['1'] + bbo_0['0'] + bbo_0['-1']);
+
+                var bbo_1 = secBullBearMap[v1];
+                var r_1 = bbo_1['1'] / (bbo_1['1'] + bbo_1['0'] + bbo_1['-1']);
+                if (r_0 > r_1) return -1;
+                if (r_0 === r_1) return 0;
+                if (r_0 < r_1) return 1;
+            });
+
+            var validarr = [];
+            var sumobj = { '1': 0, '0': 0, '-1': 0 };
+            var rekey = void 0;
+            for (var i = 0; i < arr.length; i++) {
+                var _sec = arr[i];
+
+                var badflag = false;
+                var bbo = secBullBearMap[_sec];
+
+                var sumr = (sumobj['1'] + bbo['1']) / (sumobj['1'] + sumobj['0'] + sumobj['-1'] + bbo['1'] + bbo['0'] + bbo['-1']);
+                if (sumr >= bullrate) {
+                    if (rekey === undefined) rekey = '' + _sec;else {
+                        rekey += '_' + _sec;
+                    }
+
+                    var bull = sumobj['1'] += bbo['1'];
+                    var pending = sumobj['0'] += bbo['0'];
+                    var bear = sumobj['-1'] += bbo['-1'];
+
+                    if (bull + pending + bear < minNumber) badflag = true;
+
+                    for (var att_idx in remap) {
+                        if (badflag) break;
+
+                        var idxmap = remap[att_idx];
+                        for (var att_secs in idxmap) {
+                            if (Number(att_idx) === idx && MatchAnalyser.isSubSections(att_secs, rekey, '_')) {
+                                //console.log("filterValidRanges delete sub sections", att_idx, att_secs, rekey);
+                                delete idxmap[att_secs];
+                                continue;
+                            }
+
+                            var secsobj = idxmap[att_secs];
+                            var b = secsobj['1'];
+                            var r = b / (secsobj['1'] + secsobj['0'] + secsobj['-1']);
+                            if (bull > b && sumr > r) {
+                                //console.log("filterValidRanges delete", att_idx, att_secs, idxmap[att_secs])
+                                delete idxmap[att_secs];
+                            } else if (b > bull && r > sumr) {
+                                badflag = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!badflag) {
+                        if (!remap[idx]) remap[idx] = {};
+                        rekey = rekey.split('_').sort().join('_');
+                        remap[idx][rekey] = {
+                            '1': bull,
+                            '0': pending,
+                            '-1': bear
+                        };
+
+                        //console.log("filterValidRanges add", idx, rekey, sumr, bullrate, remap[idx][rekey])
+                    } else {
+                            //console.log("badflag true", idx, rekey);
+                        }
+                } else {
+                        //console.log("invalid sec", idx, sec, sumr);
+                    }
+            }
+        }
     }]);
 
     return MatchAnalyser;
@@ -23822,6 +23905,10 @@ var _webworkify = require('webworkify');
 
 var _webworkify2 = _interopRequireDefault(_webworkify);
 
+var _workergroup = require('./workergroup');
+
+var _workergroup2 = _interopRequireDefault(_workergroup);
+
 var _chartcanvas = require('./chartcanvas');
 
 var _chartcanvas2 = _interopRequireDefault(_chartcanvas);
@@ -23865,7 +23952,7 @@ for (var i = 0; i < cpus; i++) {
     pworks.push(w);
 }
 
-_io2.default.setDataWorkers(pworks);
+_workergroup2.default.setDataWorkers(pworks);
 
 var PainterCore = require('../chart/paintercore');
 var painterCore = new PainterCore();
@@ -24142,7 +24229,7 @@ var CandleApp = function (_React$Component) {
             this.handleSidInputChagned();
             setTimeout(function () {
                 var count = 0;
-                _io2.default.loadStocksPerPage(function (re) {
+                _workergroup2.default.loadStocksPerPage(function (re) {
                     count += re.count;
                 });
                 var timer = 0;
@@ -24162,7 +24249,7 @@ var CandleApp = function (_React$Component) {
         key: 'doAnalyseClick',
         value: function doAnalyseClick() {
             var matchStr = this.matchTextArea.value;
-            _io2.default.workersBuildAndAnalyse(matchStr, function (re) {
+            _workergroup2.default.workersBuildAndAnalyse(matchStr, function (re) {
                 console.log("workersBuildAndAnalyse", re);
             });
         }
@@ -24175,7 +24262,7 @@ var CandleApp = function (_React$Component) {
                 this.scanAllBtn.innerHTML = startChar;
                 this.scanAllBtn.style.fontSize = 'xx-large';
                 this.scanAllBtn.style.top = '17px';
-                _io2.default.workersStopScanByIndex(function (re) {
+                _workergroup2.default.workersStopScanByIndex(function (re) {
                     console.log("workerStopScanAll", re);
                 });
                 return;
@@ -24191,7 +24278,7 @@ var CandleApp = function (_React$Component) {
                 cases = 0;
             var matchStr = this.matchTextArea.value;
             painterCore.clearMatchCases();
-            _io2.default.workersScanByIndex(matchStr, function (cnts) {
+            _workergroup2.default.workersScanByIndex(matchStr, function (cnts) {
                 // && data[n].ave_close_8 > data[n-2].ave_close_8 && data[n].ave_close_8 > data[n-3].ave_close_8
                 count++; //= cnts.index;
                 bull += cnts.bull;
@@ -24241,7 +24328,7 @@ var CandleApp = function (_React$Component) {
         key: 'loadDataBySid',
         value: function loadDataBySid(sid, date) {
             var start = new Date();
-            _io2.default.workerGetStockJson(sid, function (json) {
+            _workergroup2.default.workerGetStockJson(sid, function (json) {
                 if (!json) return;
                 console.log("workerGetStockJson time", new Date() - start, sid, json.length);
                 painterCore.loadData(json);
@@ -24317,7 +24404,7 @@ var CandleApp = function (_React$Component) {
 
 exports.default = CandleApp;
 
-},{"../chart/alphapainter":183,"../chart/candlepainter":184,"../chart/paintercore":186,"../chart/pointerpainter":187,"../chart/volumepainter":188,"./chartcanvas":190,"./dataworker.js":191,"./forms/dateinput":192,"./forms/forminput":193,"./io":195,"./localstoreutil":196,"./stockids":197,"./tradingdate":198,"react":172,"webworkify":173}],190:[function(require,module,exports){
+},{"../chart/alphapainter":183,"../chart/candlepainter":184,"../chart/paintercore":186,"../chart/pointerpainter":187,"../chart/volumepainter":188,"./chartcanvas":190,"./dataworker.js":191,"./forms/dateinput":192,"./forms/forminput":193,"./io":195,"./localstoreutil":196,"./stockids":197,"./tradingdate":198,"./workergroup":199,"react":172,"webworkify":173}],190:[function(require,module,exports){
 'use strict';
 
 // let sampleData = [{ open: 15.5, close: 16, high: 16.5, low: 15.2 }, { open: 15.8, close: 15, high: 16.8, low: 14.2 }, { open: 15.5, close: 16, high: 16.8, low: 15.2 }, { open: 10.5, close: 10, high: 10.8, low: 9.2 }];
@@ -24578,6 +24665,7 @@ module.buildForAnalysis = function buildAnalysisData(patternStr, callback) {
     statusArrAll = [];
     var start = new Date();
     var matchSum = { bull: 0, bear: 0, cases: 0 };
+    var sectionBBSum = {};
     for (var sid in cacheCompressedMap) {
         var cmpdata = module.getStockDataSync(sid, stockFields);
         if (!cmpdata) {
@@ -24593,7 +24681,7 @@ module.buildForAnalysis = function buildAnalysisData(patternStr, callback) {
         matchSum.cases += m.cases;
 
         if (m.cases > 0) {
-            var statusArr = matchAnalyser.generateConditionCombinations(m.cases, data, function (dn) {
+            var statusArr = matchAnalyser.generateConditionCombinations(m.cases, data, sectionBBSum, function (dn) {
                 return !!dn.match;
             });
 
@@ -24614,19 +24702,19 @@ module.buildForAnalysis = function buildAnalysisData(patternStr, callback) {
     console.log("====================buildForAnalysis callback");
     callback({
         matchSum: matchSum,
+        sectionBBSum: sectionBBSum,
         analysisBufferLength: analysisBufferLength,
         matchBufferLength: matchBufferLength,
         finished: true
     }, true);
 };
 
-module.analyseBullConditions = function analyseBullConditions(bullRate, minNumber, filterArr2, callback) {
+module.generateSectionStatus = function generateSectionStatus(filterArr2, callback) {
 
-    console.log("analyseBullConditions--------------", bullRate);
+    //console.log("generateSectionStatus--------------", filterArr2);
 
-    var bc = matchAnalyser.searchBullConditions(statusArrAll, bullRate, minNum, filterArr2);
-    console.log("bullRate", bullRate, bc);
-    callback(bc);
+    var secstatus = matchAnalyser.generateSectionStatus(statusArrAll, filterArr2);
+    callback(secstatus);
 };
 
 },{"../alpha/databuildpipe":176,"../alpha/matchanalyser":178,"../alpha/matchfunctionutil":179,"../alpha/zip":182,"./io":195,"./stockids":197}],192:[function(require,module,exports){
@@ -24925,124 +25013,6 @@ var IO = function () {
             return this.cacheMap[sid];
         }
     }, {
-        key: 'setDataWorkers',
-        value: function setDataWorkers(workers) {
-            IO.dataWorkerProxies = [];
-            workers.forEach(function (w, idx) {
-                IO.dataWorkerProxies.push(new _workerproxy2.default(w));
-            });
-        }
-    }, {
-        key: 'workersScanByIndex',
-        value: function workersScanByIndex(patternStr, callback) {
-            IO.dataWorkerProxies.forEach(function (workerProxy, idx) {
-                workerProxy.callMethod("reset", [], function (re) {
-
-                    var params = [IO.workerStarts[idx], patternStr];
-                    workerProxy.callMethod("scanByIndex", params, function (re) {
-                        callback(re);
-                    });
-                });
-            });
-        }
-    }, {
-        key: 'workersStopScanByIndex',
-        value: function workersStopScanByIndex(callback) {
-            IO.dataWorkerProxies.forEach(function (workerProxy, idx) {
-                workerProxy.callMethod("stopScanByIndex", [], function (re) {
-                    callback(re);
-                });
-            });
-        }
-    }, {
-        key: 'workersBuildAndAnalyse',
-        value: function workersBuildAndAnalyse(patternStr, callback) {
-            var finishedCount = 0;
-            var matchSum = { bull: 0, bear: 0, cases: 0 };
-            IO.dataWorkerProxies.forEach(function (workerProxy, idx) {
-                workerProxy.callMethod("reset", [], function (re) {
-                    var params = [patternStr];
-                    workerProxy.callMethod("buildForAnalysis", params, function (re) {
-                        if (re.finished) {
-                            finishedCount++;
-                            var m = re.matchSum;
-                            matchSum.bull += m.bull;
-                            matchSum.bear += m.bear;
-                            matchSum.cases += m.cases;
-                            console.log("buildForAnalysis finished", m, matchSum);
-                        }
-
-                        if (finishedCount === IO.dataWorkerProxies.length) {
-                            callback(matchSum);
-                        }
-                    });
-                });
-            });
-        }
-    }, {
-        key: 'workersAnalyseBullConditions',
-        value: function workersAnalyseBullConditions(bullRate, minNumber, filterArr2, callback) {
-            var finishedCount = 0;
-            var result = {};
-            IO.dataWorkerProxies.forEach(function (workerProxy, idx) {
-                workerProxy.callMethod("reset", [], function (re) {
-                    var params = [bullRate, minNumber, filterArr2];
-
-                    workerProxy.callMethod("analyseBullConditions", params, function (re) {
-
-                        finishedCount++;
-                        for (var att in re) {
-                            if (!result[att]) result[att] = re[att];else {}
-                        }
-                        if (finishedCount === IO.dataWorkerProxies.length) {
-                            callback(result);
-                        }
-                    });
-                });
-            });
-        }
-    }, {
-        key: 'workerGetStockJson',
-        value: function workerGetStockJson(sid, callback) {
-            var fields = ['date', 'open', 'close', 'high', 'low', 'amount', 'netamount', 'r0_net', 'changeratio', 'turnover'];
-            var params = [sid, fields];
-            var worker = IO.getWorkerBySid(sid);
-            worker.callMethod("getStockData", params, function (re) {
-                if (re) {
-                    var dcp = _zip2.default.decompressStockJson(re);
-                    callback(dcp);
-                } else {
-                    IO.httpGetStockCompressedJson(sid, fields, function (cmpr) {
-                        //callback(json);
-                        var dcp = _zip2.default.decompressStockJson(cmpr);
-                        callback(dcp);
-                    });
-                }
-            });
-        }
-    }, {
-        key: 'getWorkerBySid',
-        value: function getWorkerBySid(sid) {
-            var idx = _stockids2.default.idIndexMap[sid];
-            var i = 1;
-            for (; i < IO.workerStarts.length; i++) {
-                if (IO.workerStarts[i] > idx) return IO.dataWorkerProxies[i - 1];
-            }
-            return IO.dataWorkerProxies[i - 1];
-        }
-    }, {
-        key: 'loadStocksPerPage',
-        value: function loadStocksPerPage(callback) {
-            var starts = IO.workerStarts = _stockids2.default.divideToGroups(IO.dataWorkerProxies.length);
-            for (var i = 0; i < IO.dataWorkerProxies.length; i++) {
-                var start = starts[i];
-                var end = i + 1 === starts.length ? null : starts[i + 1] - 1;
-                IO.dataWorkerProxies[i].callMethod("loadStocksPerPage", [start, 100, end], function (result) {
-                    callback(result);
-                });
-            }
-        }
-    }, {
         key: 'httpGetStockIdsJson',
         value: function httpGetStockIdsJson(filter, callback) {
             fetch(IO.baseUrl, {
@@ -25156,7 +25126,7 @@ IO.workerStarts = [0];
 
 exports.default = IO;
 
-},{"../alpha/netsumutil":181,"../alpha/zip":182,"./stockids":197,"./workerproxy":199}],196:[function(require,module,exports){
+},{"../alpha/netsumutil":181,"../alpha/zip":182,"./stockids":197,"./workerproxy":200}],196:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -25371,6 +25341,268 @@ TradingDate.dateIndexMap = {};
 exports.default = TradingDate;
 
 },{"./io":195}],199:[function(require,module,exports){
+'use strict';
+// import fetch from 'whatwg-fetch';
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _zip = require('../alpha/zip');
+
+var _zip2 = _interopRequireDefault(_zip);
+
+var _matchanalyser = require('../alpha/matchanalyser');
+
+var _matchanalyser2 = _interopRequireDefault(_matchanalyser);
+
+var _netsumutil = require('../alpha/netsumutil');
+
+var _netsumutil2 = _interopRequireDefault(_netsumutil);
+
+var _workerproxy = require('./workerproxy');
+
+var _workerproxy2 = _interopRequireDefault(_workerproxy);
+
+var _stockids = require('./stockids');
+
+var _stockids2 = _interopRequireDefault(_stockids);
+
+var _io = require('./io');
+
+var _io2 = _interopRequireDefault(_io);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var WorkerGroup = function () {
+    function WorkerGroup() {
+        _classCallCheck(this, WorkerGroup);
+    }
+
+    _createClass(WorkerGroup, null, [{
+        key: 'setDataWorkers',
+        value: function setDataWorkers(workers) {
+            WorkerGroup.dataWorkerProxies = [];
+            workers.forEach(function (w, idx) {
+                WorkerGroup.dataWorkerProxies.push(new _workerproxy2.default(w));
+            });
+        }
+    }, {
+        key: 'workersStopScanByIndex',
+        value: function workersStopScanByIndex(callback) {
+            WorkerGroup.dataWorkerProxies.forEach(function (workerProxy, idx) {
+                workerProxy.callMethod("stopScanByIndex", [], function (re) {
+                    callback(re);
+                });
+            });
+        }
+    }, {
+        key: 'workersBuildAndAnalyse',
+        value: function workersBuildAndAnalyse(patternStr, callback) {
+            var finishedCount = 0;
+            var matchSum = { bull: 0, bear: 0, cases: 0 };
+            var sectionBBSum = {};
+            WorkerGroup.dataWorkerProxies.forEach(function (workerProxy, idx) {
+                workerProxy.callMethod("reset", [], function (re) {
+                    var params = [patternStr];
+                    workerProxy.callMethod("buildForAnalysis", params, function (re) {
+                        if (re.finished) {
+                            finishedCount++;
+                            var m = re.matchSum;
+                            matchSum.bull += m.bull;
+                            matchSum.bear += m.bear;
+                            matchSum.cases += m.cases;
+                            var bbs = re.sectionBBSum;
+
+                            for (var att in bbs) {
+                                if (!sectionBBSum[att]) sectionBBSum[att] = {};
+                                var subobj = bbs[att];
+                                for (var satt in subobj) {
+                                    if (!sectionBBSum[att][satt]) sectionBBSum[att][satt] = { '-1': 0, '0': 0, '1': 0 };
+                                    sectionBBSum[att][satt]['-1'] += subobj[satt]['-1'];
+                                    sectionBBSum[att][satt]['0'] += subobj[satt]['0'];
+                                    sectionBBSum[att][satt]['1'] += subobj[satt]['1'];
+                                }
+                            }
+
+                            console.log("buildForAnalysis finished", m, matchSum, JSON.stringify(sectionBBSum[0]));
+                        }
+
+                        if (finishedCount === WorkerGroup.dataWorkerProxies.length) {
+                            var rate = matchSum.bull / matchSum.cases;
+                            console.log("buildForAnalysis all finished", JSON.stringify(sectionBBSum));
+                            var obj = {};
+                            for (var idxatt in sectionBBSum) {
+                                var secs = sectionBBSum[idxatt];
+
+                                _matchanalyser2.default.filterValidRanges(idxatt, secs, rate + 0.01, 10000, obj);
+                                console.log("-------------------", JSON.stringify(obj));
+                            }
+
+                            var arr2d = _matchanalyser2.default.rangesObjToArr2D(obj);
+                            var filter0 = arr2d[0];
+
+                            var filter0obj = obj[filter0[0]][filter0[1].join('_')];
+                            var nextrate = filter0obj['1'] / (filter0obj['-1'] + filter0obj['0'] + filter0obj['1']);
+                            var filters = [];
+                            filters[filter0[0]] = filter0[1];
+                            var minNumber = 10000;
+                            WorkerGroup.workersAnalyseBullConditions(nextrate + 0.01, minNumber, filters, arr2d, function (resultfilters, resultrate) {
+                                console.log("bull------------", resultrate, JSON.stringify(resultfilters));
+                            });
+
+                            callback(matchSum);
+                        }
+                    });
+                });
+            });
+        }
+    }, {
+        key: 'workersAnalyseBullConditions',
+        value: function workersAnalyseBullConditions(rate, minNumber, filters, candidateFilters, callback) {
+
+            if (rate >= 0.8) {
+                debugger;
+                console.log("bull------------", rate, JSON.stringify(filters));
+                callback(filters, rate);
+                return;
+            }
+
+            var finishedCount = 0;
+            var sectionBBSum = {};
+            console.log("workersAnalyseBullConditions************************", rate, filters);
+            WorkerGroup.dataWorkerProxies.forEach(function (workerProxy, idx) {
+                var params = [filters];
+
+                workerProxy.callMethod("generateSectionStatus", params, function (sectionStatus) {
+
+                    finishedCount++;
+
+                    for (var _idx in sectionStatus) {
+                        if (!sectionBBSum[_idx]) sectionBBSum[_idx] = {};
+                        var subobj = sectionStatus[_idx];
+                        for (var sec in subobj) {
+                            if (!sectionBBSum[_idx][sec]) sectionBBSum[_idx][sec] = { '-1': 0, '0': 0, '1': 0 };
+                            sectionBBSum[_idx][sec]['-1'] += subobj[sec]['-1'];
+                            sectionBBSum[_idx][sec]['0'] += subobj[sec]['0'];
+                            sectionBBSum[_idx][sec]['1'] += subobj[sec]['1'];
+                        }
+                    }
+                    //console.log("workersAnalyseBullConditions--------------finishedCount", finishedCount, JSON.stringify(sectionBBSum));
+                    if (finishedCount === WorkerGroup.dataWorkerProxies.length) {
+                        var _ret = function () {
+                            var validranges = {};
+                            var nextrate = rate + 0.01;
+                            for (var idxatt in sectionBBSum) {
+                                var secs = sectionBBSum[idxatt];
+                                _matchanalyser2.default.filterValidRanges(idxatt, secs, nextrate, minNumber, validranges);
+                            }
+
+                            var candidateFiltersNext = _matchanalyser2.default.rangesObjToArr2D(validranges);
+                            if (candidateFiltersNext.length === 0) {
+                                debugger;
+                                console.log("bear*******no further filters");
+                                callback(filters, rate);
+                                return {
+                                    v: void 0
+                                };
+                            }
+
+                            var nextfilter = candidateFiltersNext[0];
+                            var nextfilterobj = validranges[nextfilter[0]][nextfilter[1].join('_')];
+                            nextrate = nextfilterobj['1'] / (nextfilterobj['-1'] + nextfilterobj['0'] + nextfilterobj['1']);
+                            var nextfilters = _matchanalyser2.default.cloneFilters(filters);
+                            nextfilters[nextfilter[0]] = nextfilter[1];
+                            WorkerGroup.workersAnalyseBullConditions(nextrate, minNumber, nextfilters, candidateFiltersNext, function (validfilters, rate) {
+                                var prefilter = candidateFilters.shift();
+                                delete filters[prefilter[0]];
+                                console.log("candidateFilters length", candidateFilters.length);
+                                if (candidateFilters.length > 0) {
+                                    var nxtfilter = candidateFilters[0];
+                                    filters[nxtfilter[0]] = nxtfilter[1];
+                                    WorkerGroup.workersAnalyseBullConditions(nextrate, minNumber, filters, candidateFilters, callback);
+                                } else {
+                                    debugger;
+                                    callback(filters, rate);
+                                }
+                            });
+                        }();
+
+                        if ((typeof _ret === 'undefined' ? 'undefined' : _typeof(_ret)) === "object") return _ret.v;
+                    }
+                });
+            });
+        }
+    }, {
+        key: 'workersScanByIndex',
+        value: function workersScanByIndex(patternStr, callback) {
+            WorkerGroup.dataWorkerProxies.forEach(function (workerProxy, idx) {
+                workerProxy.callMethod("reset", [], function (re) {
+
+                    var params = [WorkerGroup.workerStarts[idx], patternStr];
+                    workerProxy.callMethod("scanByIndex", params, function (re) {
+                        callback(re);
+                    });
+                });
+            });
+        }
+    }, {
+        key: 'workerGetStockJson',
+        value: function workerGetStockJson(sid, callback) {
+            var fields = ['date', 'open', 'close', 'high', 'low', 'amount', 'netamount', 'r0_net', 'changeratio', 'turnover'];
+            var params = [sid, fields];
+            var worker = WorkerGroup.getWorkerBySid(sid);
+            worker.callMethod("getStockData", params, function (re) {
+                if (re) {
+                    var dcp = _zip2.default.decompressStockJson(re);
+                    callback(dcp);
+                } else {
+                    _io2.default.httpGetStockCompressedJson(sid, fields, function (cmpr) {
+                        //callback(json);
+                        var dcp = _zip2.default.decompressStockJson(cmpr);
+                        callback(dcp);
+                    });
+                }
+            });
+        }
+    }, {
+        key: 'getWorkerBySid',
+        value: function getWorkerBySid(sid) {
+            var idx = _stockids2.default.idIndexMap[sid];
+            var i = 1;
+            for (; i < WorkerGroup.workerStarts.length; i++) {
+                if (WorkerGroup.workerStarts[i] > idx) return WorkerGroup.dataWorkerProxies[i - 1];
+            }
+            return WorkerGroup.dataWorkerProxies[i - 1];
+        }
+    }, {
+        key: 'loadStocksPerPage',
+        value: function loadStocksPerPage(callback) {
+            var starts = WorkerGroup.workerStarts = _stockids2.default.divideToGroups(WorkerGroup.dataWorkerProxies.length);
+            for (var i = 0; i < WorkerGroup.dataWorkerProxies.length; i++) {
+                var start = starts[i];
+                var end = i + 1 === starts.length ? null : starts[i + 1] - 1;
+                WorkerGroup.dataWorkerProxies[i].callMethod("loadStocksPerPage", [start, 100, end], function (result) {
+                    callback(result);
+                });
+            }
+        }
+    }]);
+
+    return WorkerGroup;
+}();
+
+WorkerGroup.workerStarts = [0];
+
+exports.default = WorkerGroup;
+
+},{"../alpha/matchanalyser":178,"../alpha/netsumutil":181,"../alpha/zip":182,"./io":195,"./stockids":197,"./workerproxy":200}],200:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {

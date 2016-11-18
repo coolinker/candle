@@ -177,6 +177,7 @@ module.buildForAnalysis = function buildAnalysisData(patternStr, callback) {
     statusArrAll = [];
     let start = new Date();
     let matchSum = { bull: 0, bear: 0, cases: 0 };
+    let sectionBBSum = {};
     for (let sid in cacheCompressedMap) {
         let cmpdata = module.getStockDataSync(sid, stockFields);
         if (!cmpdata) {
@@ -193,7 +194,7 @@ module.buildForAnalysis = function buildAnalysisData(patternStr, callback) {
         matchSum.cases += m.cases;
 
         if (m.cases > 0) {
-            let statusArr = matchAnalyser.generateConditionCombinations(m.cases, data, function (dn) {
+            let statusArr = matchAnalyser.generateConditionCombinations(m.cases, data, sectionBBSum, function (dn) {
                 return !!dn.match;
             });
 
@@ -202,7 +203,6 @@ module.buildForAnalysis = function buildAnalysisData(patternStr, callback) {
         }
 
         analysisBufferLength += data.length;
-
 
         callback({
             sid: sid,
@@ -216,6 +216,7 @@ module.buildForAnalysis = function buildAnalysisData(patternStr, callback) {
     console.log("====================buildForAnalysis callback")
     callback({
         matchSum: matchSum,
+        sectionBBSum: sectionBBSum,
         analysisBufferLength: analysisBufferLength,
         matchBufferLength: matchBufferLength,
         finished: true
@@ -224,12 +225,11 @@ module.buildForAnalysis = function buildAnalysisData(patternStr, callback) {
 
 }
 
-module.analyseBullConditions = function analyseBullConditions(bullRate, minNumber, filterArr2, callback) {
+module.generateSectionStatus = function generateSectionStatus(filterArr2, callback) {
 
-    console.log("analyseBullConditions--------------", bullRate);
+    //console.log("generateSectionStatus--------------", filterArr2);
 
-    let bc = matchAnalyser.searchBullConditions(statusArrAll, bullRate, minNum, filterArr2);
-    console.log("bullRate", bullRate, bc);
-    callback(bc);
+    let secstatus = matchAnalyser.generateSectionStatus(statusArrAll, filterArr2);
+    callback(secstatus);
 
 }

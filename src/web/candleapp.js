@@ -2,6 +2,7 @@
 import React from 'react';
 import IO from './io';
 import work from 'webworkify';
+import WorkerGroup from './workergroup';
 
 let cpus = window.location.search.match('[?&]cpus=([^&]+)');
 if (cpus && cpus.length) cpus = cpus[1];
@@ -15,7 +16,7 @@ for (let i = 0; i < cpus; i++) {
     pworks.push(w);
 }
 
-IO.setDataWorkers(pworks);
+WorkerGroup.setDataWorkers(pworks);
 
 let PainterCore = require('../chart/paintercore');
 let painterCore = new PainterCore();
@@ -233,7 +234,7 @@ class CandleApp extends React.Component {
         this.handleSidInputChagned();
         setTimeout(function() {
             let count = 0;
-            IO.loadStocksPerPage(function(re) {
+            WorkerGroup.loadStocksPerPage(function(re) {
                 count += re.count;
             });
             let timer = 0;
@@ -254,7 +255,7 @@ class CandleApp extends React.Component {
 
     doAnalyseClick(){
         let matchStr = this.matchTextArea.value;
-        IO.workersBuildAndAnalyse(matchStr, function(re) {
+        WorkerGroup.workersBuildAndAnalyse(matchStr, function(re) {
                 console.log("workersBuildAndAnalyse", re)
             });
     }
@@ -266,7 +267,7 @@ class CandleApp extends React.Component {
             this.scanAllBtn.innerHTML = startChar;
             this.scanAllBtn.style.fontSize = 'xx-large';
             this.scanAllBtn.style.top = '17px';
-            IO.workersStopScanByIndex(function(re) {
+            WorkerGroup.workersStopScanByIndex(function(re) {
                 console.log("workerStopScanAll", re)
             });
             return;
@@ -282,7 +283,7 @@ class CandleApp extends React.Component {
             cases = 0;
         let matchStr = this.matchTextArea.value;
         painterCore.clearMatchCases();
-        IO.workersScanByIndex(matchStr, function(cnts) { // && data[n].ave_close_8 > data[n-2].ave_close_8 && data[n].ave_close_8 > data[n-3].ave_close_8
+        WorkerGroup.workersScanByIndex(matchStr, function(cnts) { // && data[n].ave_close_8 > data[n-2].ave_close_8 && data[n].ave_close_8 > data[n-3].ave_close_8
             count++; //= cnts.index;
             bull += cnts.bull;
             bear += cnts.bear;
@@ -328,7 +329,7 @@ class CandleApp extends React.Component {
 
     loadDataBySid(sid, date) {
         let start = new Date();
-        IO.workerGetStockJson(sid, function(json) {
+        WorkerGroup.workerGetStockJson(sid, function(json) {
             if (!json) return;
             console.log("workerGetStockJson time", new Date() - start, sid, json.length)
             painterCore.loadData(json);
