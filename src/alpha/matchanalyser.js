@@ -1,14 +1,14 @@
 'use strict';
 
 let conditions = [
-    ["dn.ave_close_21/dn.close", [0.99, 1, 1.01, 1.03]],
+    ["dn.ave_close_21/dn.close", [0.9, 1, 1.08,1.15]],
     ["dn.ave_close_8/dn.close", [1.03]],
     ["dn.ave_amount_21/dn.ave_amount_8", [1]],
     ["dn.ave_amount_21/dn.amount", [1.5]],
     ["dn.netsummin_r0_21", [0, 0]],
     ["dn.netsummax_r0_8", [0, 0]],
     ["dn.ave_turnover_8/dn.ave_turnover_21", [1]],
-    ["dn.netsum_r0_below/dn.ave_amount_21", [0, 0]],
+    ["dn.netsum_r0_below/dn.ave_amount_21", [0]],
     ["dn.netsum_r0_below/dn.ave_amount_21", [0.02, 0.04]],
     ["dn.marketCap", [2000000000, 3000000000, 5000000000, 10000000000]]
 
@@ -197,7 +197,7 @@ module.exports = class MatchAnalyser {
         for (let idx in ranges) {
             let idxobj = ranges[idx];
             for (let secs in idxobj) {
-                att2d.push([idx, secs.split('_').map(Number)]);
+                att2d.push([idx, secs.split('_').map(Number),idxobj[secs]]);
             }
         }
         return att2d;

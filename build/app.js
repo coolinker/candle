@@ -21728,7 +21728,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var conditions = [["dn.ave_close_21/dn.close", [0.99, 1, 1.01, 1.03]], ["dn.ave_close_8/dn.close", [1.03]], ["dn.ave_amount_21/dn.ave_amount_8", [1]], ["dn.ave_amount_21/dn.amount", [1.5]], ["dn.netsummin_r0_21", [0, 0]], ["dn.netsummax_r0_8", [0, 0]], ["dn.ave_turnover_8/dn.ave_turnover_21", [1]], ["dn.netsum_r0_below/dn.ave_amount_21", [0, 0]], ["dn.netsum_r0_below/dn.ave_amount_21", [0.02, 0.04]], ["dn.marketCap", [2000000000, 3000000000, 5000000000, 10000000000]]];
+var conditions = [["dn.ave_close_21/dn.close", [0.9, 1, 1.08, 1.15]], ["dn.ave_close_8/dn.close", [1.03]], ["dn.ave_amount_21/dn.ave_amount_8", [1]], ["dn.ave_amount_21/dn.amount", [1.5]], ["dn.netsummin_r0_21", [0, 0]], ["dn.netsummax_r0_8", [0, 0]], ["dn.ave_turnover_8/dn.ave_turnover_21", [1]], ["dn.netsum_r0_below/dn.ave_amount_21", [0]], ["dn.netsum_r0_below/dn.ave_amount_21", [0.02, 0.04]], ["dn.marketCap", [2000000000, 3000000000, 5000000000, 10000000000]]];
 
 module.exports = function () {
     function MatchAnalyser() {
@@ -21988,7 +21988,7 @@ module.exports = function () {
             for (var idx in ranges) {
                 var idxobj = ranges[idx];
                 for (var secs in idxobj) {
-                    att2d.push([idx, secs.split('_').map(Number)]);
+                    att2d.push([idx, secs.split('_').map(Number), idxobj[secs]]);
                 }
             }
             return att2d;
@@ -25348,8 +25348,6 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
-
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 var _zip = require('../alpha/zip');
@@ -25436,12 +25434,13 @@ var WorkerGroup = function () {
 
                         if (finishedCount === WorkerGroup.dataWorkerProxies.length) {
                             var rate = matchSum.bull / matchSum.cases;
+                            var minNumber = 10000;
                             console.log("buildForAnalysis all finished", JSON.stringify(sectionBBSum));
                             var obj = {};
                             for (var idxatt in sectionBBSum) {
                                 var secs = sectionBBSum[idxatt];
 
-                                _matchanalyser2.default.filterValidRanges(idxatt, secs, rate + 0.01, 10000, obj);
+                                _matchanalyser2.default.filterValidRanges(idxatt, secs, rate + 0.02, minNumber, obj);
                                 console.log("-------------------", JSON.stringify(obj));
                             }
 
@@ -25452,9 +25451,28 @@ var WorkerGroup = function () {
                             var nextrate = filter0obj['1'] / (filter0obj['-1'] + filter0obj['0'] + filter0obj['1']);
                             var filters = [];
                             filters[filter0[0]] = filter0[1];
-                            var minNumber = 10000;
-                            WorkerGroup.workersAnalyseBullConditions(nextrate + 0.01, minNumber, filters, arr2d, function (resultfilters, resultrate) {
-                                console.log("bull------------", resultrate, JSON.stringify(resultfilters));
+
+                            WorkerGroup.workersAnalyseBullConditions(minNumber, filters, [arr2d], function (cbfilters, cbcandidatefilters) {
+                                // console.log("roll candidate filters:", JSON.stringify(cbfilters), "*********", cbcandidatefilters.length, JSON.stringify(cbcandidatefilters));
+                                var candidateFiltersNext = void 0;
+                                do {
+                                    candidateFiltersNext = cbcandidatefilters[cbcandidatefilters.length - 1];
+                                    var prefilter = candidateFiltersNext.shift();
+                                    if (candidateFiltersNext._replacement) {
+                                        cbfilters[prefilter[0]] = candidateFiltersNext._replacement;
+                                        delete candidateFiltersNext._replacement;
+                                    } else {
+                                        delete cbfilters[prefilter[0]];
+                                    }
+                                } while (candidateFiltersNext.length === 0 && cbcandidatefilters.pop() && cbcandidatefilters.length > 0);
+
+                                if (candidateFiltersNext && candidateFiltersNext.length > 0) {
+                                    var nxtfilter = candidateFiltersNext[0];
+                                    cbfilters[nxtfilter[0]] = nxtfilter[1];
+                                }
+
+                                // console.log("cbcandidatefilters length", cbcandidatefilters.length, JSON.stringify(cbfilters))
+
                             });
 
                             callback(matchSum);
@@ -25465,18 +25483,28 @@ var WorkerGroup = function () {
         }
     }, {
         key: 'workersAnalyseBullConditions',
-        value: function workersAnalyseBullConditions(rate, minNumber, filters, candidateFilters, callback) {
+        value: function workersAnalyseBullConditions(minNumber, filters, candidateFilters, callback) {
+            if (candidateFilters.length === 0) return;
+
+            var candidateFiltersNext = candidateFilters[candidateFilters.length - 1];
+            var nxtfilter = candidateFiltersNext[0];
+            if (!nxtfilter) debugger;
+            var bbobj = nxtfilter[2];
+
+            var rate = bbobj['1'] / (bbobj['-1'] + bbobj['0'] + bbobj['1']);
 
             if (rate >= 0.8) {
-                debugger;
+                //debugger;
                 console.log("bull------------", rate, JSON.stringify(filters));
-                callback(filters, rate);
+                callback(filters, candidateFilters);
+                WorkerGroup.workersAnalyseBullConditions(minNumber, filters, candidateFilters, callback);
                 return;
             }
 
             var finishedCount = 0;
             var sectionBBSum = {};
-            console.log("workersAnalyseBullConditions************************", rate, filters);
+            // console.log("\n-->>", rate, JSON.stringify(filters), '*********', candidateFilters.length, JSON.stringify(candidateFilters));
+            //console.trace();
             WorkerGroup.dataWorkerProxies.forEach(function (workerProxy, idx) {
                 var params = [filters];
 
@@ -25496,45 +25524,63 @@ var WorkerGroup = function () {
                     }
                     //console.log("workersAnalyseBullConditions--------------finishedCount", finishedCount, JSON.stringify(sectionBBSum));
                     if (finishedCount === WorkerGroup.dataWorkerProxies.length) {
-                        var _ret = function () {
-                            var validranges = {};
-                            var nextrate = rate + 0.01;
-                            for (var idxatt in sectionBBSum) {
-                                var secs = sectionBBSum[idxatt];
-                                _matchanalyser2.default.filterValidRanges(idxatt, secs, nextrate, minNumber, validranges);
-                            }
+                        var validranges = {};
+                        var nextrate = rate + 0.02;
+                        for (var idxatt in sectionBBSum) {
+                            var secs = sectionBBSum[idxatt];
+                            _matchanalyser2.default.filterValidRanges(idxatt, secs, nextrate, minNumber, validranges);
+                        }
 
-                            var candidateFiltersNext = _matchanalyser2.default.rangesObjToArr2D(validranges);
-                            if (candidateFiltersNext.length === 0) {
-                                debugger;
-                                console.log("bear*******no further filters");
-                                callback(filters, rate);
-                                return {
-                                    v: void 0
-                                };
-                            }
+                        var _candidateFiltersNext = _matchanalyser2.default.rangesObjToArr2D(validranges);
+                        if (_candidateFiltersNext.length === 0) {
+                            //debugger;
+                            console.log("<<-- bear*******no further filters", rate, JSON.stringify(filters), '\n');
+                            //callback(filters, rate);
+                            callback(filters, candidateFilters);
+                            WorkerGroup.workersAnalyseBullConditions(minNumber, filters, candidateFilters, callback);
+                            return;
+                        }
 
-                            var nextfilter = candidateFiltersNext[0];
-                            var nextfilterobj = validranges[nextfilter[0]][nextfilter[1].join('_')];
-                            nextrate = nextfilterobj['1'] / (nextfilterobj['-1'] + nextfilterobj['0'] + nextfilterobj['1']);
-                            var nextfilters = _matchanalyser2.default.cloneFilters(filters);
-                            nextfilters[nextfilter[0]] = nextfilter[1];
-                            WorkerGroup.workersAnalyseBullConditions(nextrate, minNumber, nextfilters, candidateFiltersNext, function (validfilters, rate) {
-                                var prefilter = candidateFilters.shift();
-                                delete filters[prefilter[0]];
-                                console.log("candidateFilters length", candidateFilters.length);
-                                if (candidateFilters.length > 0) {
-                                    var nxtfilter = candidateFilters[0];
-                                    filters[nxtfilter[0]] = nxtfilter[1];
-                                    WorkerGroup.workersAnalyseBullConditions(nextrate, minNumber, filters, candidateFilters, callback);
-                                } else {
-                                    debugger;
-                                    callback(filters, rate);
-                                }
-                            });
-                        }();
+                        var nextfilter = _candidateFiltersNext[0];
+                        var nextfilterobj = validranges[nextfilter[0]][nextfilter[1].join('_')];
+                        nextrate = nextfilterobj['1'] / (nextfilterobj['-1'] + nextfilterobj['0'] + nextfilterobj['1']);
+                        //let nextfilters = filters;//MatchAnalyser.cloneFilters(filters);
+                        if (filters[nextfilter[0]]) {
+                            _candidateFiltersNext._replacement = filters[nextfilter[0]];
+                        }
 
-                        if ((typeof _ret === 'undefined' ? 'undefined' : _typeof(_ret)) === "object") return _ret.v;
+                        filters[nextfilter[0]] = nextfilter[1];
+
+                        candidateFilters.push(_candidateFiltersNext);
+                        WorkerGroup.workersAnalyseBullConditions(minNumber, filters, candidateFilters, /*function (cbfilters, cbcandidatefilters) {
+                                                                                                       let candidateFiltersNext = cbcandidatefilters[cbcandidatefilters.length - 1];
+                                                                                                       let prefilter = candidateFiltersNext.shift();
+                                                                                                       if (candidateFiltersNext._replacement) {
+                                                                                                       cbfilters[prefilter[0]] = candidateFiltersNext._replacement;
+                                                                                                       delete candidateFiltersNext._replacement;
+                                                                                                       } else {
+                                                                                                       delete cbfilters[prefilter[0]];
+                                                                                                       }
+                                                                                                       console.log("cbcandidatefilters length", cbcandidatefilters.length, JSON.stringify(cbfilters))
+                                                                                                       if (candidateFiltersNext.length > 0) {
+                                                                                                       let nxtfilter = candidateFiltersNext[0];
+                                                                                                       cbfilters[nxtfilter[0]] = nxtfilter[1];
+                                                                                                       let bbobj = nxtfilter[2];
+                                                                                                       let nxtrate = bbobj['1'] / (bbobj['-1'] + bbobj['0'] + bbobj['1']);
+                                                                                                       WorkerGroup.workersAnalyseBullConditions(nxtrate, minNumber, cbfilters, cbcandidatefilters, callback);
+                                                                                                       } else {
+                                                                                                       //debugger;
+                                                                                                       cbcandidatefilters.pop();
+                                                                                                       let candidateFiltersNext = cbcandidatefilters[cbcandidatefilters.length - 1];
+                                                                                                       let nxtfilter = candidateFiltersNext[0];
+                                                                                                       cbfilters[nxtfilter[0]] = nxtfilter[1];
+                                                                                                       let bbobj = nxtfilter[2];
+                                                                                                       let nxtrate = bbobj['1'] / (bbobj['-1'] + bbobj['0'] + bbobj['1']);
+                                                                                                       console.log("<<--", nxtrate, JSON.stringify(cbfilters), '\n')
+                                                                                                       // callback(cbfilters, cbcandidatefilters);
+                                                                                                       WorkerGroup.workersAnalyseBullConditions(nxtrate, minNumber, cbfilters, cbcandidatefilters, callback);
+                                                                                                       }
+                                                                                                       }*/callback);
                     }
                 });
             });
