@@ -6,7 +6,7 @@ import NetSumUtil from '../alpha/netsumutil';
 import WorkerProxy from './workerproxy';
 import StockIDs from './stockids';
 import IO from './io';
-
+import LocalStoreUtil from './localstoreutil';
 class WorkerGroup {
     constructor() { }
     static setDataWorkers(workers) {
@@ -112,8 +112,9 @@ class WorkerGroup {
                                 
                                 if(candidateFiltersNext.length === 0 && cbcandidatefilters.pop()) {
                                     if (cbcandidatefilters.length === 0){
-                                        console.log("call counter:", WorkerGroup.callCounter, bullfilters.length, MatchAnalyser.outputFilters(bullfilters, patternStr))
-
+                                        let alphaObj = MatchAnalyser.outputFilters(bullfilters, patternStr);
+                                        console.log("call counter:", WorkerGroup.callCounter, bullfilters.length, alphaObj)
+                                        LocalStoreUtil.addToStore("alphaObj", alphaObj)
                                         return;
                                     } 
                                 } else {

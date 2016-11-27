@@ -94,9 +94,10 @@ class CandleApp extends React.Component {
         this.scanAllBtnClick = this.scanAllBtnClick.bind(this);
         this.doAnalyseClick = this.doAnalyseClick.bind(this);
         
-        let matchStr = LocalStoreUtil.getCookie('scanExp');
+        //let matchStr = LocalStoreUtil.getCookie('scanExp');
+        let matchStr = LocalStoreUtil.getLastOfKey('scanExp');
         if (!matchStr) {
-            matchStr = 'n>81\n' + '&& diffR(dn.close, dn.ave_close_21) > 0.1 \n' + '&& function() { \n' + '    let right_lowidx = lowPI(d,n-8, n, "low");\n' + '    if(diffR(d[right_lowidx].low, d[right_lowidx].ave_close_8) < 1*priceCRA(d, right_lowidx, 8)) return false;\n\n' + '    let mid_highidx = highPI(d, right_lowidx-8, right_lowidx, "high");\n' + '    if (diffR(d[right_lowidx].low, d[mid_highidx].high) < 2* priceCRA(d, right_lowidx, 8)) return false;\n\n' + '    let left_lowidx = lowPI(d,mid_highidx -20, mid_highidx , "low");\n' + '    if(diffR(d[left_lowidx].low, d[left_lowidx].ave_close_8) < 1.5*priceCRA(d, right_lowidx, 8)) return false;\n\n' + '    if (d[left_lowidx].ave_close_8 > d[left_lowidx].ave_close_13) return false;\n\n' + '    return true\n' + '} ()'
+            matchStr = 'function() { \n' + '    let right_lowidx = lowPI(d,n-8, n, "low");\n' + '    if(diffR(d[right_lowidx].low, d[right_lowidx].ave_close_8) < 1*priceCRA(d, right_lowidx, 8)) return false;\n\n' + '    let mid_highidx = highPI(d, right_lowidx-8, right_lowidx, "high");\n' + '    if (diffR(d[right_lowidx].low, d[mid_highidx].high) < 2* priceCRA(d, right_lowidx, 8)) return false;\n\n' + '    let left_lowidx = lowPI(d,mid_highidx -20, mid_highidx , "low");\n' + '    if(diffR(d[left_lowidx].low, d[left_lowidx].ave_close_8) < 1.5*priceCRA(d, right_lowidx, 8)) return false;\n\n' + '    if (d[left_lowidx].ave_close_8 > d[left_lowidx].ave_close_13) return false;\n\n' + '    return true\n' + '} ()'
 
         }
 
@@ -283,6 +284,7 @@ class CandleApp extends React.Component {
             cases = 0;
         let matchStr = this.matchTextArea.value;
         painterCore.clearMatchCases();
+
         WorkerGroup.workersScanByIndex(matchStr, function(cnts) { // && data[n].ave_close_8 > data[n-2].ave_close_8 && data[n].ave_close_8 > data[n-3].ave_close_8
             count++; //= cnts.index;
             bull += cnts.bull;
@@ -299,6 +301,7 @@ class CandleApp extends React.Component {
                 console.log("-------------------------bull/bear/cases:", bull, bear, cases)
             }
         })
+        LocalStoreUtil.addToStore('scanExp', matchStr, 100);
     }
 
     handleMatchTextAreaKeyUp(e) {
@@ -319,7 +322,8 @@ class CandleApp extends React.Component {
         this.setState({
             matchStr: e.target.value
         });
-        LocalStoreUtil.setCookie('scanExp', escape(e.target.value));
+        // LocalStoreUtil.setCookie('scanExp', escape(e.target.value));
+        
     }
 
     toggleMatchTextArea() {

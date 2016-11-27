@@ -64,11 +64,32 @@ module.exports = class MovingAverageUtil {
         } else {
             let sum = 0;
             for (let i = 0; i < period; i++) {
-                sum += data[idx - i][field];
+                let v = data[idx - i][field];
+                if (v === undefined) return;
+                sum += v;
             }
             let v = MovingAverageUtil.formatFloat((sum / period));
             data[idx][fieldAveName] = v;
         }
 
+    }
+
+    static buildSingleAdv(idx, period, data, field, valFun) {
+        let fieldAveName = 'ave_' + field + '_' + period;
+        if (idx < period - 1 || data[idx][fieldAveName]) return;
+
+        let preobj = data[idx - 1];
+        let prevalue = preobj[fieldAveName];
+        if (!isNaN(prevalue)) {
+            let v = MovingAverageUtil.formatFloat((prevalue * period - valFun(idx-period, data) + valFun(idx, data)) / period);
+            data[idx][fieldAveName] = v;
+        } else {
+            let sum = 0;
+            for (let i = 0; i < period; i++) {
+                sum += valFun(idx-i, data);
+            }
+            let v = MovingAverageUtil.formatFloat((sum / period));
+            data[idx][fieldAveName] = v;
+        }
     }
 }

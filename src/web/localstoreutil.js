@@ -23,6 +23,66 @@ class LocalStoreUtil {
         return "";
     }
 
+    static addToStore(key, obj, max) {
+        let newkey = key+'_'+(new Date().getTime());
+        if (localStorage.getItem(newkey)) {
+            console.error("ERROR key existed:", newkey);
+            return;
+        }
+        let objstr = JSON.stringify(obj);
+        let keyArr = localStorage.getItem(key);
+        if (keyArr) {
+            keyArr = JSON.parse(keyArr);
+            let last = localStorage.getItem(keyArr[keyArr.length-1]);
+            if (objstr === last) return;
+        } else keyArr = [];
+        if (!max) max = 30;
+        if (keyArr.length>=max) {
+            let removeKey = keyArr.shift();
+            localStorage.removeItem(removeKey);
+        }
+
+        localStorage.setItem(newkey, objstr);
+        keyArr.push(newkey);
+
+        localStorage.setItem(key, JSON.stringify(keyArr));
+        
+    }
+
+    
+    static getLastOfKey(key){
+        let keyArr = localStorage.getItem(key);
+        if (keyArr) keyArr = JSON.parse(keyArr);
+        else return null;
+
+        let obj = localStorage.getItem(keyArr[keyArr.length-1]);
+
+        return JSON.parse(obj);
+    }
+
+    static getByKeyIndex(key, idx){
+        let keyArr = localStorage.getItem(key);
+        if (keyArr) keyArr = JSON.parse(keyArr);
+        else return null;
+
+        let obj = localStorage.getItem(keyArr[idx]);
+
+        return JSON.parse(obj);
+    }
+    
+    static getByKey(key){
+        let keyArr = localStorage.getItem(key);
+        if (keyArr) keyArr = JSON.parse(keyArr);
+        else return null;
+        let objs = [];
+        for (let i = 0; i<keyArr.length; i++) {
+            let obj = localStorage.getItem(keyArr[i]);
+            if (obj) objs.push(JSON.parse(obj));
+            else console.error("getByKey obj doesn't existed", keyArr[i]);
+        }
+        
+        return objs;
+    }
 }
 
 
