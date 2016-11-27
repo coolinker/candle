@@ -1,38 +1,4 @@
 module.exports = {
-    wBottom: function () {
-        let right_lowidx = lowPI(d, n - 8, n, "low");
-        let cra = 0.06;//priceCRA(d, right_lowidx, 8);
-        if (diffR(d[right_lowidx].low, d[right_lowidx].ave_close_8) < 1 * cra) return false;
-
-        let mid_highidx = highPI(d, right_lowidx - 8, right_lowidx, "high");
-        if (diffR(d[right_lowidx].low, d[mid_highidx].high) < 2 * cra) return false;
-
-        let left_lowidx = lowPI(d, mid_highidx - 20, mid_highidx, "low");
-        if (diffR(d[left_lowidx].low, d[left_lowidx].ave_close_8) < 1.5 * cra) return false;
-
-        if (d[left_lowidx].ave_close_8 > d[left_lowidx].ave_close_13) return false;
-
-        if (diffR(d[left_lowidx].low, d[right_lowidx].low) > -0.0) return false;
-        if (diffR(d[left_lowidx].ave_amount_55, d[right_lowidx].ave_amount_55) > -0) return false;
-
-        return true
-    },
-
-    nearDrop: function (data, n, period, maxdiff) {
-        for (let i = 0; i < period; i++) {
-            if (0.8 * data[n].amount < data[n - 1].ave_amount_8) continue;
-
-            let open = data[n - i].open;
-            let close = data[n - i].close;
-            let diff = (close - open) / open;
-            if (diff > maxdiff) continue;
-            let low = data[n - i].low;
-            let lowdiff = (low - close) / open;
-            if (lowdiff < maxdiff / 3) return true;
-        }
-        return false;
-
-    },
 
     priceCR: function (data, n) {
         let base = n === 0 ? data[n.open] : data[n - 1].close;
@@ -84,6 +50,17 @@ module.exports = {
         }
 
         return sum;
+    },
+
+    lowerItems(data, start, end, field, v) {
+        let arr = [];
+        for (let i = end; i >= start; i--) {
+            if (data[i][field] < v) arr.push(i);
+            if (data[i].ex) {
+                v = v * data[i - 1].close/data[i].open;
+            }            
+        }
+        return arr;
     },
 
     sum: function (data, n, field, period) {
@@ -180,4 +157,39 @@ module.exports = {
         }
         return maxidx;
     }
+    // wBottom: function () {
+    //     let right_lowidx = lowPI(d, n - 8, n, "low");
+    //     let cra = 0.06;//priceCRA(d, right_lowidx, 8);
+    //     if (diffR(d[right_lowidx].low, d[right_lowidx].ave_close_8) < 1 * cra) return false;
+
+    //     let mid_highidx = highPI(d, right_lowidx - 8, right_lowidx, "high");
+    //     if (diffR(d[right_lowidx].low, d[mid_highidx].high) < 2 * cra) return false;
+
+    //     let left_lowidx = lowPI(d, mid_highidx - 20, mid_highidx, "low");
+    //     if (diffR(d[left_lowidx].low, d[left_lowidx].ave_close_8) < 1.5 * cra) return false;
+
+    //     if (d[left_lowidx].ave_close_8 > d[left_lowidx].ave_close_13) return false;
+
+    //     if (diffR(d[left_lowidx].low, d[right_lowidx].low) > -0.0) return false;
+    //     if (diffR(d[left_lowidx].ave_amount_55, d[right_lowidx].ave_amount_55) > -0) return false;
+
+    //     return true
+    // },
+
+    // nearDrop: function (data, n, period, maxdiff) {
+    //     for (let i = 0; i < period; i++) {
+    //         if (0.8 * data[n].amount < data[n - 1].ave_amount_8) continue;
+
+    //         let open = data[n - i].open;
+    //         let close = data[n - i].close;
+    //         let diff = (close - open) / open;
+    //         if (diff > maxdiff) continue;
+    //         let low = data[n - i].low;
+    //         let lowdiff = (low - close) / open;
+    //         if (lowdiff < maxdiff / 3) return true;
+    //     }
+    //     return false;
+
+    // },
+
 };

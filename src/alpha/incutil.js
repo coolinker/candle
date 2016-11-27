@@ -12,9 +12,9 @@ module.exports = class IncUtil {
 
 
     static buildSingle(idx, data) {
-        let preprice = data[idx-1].close;
+        let preprice = idx>1?data[idx-1].close:data[idx].open;
         let price = data[idx].close;
-        data.inc = (price-preprice)/preprice;
+        data[idx].inc = (price-preprice)/preprice;
     }
 
 }

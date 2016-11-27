@@ -21755,9 +21755,9 @@ module.exports = function () {
     }, {
         key: 'buildSingle',
         value: function buildSingle(idx, data) {
-            var preprice = data[idx - 1].close;
+            var preprice = idx > 1 ? data[idx - 1].close : data[idx].open;
             var price = data[idx].close;
-            data.inc = (price - preprice) / preprice;
+            data[idx].inc = (price - preprice) / preprice;
         }
     }]);
 
@@ -22498,39 +22498,6 @@ module.exports = function () {
 "use strict";
 
 module.exports = {
-    wBottom: function wBottom() {
-        var right_lowidx = lowPI(d, n - 8, n, "low");
-        var cra = 0.06; //priceCRA(d, right_lowidx, 8);
-        if (diffR(d[right_lowidx].low, d[right_lowidx].ave_close_8) < 1 * cra) return false;
-
-        var mid_highidx = highPI(d, right_lowidx - 8, right_lowidx, "high");
-        if (diffR(d[right_lowidx].low, d[mid_highidx].high) < 2 * cra) return false;
-
-        var left_lowidx = lowPI(d, mid_highidx - 20, mid_highidx, "low");
-        if (diffR(d[left_lowidx].low, d[left_lowidx].ave_close_8) < 1.5 * cra) return false;
-
-        if (d[left_lowidx].ave_close_8 > d[left_lowidx].ave_close_13) return false;
-
-        if (diffR(d[left_lowidx].low, d[right_lowidx].low) > -0.0) return false;
-        if (diffR(d[left_lowidx].ave_amount_55, d[right_lowidx].ave_amount_55) > -0) return false;
-
-        return true;
-    },
-
-    nearDrop: function nearDrop(data, n, period, maxdiff) {
-        for (var i = 0; i < period; i++) {
-            if (0.8 * data[n].amount < data[n - 1].ave_amount_8) continue;
-
-            var open = data[n - i].open;
-            var close = data[n - i].close;
-            var diff = (close - open) / open;
-            if (diff > maxdiff) continue;
-            var low = data[n - i].low;
-            var lowdiff = (low - close) / open;
-            if (lowdiff < maxdiff / 3) return true;
-        }
-        return false;
-    },
 
     priceCR: function priceCR(data, n) {
         var base = n === 0 ? data[n.open] : data[n - 1].close;
@@ -22583,6 +22550,18 @@ module.exports = {
 
         return sum;
     },
+
+    lowerItems: function lowerItems(data, start, end, field, v) {
+        var arr = [];
+        for (var i = end; i >= start; i--) {
+            if (data[i][field] < v) arr.push(i);
+            if (data[i].ex) {
+                v = v * data[i - 1].close / data[i].open;
+            }
+        }
+        return arr;
+    },
+
 
     sum: function sum(data, n, field, period) {
         if (!period) return 0;
@@ -22678,6 +22657,41 @@ module.exports = {
         }
         return maxidx;
     }
+    // wBottom: function () {
+    //     let right_lowidx = lowPI(d, n - 8, n, "low");
+    //     let cra = 0.06;//priceCRA(d, right_lowidx, 8);
+    //     if (diffR(d[right_lowidx].low, d[right_lowidx].ave_close_8) < 1 * cra) return false;
+
+    //     let mid_highidx = highPI(d, right_lowidx - 8, right_lowidx, "high");
+    //     if (diffR(d[right_lowidx].low, d[mid_highidx].high) < 2 * cra) return false;
+
+    //     let left_lowidx = lowPI(d, mid_highidx - 20, mid_highidx, "low");
+    //     if (diffR(d[left_lowidx].low, d[left_lowidx].ave_close_8) < 1.5 * cra) return false;
+
+    //     if (d[left_lowidx].ave_close_8 > d[left_lowidx].ave_close_13) return false;
+
+    //     if (diffR(d[left_lowidx].low, d[right_lowidx].low) > -0.0) return false;
+    //     if (diffR(d[left_lowidx].ave_amount_55, d[right_lowidx].ave_amount_55) > -0) return false;
+
+    //     return true
+    // },
+
+    // nearDrop: function (data, n, period, maxdiff) {
+    //     for (let i = 0; i < period; i++) {
+    //         if (0.8 * data[n].amount < data[n - 1].ave_amount_8) continue;
+
+    //         let open = data[n - i].open;
+    //         let close = data[n - i].close;
+    //         let diff = (close - open) / open;
+    //         if (diff > maxdiff) continue;
+    //         let low = data[n - i].low;
+    //         let lowdiff = (low - close) / open;
+    //         if (lowdiff < maxdiff / 3) return true;
+    //     }
+    //     return false;
+
+    // },
+
 };
 
 },{}],185:[function(require,module,exports){
