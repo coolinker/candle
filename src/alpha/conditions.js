@@ -1,0 +1,15 @@
+module.exports = [["dn.ave_close_21/dn.close", [0.8, 0.9, 1, 1.1, 1.15]],
+    ["dn.ave_close_8/dn.close", [1,1.03]],
+    ["dn.ave_amount_21/dn.ave_amount_8", [0.75,1,1.5]],
+    ["dn.ave_amount_21/dn.amount", [1,1.5,2]],
+    ["dn.netsummax_duration", [40,80,120]],
+    ["dn.netsummin_r0_21", [0, 0.1]],
+    ["dn.netsummin_r0_21/dn.amount_ave_21", [-0.2,0, 0.2]],
+    ["dn.netsummax_r0_5", [0, 0.1]],
+    ["dn.netsummax_r0/dn.amount_ave_21", [0,0.5,1,1.5,2]],
+    ["dn.ave_turnover_8/dn.ave_turnover_21", [1]],
+    ["dn.netsum_r0_below", [0]],
+    ["dn.netsum_r0_below/dn.ave_amount_21", [-0.02, 0, 0.02]],
+    ["dn.netsum_r0_below/dn.netsum_r0_above", [-0.5, -0.2, 0, 0.2, 0.5]],
+    ["dn.marketCap", [5000000000, 10000000000]]
+];

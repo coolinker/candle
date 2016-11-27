@@ -21636,6 +21636,11 @@ module.exports = function () {
 }();
 
 },{}],176:[function(require,module,exports){
+"use strict";
+
+module.exports = [["dn.ave_close_21/dn.close", [0.8, 0.9, 1, 1.1, 1.15]], ["dn.ave_close_8/dn.close", [1, 1.03]], ["dn.ave_amount_21/dn.ave_amount_8", [0.75, 1, 1.5]], ["dn.ave_amount_21/dn.amount", [1, 1.5, 2]], ["dn.netsummax_duration", [40, 80, 120]], ["dn.netsummin_r0_21", [0, 0.1]], ["dn.netsummin_r0_21/dn.amount_ave_21", [-0.2, 0, 0.2]], ["dn.netsummax_r0_5", [0, 0.1]], ["dn.netsummax_r0/dn.amount_ave_21", [0, 0.5, 1, 1.5, 2]], ["dn.ave_turnover_8/dn.ave_turnover_21", [1]], ["dn.netsum_r0_below", [0]], ["dn.netsum_r0_below/dn.ave_amount_21", [-0.02, 0, 0.02]], ["dn.netsum_r0_below/dn.netsum_r0_above", [-0.5, -0.2, 0, 0.2, 0.5]], ["dn.marketCap", [5000000000, 10000000000]]];
+
+},{}],177:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -21684,7 +21689,7 @@ module.exports = function () {
     return DataBuildPipe;
 }();
 
-},{"./bullbearutil":175,"./exdateutil":177,"./movingaverageutil":180,"./netsumutil":181}],177:[function(require,module,exports){
+},{"./bullbearutil":175,"./exdateutil":178,"./movingaverageutil":181,"./netsumutil":182}],178:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -21721,14 +21726,14 @@ module.exports = function () {
     return EXDateUtil;
 }();
 
-},{}],178:[function(require,module,exports){
+},{}],179:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var conditions = [["dn.ave_close_21/dn.close", [0.9, 1, 1.08, 1.15]], ["dn.ave_close_8/dn.close", [1.03]], ["dn.ave_amount_21/dn.ave_amount_8", [1]], ["dn.ave_amount_21/dn.amount", [1.5]], ["dn.netsummin_r0_21", [0, 0]], ["dn.netsummax_r0_8", [0, 0]], ["dn.ave_turnover_8/dn.ave_turnover_21", [1]], ["dn.netsum_r0_below/dn.ave_amount_21", [0]], ["dn.netsum_r0_below/dn.ave_amount_21", [0.02, 0.04]], ["dn.marketCap", [2000000000, 3000000000, 5000000000, 10000000000]]];
+var conditions = require('./conditions');
 
 module.exports = function () {
     function MatchAnalyser() {
@@ -21739,28 +21744,7 @@ module.exports = function () {
     }
 
     _createClass(MatchAnalyser, [{
-        key: "C",
-        value: function C(arr, num) {
-            var r = [];
-            (function f(t, a, n) {
-                if (n == 0) return r.push(t);
-                for (var i = 0, l = a.length; i <= l - n; i++) {
-                    f(t.concat(a[i]), a.slice(i + 1), n - 1);
-                }
-            })([], arr, num);
-            return r;
-        }
-    }, {
-        key: "CArr",
-        value: function CArr(n, r) {
-            var arr = [];
-            for (var i = 0; i < n; i++) {
-                arr.push(i);
-            }
-            return this.C(arr, r);
-        }
-    }, {
-        key: "getValueRange",
+        key: 'getValueRange',
         value: function getValueRange(val, ranges, expression) {
             if (isNaN(val)) {
                 //console.log(expression)
@@ -21772,7 +21756,7 @@ module.exports = function () {
             return 0;
         }
     }, {
-        key: "composeMatchFunction",
+        key: 'composeMatchFunction',
         value: function composeMatchFunction(conditions) {
             // let dn = d[n];
             // reArr[offset + 0] = this.getValueRange(dn.amount_ave_21 / dn.amount, [1.5]);
@@ -21788,14 +21772,14 @@ module.exports = function () {
             return new Function('d', 'n', 'arr', 'offset', funstr);
         }
     }, {
-        key: "generateConditionCombinations",
+        key: 'generateConditionCombinations',
         value: function generateConditionCombinations(buflen, data, sectionBBSum, filterFun, callback) {
             var sublen = this.matchConditionsCount + 1;
             var byteArr = new Int8Array(buflen * sublen);
             var offset = 0;
 
-            var len = data.length;
-            for (var i = 0; i < len; i++) {
+            var len = data.length - 20;
+            for (var i = 80; i < len; i++) {
                 var dn = data[i];
                 if (!filterFun(dn)) continue;
 
@@ -21816,7 +21800,7 @@ module.exports = function () {
             return byteArr;
         }
     }, {
-        key: "Arr2Dto1D",
+        key: 'Arr2Dto1D',
         value: function Arr2Dto1D(arr2d) {
             if (!(arr2d[0] instanceof Int8Array)) return arr2d;
             var len = 0;
@@ -21835,7 +21819,7 @@ module.exports = function () {
             return byteArr;
         }
     }, {
-        key: "searchBullConditions",
+        key: 'searchBullConditions',
         value: function searchBullConditions(statusArr, bullRate, minNumer, reFilter) {
             statusArr = this.Arr2Dto1D(statusArr);
             console.log("\nsearchBullConditions", statusArr.length);
@@ -21865,7 +21849,7 @@ module.exports = function () {
             return remap;
         }
     }, {
-        key: "generateSectionStatus",
+        key: 'generateSectionStatus',
         value: function generateSectionStatus(statusArr, filter) {
             statusArr = this.Arr2Dto1D(statusArr);
             //console.log("\generateSectionStatus", statusArr.length);
@@ -21894,7 +21878,7 @@ module.exports = function () {
             return remap;
         }
     }, {
-        key: "isConditionExisted",
+        key: 'isConditionExisted',
 
 
         /* 
@@ -21917,7 +21901,7 @@ module.exports = function () {
             return filter[idx] !== undefined && filter[idx].length === 1;
         }
     }, {
-        key: "matchFilter",
+        key: 'matchFilter',
         value: function matchFilter(statusArr, offset, filter) {
 
             for (var i = 0; i < filter.length; i++) {
@@ -21961,17 +21945,46 @@ module.exports = function () {
 
 
     }], [{
-        key: "cloneFilters",
+        key: 'outputFilters',
+        value: function outputFilters(filtersArr, funstr) {
+            var cdts = {};
+            var filterObjs = [];
+            for (var i = 0; i < filtersArr.length; i++) {
+                var filters = filtersArr[i];
+                var obj = {};
+                for (var j = 0; j < filters.length; j++) {
+                    if (cdts[j] === undefined) cdts[j] = conditions[j];
+
+                    if (filters[j] !== undefined) {
+                        obj[j] = { secs: filters[j], cases: filters[j]._counters };
+                    }
+                }
+
+                filterObjs.push(obj);
+            }
+
+            return {
+                filters: JSON.stringify(filterObjs),
+                conditions: JSON.stringify(cdts),
+                basefilter: funstr
+            };
+        }
+    }, {
+        key: 'cloneFilters',
         value: function cloneFilters(filters) {
             var str = JSON.stringify(filters);
             var arr = JSON.parse(str);
             for (var i = 0; i < arr.length; i++) {
                 if (arr[i] === null && filters[i] === undefined) arr[i] = undefined;
+                if (filters[i] && filters[i]._counters) {
+                    var c = filters[i]._counters;
+                    arr[i]._counters = { '1': c['1'], '0': c['0'], '-1': c['-1'] };
+                }
             }
             return arr;
         }
     }, {
-        key: "isSubSections",
+        key: 'isSubSections',
         value: function isSubSections(sec0, sec1, seperator) {
             var arr0 = sec0.split(seperator);
             var arr1 = sec1.split(seperator);
@@ -21982,19 +21995,21 @@ module.exports = function () {
             return true;
         }
     }, {
-        key: "rangesObjToArr2D",
+        key: 'rangesObjToArr2D',
         value: function rangesObjToArr2D(ranges) {
             var att2d = [];
             for (var idx in ranges) {
                 var idxobj = ranges[idx];
                 for (var secs in idxobj) {
-                    att2d.push([idx, secs.split('_').map(Number), idxobj[secs]]);
+                    var arr = [idx, secs.split('_').map(Number)];
+                    arr[1]._counters = idxobj[secs];
+                    att2d.push(arr);
                 }
             }
             return att2d;
         }
     }, {
-        key: "filterValidRanges",
+        key: 'filterValidRanges',
         value: function filterValidRanges(idx, secBullBearMap, bullrate, minNumber, remap) {
             idx = Number(idx);
             var re = { '1': 0, '0': 0, '-1': 0 };
@@ -22081,14 +22096,348 @@ module.exports = function () {
     return MatchAnalyser;
 }();
 
-},{}],179:[function(require,module,exports){
+},{"./conditions":176}],180:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var tools = {
+var tools = require('./toolfunctions');
+module.exports = function () {
+    function MatchFunctionUtil() {
+        _classCallCheck(this, MatchFunctionUtil);
+    }
+
+    _createClass(MatchFunctionUtil, null, [{
+        key: 'composeFunction',
+        value: function composeFunction(returnStr) {
+            try {
+                var funs = 'let dn = d[n];\n';
+                for (var att in tools) {
+                    funs += 'let ' + att + ' = ' + tools[att].toString() + '\n';
+                }
+
+                // if (returnStr.indexOf("priceCR") >= 0) {
+                //     funs += 'let priceCR = ' + MatchFunctionUtil.priceCR.toString() + '\n';
+                // }
+                // if (returnStr.indexOf("diffR") >= 0) {
+                //     funs += 'let diffR = ' + MatchFunctionUtil.diffR.toString() + '\n';
+                // }
+                // if (returnStr.indexOf("priceCRA") >= 0) {
+                //     funs += 'let priceCRA = ' + MatchFunctionUtil.priceCRA.toString() + '\n';
+                // }
+                var matchFun = new Function('d', 'n', funs + '\nreturn ' + returnStr);
+                return matchFun;
+            } catch (e) {
+                console.log("e", e);
+                return null;
+            }
+        }
+    }, {
+        key: 'scan',
+        value: function scan(data, functionStr, matchInDay) {
+            var matchFun = MatchFunctionUtil.composeFunction(functionStr);
+            var cases = 0,
+                bull = 0,
+                bear = 0;
+            if (matchFun) {
+                for (var i = 80; i < data.length - 20; i++) {
+                    if (matchFun(data, i)) {
+                        var d = data[i];
+                        //matchInDay[d.date] = true;
+
+                        data[i].match = {
+                            fun: matchFun,
+                            result: 0
+                        };
+                        cases++;
+                        var re = data[i].bullbear;
+                        if (re > 0) {
+                            bull++;
+                            matchInDay[d.date] = 1;
+                        } else if (re < 0) {
+                            bear++;
+                            matchInDay[d.date] = -1;
+                        } else {
+                            matchInDay[d.date] = 0;
+                        }
+
+                        data[i].match.result = re;
+                    } else {
+                        delete data[i].match;
+                    }
+                }
+            }
+            return {
+                cases: cases,
+                bull: bull,
+                bear: bear
+            };
+        }
+    }, {
+        key: 'testBullBear',
+        value: function testBullBear(data, idx) {
+
+            var price = data[idx].close,
+                almp = tools.priceCRA(data, idx, 5);
+            for (var i = idx + 1; i < data.length; i++) {
+                var d = data[i];
+                if (d.ex) {
+                    price = price * d.open / data[i - 1].close;
+                }
+                if ((d.low - price) / price < -3 * almp) return (d.low - price) / price;
+                if ((d.high - price) / price > 3 * almp) return (d.high - price) / price;
+            }
+            return 0;
+        }
+    }]);
+
+    return MatchFunctionUtil;
+}();
+
+},{"./toolfunctions":183}],181:[function(require,module,exports){
+'use strict';
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+module.exports = function () {
+    function MovingAverageUtil() {
+        _classCallCheck(this, MovingAverageUtil);
+    }
+
+    _createClass(MovingAverageUtil, null, [{
+        key: "buildFields",
+        value: function buildFields(fields, period, start, end, data) {
+            start = Math.max(start, period - 1);
+            var sums = [];
+
+            var _loop = function _loop(i) {
+                fields.map(function (v, idx, arr) {
+                    if (sums[idx] === undefined) sums[idx] = data[i][v];else sums[idx] += data[i][v];
+                });
+            };
+
+            for (var i = start; i > start - period; i--) {
+                _loop(i);
+            }
+
+            var aves = [];
+            sums.map(function (v, idx, arr) {
+                aves[idx] = v / period;
+                var field = fields[idx];
+                data[start]["ave_" + field + "_" + period] = MovingAverageUtil.formatFloat(aves[idx]);
+            });
+
+            var _loop2 = function _loop2(_i) {
+                aves.map(function (v, idx, arr) {
+                    var field = fields[idx];
+                    var ave = aves[idx];
+                    aves[idx] = ave + (data[_i][field] - data[_i - period][field]) / period;
+                    data[_i]["ave_" + field + "_" + period] = MovingAverageUtil.formatFloat(aves[idx]);
+                });
+            };
+
+            for (var _i = start + 1; _i <= end; _i++) {
+                _loop2(_i);
+            }
+        }
+    }, {
+        key: "build",
+        value: function build(field, period, start, end, data) {
+            start = Math.max(start, period - 1);
+            var sum = 0;
+            for (var i = start; i > start - period; i--) {
+                sum += data[i][field];
+            }
+            var ave = sum / period;
+            data[start]["ave_" + field + "_" + period] = MovingAverageUtil.formatFloat(ave);
+            for (var _i2 = start + 1; _i2 <= end; _i2++) {
+                ave = ave + (data[_i2][field] - data[_i2 - period][field]) / period;
+                data[_i2]["ave_" + field + "_" + period] = MovingAverageUtil.formatFloat(ave);
+            }
+
+            return data;
+        }
+    }, {
+        key: "formatFloat",
+        value: function formatFloat(f) {
+            return f; //Math.round(f * 100) / 100;
+        }
+    }, {
+        key: "buildSingle",
+        value: function buildSingle(idx, period, data, field) {
+            var fieldAveName = 'ave_' + field + '_' + period;
+            if (idx < period - 1 || data[idx][fieldAveName]) return;
+
+            var preobj = data[idx - 1];
+            var prevalue = preobj[fieldAveName];
+            if (!isNaN(prevalue)) {
+                var v = MovingAverageUtil.formatFloat((prevalue * period - data[idx - period][field] + data[idx][field]) / period);
+                data[idx][fieldAveName] = v;
+            } else {
+                var sum = 0;
+                for (var i = 0; i < period; i++) {
+                    sum += data[idx - i][field];
+                }
+                var _v = MovingAverageUtil.formatFloat(sum / period);
+                data[idx][fieldAveName] = _v;
+            }
+        }
+    }]);
+
+    return MovingAverageUtil;
+}();
+
+},{}],182:[function(require,module,exports){
+'use strict';
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+module.exports = function () {
+    function NetSumUtil() {
+        _classCallCheck(this, NetSumUtil);
+    }
+
+    _createClass(NetSumUtil, null, [{
+        key: 'build',
+        value: function build(start, end, period, data) {
+            for (var i = start; i <= end; i++) {
+                NetSumUtil.buildSingle(i, period, data);
+            }
+
+            return data;
+        }
+    }, {
+        key: 'buildSingle',
+        value: function buildSingle(idx, period, data) {
+            if (data[idx]['marketCap'] !== undefined || !data[idx]['turnover']) return;
+            var obj = data[idx];
+            var price = obj.close;
+
+            var netsum_r0 = 0,
+                netsummax_r0 = Number.MIN_SAFE_INTEGER,
+                netsummin_r0 = Number.MAX_SAFE_INTEGER,
+                netsummax_r0x = Number.MIN_SAFE_INTEGER,
+                netsummin_r0x = Number.MAX_SAFE_INTEGER,
+                netsum_r0x = 0,
+                netsummax = Number.MIN_SAFE_INTEGER,
+                netsummax_r0_netsum_r0x = Number.MIN_SAFE_INTEGER,
+                netsummax_idx = -1,
+                netsummax_idx_r0 = -1,
+                netsum_r0_below = 0,
+                netsum_r0_above = 0,
+                netsum_r0x_below = 0,
+                netsum_r0x_above = 0;
+
+            for (var j = idx; j >= 0 && idx - j <= period; j--) {
+                var klj = data[j];
+                var r0x_net = klj.netamount - klj.r0_net;
+
+                netsum_r0 += klj.r0_net;
+                netsum_r0x += r0x_net;
+
+                if (klj.close >= price) {
+                    netsum_r0_above += klj.r0_net;
+                    netsum_r0x_above += r0x_net;
+                } else {
+                    netsum_r0_below += klj.r0_net;
+                    netsum_r0x_below += r0x_net;
+                }
+
+                if (netsum_r0 + netsum_r0x > netsummax) {
+                    netsummax = netsum_r0 + netsum_r0x;
+                    netsummax_idx = j;
+                }
+
+                if (netsum_r0 > netsummax_r0) {
+                    netsummax_r0 = netsum_r0;
+                    netsummax_idx_r0 = j;
+                    netsummax_r0_netsum_r0x = netsum_r0x;
+                }
+
+                if (netsum_r0 < netsummin_r0) {
+                    netsummin_r0 = netsum_r0;
+                }
+
+                if (netsum_r0x > netsummax_r0x) {
+                    netsummax_r0x = netsum_r0x;
+                }
+
+                if (netsum_r0x < netsummin_r0x) {
+                    netsummin_r0x = netsum_r0x;
+                }
+
+                if (idx - j + 1 === 5) {
+                    obj.netsummax_r0_5 = netsummax_r0;
+                    obj.netsummin_r0_5 = netsummin_r0;
+                    obj.netsummax_r0x_5 = netsummax_r0x;
+                    obj.netsummin_r0x_5 = netsummin_r0x;
+                    obj.netsum_r0_above_5 = netsum_r0_above;
+                    obj.netsum_r0x_above_5 = netsum_r0x_above;
+                    obj.netsum_r0_below_5 = netsum_r0_below;
+                    obj.netsum_r0x_below_5 = netsum_r0x_below;
+                }
+
+                if (idx - j + 1 === 8) {
+                    obj.netsummax_r0_8 = netsummax_r0;
+                    obj.netsummin_r0_8 = netsummin_r0;
+                    obj.netsummax_r0x_8 = netsummax_r0x;
+                    obj.netsummin_r0x_8 = netsummin_r0x;
+                    obj.netsum_r0_above_8 = netsum_r0_above;
+                    obj.netsum_r0x_above_8 = netsum_r0x_above;
+                    obj.netsum_r0_below_8 = netsum_r0_below;
+                    obj.netsum_r0x_below_8 = netsum_r0x_below;
+                }
+
+                if (idx - j + 1 === 21) {
+                    obj.netsummax_r0_21 = netsummax_r0;
+                    obj.netsummin_r0_21 = netsummin_r0;
+                    obj.netsummax_r0x_21 = netsummax_r0x;
+                    obj.netsummin_r0x_21 = netsummin_r0x;
+                    obj.netsum_r0_above_21 = netsum_r0_above;
+                    obj.netsum_r0x_above_21 = netsum_r0x_above;
+                    obj.netsum_r0_below_21 = netsum_r0_below;
+                    obj.netsum_r0x_below_21 = netsum_r0x_below;
+                }
+
+                if (idx - j + 1 === 55) {
+                    obj.netsummax_r0_55 = netsummax_r0;
+                    obj.netsummin_r0_55 = netsummin_r0;
+                    obj.netsummax_r0x_55 = netsummax_r0x;
+                    obj.netsummin_r0x_55 = netsummin_r0x;
+                    obj.netsum_r0_above_55 = netsum_r0_above;
+                    obj.netsum_r0x_above_55 = netsum_r0x_above;
+                    obj.netsum_r0_below_55 = netsum_r0_below;
+                    obj.netsum_r0x_below_55 = netsum_r0x_below;
+                }
+            }
+
+            obj.marketCap = obj.close * (2 * obj.amount / (obj.high + obj.low)) / (obj.turnover / 10000);
+            obj.netsummax_r0 = netsummax_r0;
+            obj.netsummax = netsummax;
+            obj.netsummax_duration = idx - netsummax_idx;
+
+            obj.netsummax_r0_duration = idx - netsummax_idx_r0;
+            obj.netsummax_r0_netsum_r0x = netsummax_r0_netsum_r0x;
+            obj.netsum_r0_above = netsum_r0_above;
+            obj.netsum_r0x_above = netsum_r0x_above;
+            obj.netsum_r0_below = netsum_r0_below;
+            obj.netsum_r0x_below = netsum_r0x_below;
+        }
+    }]);
+
+    return NetSumUtil;
+}();
+
+},{}],183:[function(require,module,exports){
+"use strict";
+
+module.exports = {
     wBottom: function wBottom() {
         var right_lowidx = lowPI(d, n - 8, n, "low");
         var cra = 0.06; //priceCRA(d, right_lowidx, 8);
@@ -22271,326 +22620,7 @@ var tools = {
     }
 };
 
-module.exports = function () {
-    function MatchFunctionUtil() {
-        _classCallCheck(this, MatchFunctionUtil);
-    }
-
-    _createClass(MatchFunctionUtil, null, [{
-        key: "composeFunction",
-        value: function composeFunction(returnStr) {
-            try {
-                var funs = 'let dn = d[n];\n';
-                for (var att in tools) {
-                    funs += 'let ' + att + ' = ' + tools[att].toString() + '\n';
-                }
-
-                // if (returnStr.indexOf("priceCR") >= 0) {
-                //     funs += 'let priceCR = ' + MatchFunctionUtil.priceCR.toString() + '\n';
-                // }
-                // if (returnStr.indexOf("diffR") >= 0) {
-                //     funs += 'let diffR = ' + MatchFunctionUtil.diffR.toString() + '\n';
-                // }
-                // if (returnStr.indexOf("priceCRA") >= 0) {
-                //     funs += 'let priceCRA = ' + MatchFunctionUtil.priceCRA.toString() + '\n';
-                // }
-                var matchFun = new Function('d', 'n', funs + '\nreturn ' + returnStr);
-                return matchFun;
-            } catch (e) {
-                console.log("e", e);
-                return null;
-            }
-        }
-    }, {
-        key: "scan",
-        value: function scan(data, functionStr, matchInDay) {
-            var matchFun = MatchFunctionUtil.composeFunction(functionStr);
-            var cases = 0,
-                bull = 0,
-                bear = 0;
-            if (matchFun) {
-                for (var i = 0; i < data.length; i++) {
-                    if (matchFun(data, i)) {
-                        var _d = data[i];
-                        //matchInDay[d.date] = true;
-
-                        data[i].match = {
-                            fun: matchFun,
-                            result: 0
-                        };
-                        cases++;
-                        var re = data[i].bullbear;
-                        if (re > 0) {
-                            bull++;
-                            matchInDay[_d.date] = 1;
-                        } else if (re < 0) {
-                            bear++;
-                            matchInDay[_d.date] = -1;
-                        } else {
-                            matchInDay[_d.date] = 0;
-                        }
-
-                        data[i].match.result = re;
-                    } else {
-                        delete data[i].match;
-                    }
-                }
-            }
-            return {
-                cases: cases,
-                bull: bull,
-                bear: bear
-            };
-        }
-    }, {
-        key: "testBullBear",
-        value: function testBullBear(data, idx) {
-
-            var price = data[idx].close,
-                almp = tools.priceCRA(data, idx, 5);
-            for (var i = idx + 1; i < data.length; i++) {
-                var _d2 = data[i];
-                if (_d2.ex) {
-                    price = price * _d2.open / data[i - 1].close;
-                }
-                if ((_d2.low - price) / price < -3 * almp) return (_d2.low - price) / price;
-                if ((_d2.high - price) / price > 3 * almp) return (_d2.high - price) / price;
-            }
-            return 0;
-        }
-    }]);
-
-    return MatchFunctionUtil;
-}();
-
-},{}],180:[function(require,module,exports){
-'use strict';
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-module.exports = function () {
-    function MovingAverageUtil() {
-        _classCallCheck(this, MovingAverageUtil);
-    }
-
-    _createClass(MovingAverageUtil, null, [{
-        key: "buildFields",
-        value: function buildFields(fields, period, start, end, data) {
-            start = Math.max(start, period - 1);
-            var sums = [];
-
-            var _loop = function _loop(i) {
-                fields.map(function (v, idx, arr) {
-                    if (sums[idx] === undefined) sums[idx] = data[i][v];else sums[idx] += data[i][v];
-                });
-            };
-
-            for (var i = start; i > start - period; i--) {
-                _loop(i);
-            }
-
-            var aves = [];
-            sums.map(function (v, idx, arr) {
-                aves[idx] = v / period;
-                var field = fields[idx];
-                data[start]["ave_" + field + "_" + period] = MovingAverageUtil.formatFloat(aves[idx]);
-            });
-
-            var _loop2 = function _loop2(_i) {
-                aves.map(function (v, idx, arr) {
-                    var field = fields[idx];
-                    var ave = aves[idx];
-                    aves[idx] = ave + (data[_i][field] - data[_i - period][field]) / period;
-                    data[_i]["ave_" + field + "_" + period] = MovingAverageUtil.formatFloat(aves[idx]);
-                });
-            };
-
-            for (var _i = start + 1; _i <= end; _i++) {
-                _loop2(_i);
-            }
-        }
-    }, {
-        key: "build",
-        value: function build(field, period, start, end, data) {
-            start = Math.max(start, period - 1);
-            var sum = 0;
-            for (var i = start; i > start - period; i--) {
-                sum += data[i][field];
-            }
-            var ave = sum / period;
-            data[start]["ave_" + field + "_" + period] = MovingAverageUtil.formatFloat(ave);
-            for (var _i2 = start + 1; _i2 <= end; _i2++) {
-                ave = ave + (data[_i2][field] - data[_i2 - period][field]) / period;
-                data[_i2]["ave_" + field + "_" + period] = MovingAverageUtil.formatFloat(ave);
-            }
-
-            return data;
-        }
-    }, {
-        key: "formatFloat",
-        value: function formatFloat(f) {
-            return f; //Math.round(f * 100) / 100;
-        }
-    }, {
-        key: "buildSingle",
-        value: function buildSingle(idx, period, data, field) {
-            var fieldAveName = 'ave_' + field + '_' + period;
-            if (idx < period - 1 || data[idx][fieldAveName]) return;
-
-            var preobj = data[idx - 1];
-            var prevalue = preobj[fieldAveName];
-            if (!isNaN(prevalue)) {
-                var v = MovingAverageUtil.formatFloat((prevalue * period - data[idx - period][field] + data[idx][field]) / period);
-                data[idx][fieldAveName] = v;
-            } else {
-                var sum = 0;
-                for (var i = 0; i < period; i++) {
-                    sum += data[idx - i][field];
-                }
-                var _v = MovingAverageUtil.formatFloat(sum / period);
-                data[idx][fieldAveName] = _v;
-            }
-        }
-    }]);
-
-    return MovingAverageUtil;
-}();
-
-},{}],181:[function(require,module,exports){
-'use strict';
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-module.exports = function () {
-    function NetSumUtil() {
-        _classCallCheck(this, NetSumUtil);
-    }
-
-    _createClass(NetSumUtil, null, [{
-        key: 'build',
-        value: function build(start, end, period, data) {
-            for (var i = start; i <= end; i++) {
-                NetSumUtil.buildSingle(i, period, data);
-            }
-
-            return data;
-        }
-    }, {
-        key: 'buildSingle',
-        value: function buildSingle(idx, period, data) {
-            if (data[idx]['marketCap'] !== undefined || !data[idx]['turnover']) return;
-            var obj = data[idx];
-            var price = obj.close;
-
-            var netsum_r0 = 0,
-                netsummax_r0 = Number.MIN_SAFE_INTEGER,
-                netsummin_r0 = Number.MAX_SAFE_INTEGER,
-                netsummax_r0x = Number.MIN_SAFE_INTEGER,
-                netsummin_r0x = Number.MAX_SAFE_INTEGER,
-                netsum_r0x = 0,
-                netsummax = Number.MIN_SAFE_INTEGER,
-                netsummax_r0_netsum_r0x = Number.MIN_SAFE_INTEGER,
-                netsummax_idx = -1,
-                netsummax_idx_r0 = -1,
-                netsum_r0_below = 0,
-                netsum_r0_above = 0,
-                netsum_r0x_below = 0,
-                netsum_r0x_above = 0;
-
-            for (var j = idx; j >= 0 && idx - j <= period; j--) {
-                var klj = data[j];
-                var r0x_net = klj.netamount - klj.r0_net;
-
-                netsum_r0 += klj.r0_net;
-                netsum_r0x += r0x_net;
-
-                if (klj.close >= price) {
-                    netsum_r0_above += klj.r0_net;
-                    netsum_r0x_above += r0x_net;
-                } else {
-                    netsum_r0_below += klj.r0_net;
-                    netsum_r0x_below += r0x_net;
-                }
-
-                if (netsum_r0 + netsum_r0x > netsummax) {
-                    netsummax = netsum_r0 + netsum_r0x;
-                    netsummax_idx = j;
-                }
-
-                if (netsum_r0 > netsummax_r0) {
-                    netsummax_r0 = netsum_r0;
-                    netsummax_idx_r0 = j;
-                    netsummax_r0_netsum_r0x = netsum_r0x;
-                }
-
-                if (netsum_r0 < netsummin_r0) {
-                    netsummin_r0 = netsum_r0;
-                }
-
-                if (netsum_r0x > netsummax_r0x) {
-                    netsummax_r0x = netsum_r0x;
-                }
-
-                if (netsum_r0x < netsummin_r0x) {
-                    netsummin_r0x = netsum_r0x;
-                }
-
-                if (idx - j + 1 === 8) {
-                    obj.netsummax_r0_8 = netsummax_r0;
-                    obj.netsummin_r0_8 = netsummin_r0;
-                    obj.netsummax_r0x_8 = netsummax_r0x;
-                    obj.netsummin_r0x_8 = netsummin_r0x;
-                    obj.netsum_r0_above_8 = netsum_r0_above;
-                    obj.netsum_r0x_above_8 = netsum_r0x_above;
-                    obj.netsum_r0_below_8 = netsum_r0_below;
-                    obj.netsum_r0x_below_8 = netsum_r0x_below;
-                }
-
-                if (idx - j + 1 === 21) {
-                    obj.netsummax_r0_21 = netsummax_r0;
-                    obj.netsummin_r0_21 = netsummin_r0;
-                    obj.netsummax_r0x_21 = netsummax_r0x;
-                    obj.netsummin_r0x_21 = netsummin_r0x;
-                    obj.netsum_r0_above_21 = netsum_r0_above;
-                    obj.netsum_r0x_above_21 = netsum_r0x_above;
-                    obj.netsum_r0_below_21 = netsum_r0_below;
-                    obj.netsum_r0x_below_21 = netsum_r0x_below;
-                }
-
-                if (idx - j + 1 === 55) {
-                    obj.netsummax_r0_55 = netsummax_r0;
-                    obj.netsummin_r0_55 = netsummin_r0;
-                    obj.netsummax_r0x_55 = netsummax_r0x;
-                    obj.netsummin_r0x_55 = netsummin_r0x;
-                    obj.netsum_r0_above_55 = netsum_r0_above;
-                    obj.netsum_r0x_above_55 = netsum_r0x_above;
-                    obj.netsum_r0_below_55 = netsum_r0_below;
-                    obj.netsum_r0x_below_55 = netsum_r0x_below;
-                }
-            }
-
-            obj.marketCap = obj.close * (2 * obj.amount / (obj.high + obj.low)) / (obj.turnover / 10000);
-            obj.netsummax_r0 = netsummax_r0;
-            obj.netsummax = netsummax;
-            obj.netsummax_duration = idx - netsummax_idx;
-
-            obj.netsummax_r0_duration = idx - netsummax_idx_r0;
-            obj.netsummax_r0_netsum_r0x = netsummax_r0_netsum_r0x;
-            obj.netsum_r0_above = netsum_r0_above;
-            obj.netsum_r0x_above = netsum_r0x_above;
-            obj.netsum_r0_below = netsum_r0_below;
-            obj.netsum_r0x_below = netsum_r0x_below;
-        }
-    }]);
-
-    return NetSumUtil;
-}();
-
-},{}],182:[function(require,module,exports){
+},{}],184:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -22775,7 +22805,7 @@ module.exports = function () {
     return Zip;
 }();
 
-},{}],183:[function(require,module,exports){
+},{}],185:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -22875,7 +22905,7 @@ module.exports = function (_MassPainter) {
     return AlphaPainter;
 }(MassPainter);
 
-},{"./masspainter":185}],184:[function(require,module,exports){
+},{"./masspainter":187}],186:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -23006,7 +23036,7 @@ module.exports = function (_MassPainter) {
     return CandlePainter;
 }(MassPainter);
 
-},{"./masspainter":185}],185:[function(require,module,exports){
+},{"./masspainter":187}],187:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -23164,7 +23194,7 @@ module.exports = function () {
     return MassPainter;
 }();
 
-},{}],186:[function(require,module,exports){
+},{}],188:[function(require,module,exports){
 'use strict';
 // const EventEmitter = require('events');
 
@@ -23512,7 +23542,7 @@ module.exports = function (_EventEmitter) {
     return PainterCore;
 }(_events2.default);
 
-},{"../alpha/databuildpipe":176,"../alpha/matchfunctionutil":179,"events":1}],187:[function(require,module,exports){
+},{"../alpha/databuildpipe":177,"../alpha/matchfunctionutil":180,"events":1}],189:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -23721,7 +23751,7 @@ module.exports = function () {
     return PointerPainter;
 }();
 
-},{}],188:[function(require,module,exports){
+},{}],190:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -23884,7 +23914,7 @@ module.exports = function (_MassPainter) {
     return VolumePainter;
 }(MassPainter);
 
-},{"./masspainter":185}],189:[function(require,module,exports){
+},{"./masspainter":187}],191:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -24404,7 +24434,7 @@ var CandleApp = function (_React$Component) {
 
 exports.default = CandleApp;
 
-},{"../chart/alphapainter":183,"../chart/candlepainter":184,"../chart/paintercore":186,"../chart/pointerpainter":187,"../chart/volumepainter":188,"./chartcanvas":190,"./dataworker.js":191,"./forms/dateinput":192,"./forms/forminput":193,"./io":195,"./localstoreutil":196,"./stockids":197,"./tradingdate":198,"./workergroup":199,"react":172,"webworkify":173}],190:[function(require,module,exports){
+},{"../chart/alphapainter":185,"../chart/candlepainter":186,"../chart/paintercore":188,"../chart/pointerpainter":189,"../chart/volumepainter":190,"./chartcanvas":192,"./dataworker.js":193,"./forms/dateinput":194,"./forms/forminput":195,"./io":197,"./localstoreutil":198,"./stockids":199,"./tradingdate":200,"./workergroup":201,"react":172,"webworkify":173}],192:[function(require,module,exports){
 'use strict';
 
 // let sampleData = [{ open: 15.5, close: 16, high: 16.5, low: 15.2 }, { open: 15.8, close: 15, high: 16.8, low: 14.2 }, { open: 15.5, close: 16, high: 16.8, low: 15.2 }, { open: 10.5, close: 10, high: 10.8, low: 9.2 }];
@@ -24475,7 +24505,7 @@ var ChartCanvas = function (_React$Component) {
 
 exports.default = ChartCanvas;
 
-},{"react":172}],191:[function(require,module,exports){
+},{"react":172}],193:[function(require,module,exports){
 'use strict';
 
 var _io = require('./io');
@@ -24717,7 +24747,7 @@ module.generateSectionStatus = function generateSectionStatus(filterArr2, callba
     callback(secstatus);
 };
 
-},{"../alpha/databuildpipe":176,"../alpha/matchanalyser":178,"../alpha/matchfunctionutil":179,"../alpha/zip":182,"./io":195,"./stockids":197}],192:[function(require,module,exports){
+},{"../alpha/databuildpipe":177,"../alpha/matchanalyser":179,"../alpha/matchfunctionutil":180,"../alpha/zip":184,"./io":197,"./stockids":199}],194:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -24813,7 +24843,7 @@ DateInput.defaultProps = { type: "date", width: 130 };
 
 exports.default = DateInput;
 
-},{"./forminput":193,"react":172}],193:[function(require,module,exports){
+},{"./forminput":195,"react":172}],195:[function(require,module,exports){
 'use strict';
 
 // let sampleData = [{ open: 15.5, close: 16, high: 16.5, low: 15.2 }, { open: 15.8, close: 15, high: 16.8, low: 14.2 }, { open: 15.5, close: 16, high: 16.8, low: 15.2 }, { open: 10.5, close: 10, high: 10.8, low: 9.2 }];
@@ -24920,7 +24950,7 @@ FormInput.defaultProps = {
 
 exports.default = FormInput;
 
-},{"react":172}],194:[function(require,module,exports){
+},{"react":172}],196:[function(require,module,exports){
 'use strict';
 
 var _react = require("react");
@@ -24939,7 +24969,7 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 var candleApp = _reactDom2.default.render(_react2.default.createElement(_candleapp2.default, null), document.getElementById('app'));
 
-},{"./candleapp":189,"react":172,"react-dom":29}],195:[function(require,module,exports){
+},{"./candleapp":191,"react":172,"react-dom":29}],197:[function(require,module,exports){
 'use strict';
 // import fetch from 'whatwg-fetch';
 
@@ -25126,7 +25156,7 @@ IO.workerStarts = [0];
 
 exports.default = IO;
 
-},{"../alpha/netsumutil":181,"../alpha/zip":182,"./stockids":197,"./workerproxy":200}],196:[function(require,module,exports){
+},{"../alpha/netsumutil":182,"../alpha/zip":184,"./stockids":199,"./workerproxy":202}],198:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -25174,7 +25204,7 @@ var LocalStoreUtil = function () {
 
 exports.default = LocalStoreUtil;
 
-},{}],197:[function(require,module,exports){
+},{}],199:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -25280,7 +25310,7 @@ StockIDs.idIndexMap = {};
 
 exports.default = StockIDs;
 
-},{"./io":195}],198:[function(require,module,exports){
+},{"./io":197}],200:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -25340,7 +25370,7 @@ TradingDate.dateIndexMap = {};
 
 exports.default = TradingDate;
 
-},{"./io":195}],199:[function(require,module,exports){
+},{"./io":197}],201:[function(require,module,exports){
 'use strict';
 // import fetch from 'whatwg-fetch';
 
@@ -25401,6 +25431,27 @@ var WorkerGroup = function () {
             });
         }
     }, {
+        key: 'addFootprint',
+        value: function addFootprint(filters, history) {
+            var print = false;
+            var printobj = void 0;
+            for (var i = 0; i < filters.length; i++) {
+                if (filters[i]) {
+                    var key = i + "_" + filters[i].join("_");
+                    printobj = history[key];
+                    if (!printobj) {
+                        history = history[key] = {};
+                        print = true;
+                    } else {
+                        history = printobj;
+                    }
+                }
+            }
+
+            //if (print) console.log("footprint***add",print, hh, JSON.stringify(filters))
+            return print;
+        }
+    }, {
         key: 'workersBuildAndAnalyse',
         value: function workersBuildAndAnalyse(patternStr, callback) {
             var finishedCount = 0;
@@ -25433,49 +25484,58 @@ var WorkerGroup = function () {
                         }
 
                         if (finishedCount === WorkerGroup.dataWorkerProxies.length) {
-                            var rate = matchSum.bull / matchSum.cases;
-                            var minNumber = 10000;
-                            console.log("buildForAnalysis all finished", JSON.stringify(sectionBBSum));
-                            var obj = {};
-                            for (var idxatt in sectionBBSum) {
-                                var secs = sectionBBSum[idxatt];
-
-                                _matchanalyser2.default.filterValidRanges(idxatt, secs, rate + 0.02, minNumber, obj);
-                                console.log("-------------------", JSON.stringify(obj));
-                            }
-
-                            var arr2d = _matchanalyser2.default.rangesObjToArr2D(obj);
-                            var filter0 = arr2d[0];
-
-                            var filter0obj = obj[filter0[0]][filter0[1].join('_')];
-                            var nextrate = filter0obj['1'] / (filter0obj['-1'] + filter0obj['0'] + filter0obj['1']);
-                            var filters = [];
-                            filters[filter0[0]] = filter0[1];
-
-                            WorkerGroup.workersAnalyseBullConditions(minNumber, filters, [arr2d], function (cbfilters, cbcandidatefilters) {
-                                // console.log("roll candidate filters:", JSON.stringify(cbfilters), "*********", cbcandidatefilters.length, JSON.stringify(cbcandidatefilters));
-                                var candidateFiltersNext = void 0;
-                                do {
-                                    candidateFiltersNext = cbcandidatefilters[cbcandidatefilters.length - 1];
-                                    var prefilter = candidateFiltersNext.shift();
-                                    if (candidateFiltersNext._replacement) {
-                                        cbfilters[prefilter[0]] = candidateFiltersNext._replacement;
-                                        delete candidateFiltersNext._replacement;
-                                    } else {
-                                        delete cbfilters[prefilter[0]];
-                                    }
-                                } while (candidateFiltersNext.length === 0 && cbcandidatefilters.pop() && cbcandidatefilters.length > 0);
-
-                                if (candidateFiltersNext && candidateFiltersNext.length > 0) {
-                                    var nxtfilter = candidateFiltersNext[0];
-                                    cbfilters[nxtfilter[0]] = nxtfilter[1];
+                            (function () {
+                                var rate = matchSum.bull / matchSum.cases;
+                                console.log("buildForAnalysis all finished", JSON.stringify(sectionBBSum));
+                                var obj = {};
+                                for (var idxatt in sectionBBSum) {
+                                    var secs = sectionBBSum[idxatt];
+                                    _matchanalyser2.default.filterValidRanges(idxatt, secs, WorkerGroup.increaseRate(rate), WorkerGroup.casesMinNumber, obj);
+                                    //console.log("-------------------", JSON.stringify(obj));
                                 }
 
-                                // console.log("cbcandidatefilters length", cbcandidatefilters.length, JSON.stringify(cbfilters))
+                                var arr2d = _matchanalyser2.default.rangesObjToArr2D(obj);
+                                var filter0 = arr2d[0];
 
-                            });
+                                var filter0obj = obj[filter0[0]][filter0[1].join('_')];
+                                var nextrate = filter0obj['1'] / (filter0obj['-1'] + filter0obj['0'] + filter0obj['1']);
+                                var filters = [];
+                                filters[filter0[0]] = filter0[1];
+                                var footprint = {};
+                                var bullfilters = [];
+                                WorkerGroup.callCounter = 0;
+                                WorkerGroup.workersAnalyseBullConditions(filters, [arr2d], footprint, function (cbfilters, cbcandidatefilters, isbull) {
+                                    if (isbull) bullfilters.push(_matchanalyser2.default.cloneFilters(cbfilters));
+                                    // console.log("roll candidate filters:", JSON.stringify(cbfilters), "*********", cbcandidatefilters.length, JSON.stringify(cbcandidatefilters));
+                                    var candidateFiltersNext = void 0;
+                                    do {
+                                        candidateFiltersNext = cbcandidatefilters[cbcandidatefilters.length - 1];
+                                        var prefilter = candidateFiltersNext.shift();
+                                        if (candidateFiltersNext._replacement) {
+                                            cbfilters[prefilter[0]] = candidateFiltersNext._replacement;
+                                            delete candidateFiltersNext._replacement;
+                                        } else {
+                                            delete cbfilters[prefilter[0]];
+                                        }
 
-                            callback(matchSum);
+                                        if (candidateFiltersNext.length === 0 && cbcandidatefilters.pop()) {
+                                            if (cbcandidatefilters.length === 0) {
+                                                console.log("call counter:", WorkerGroup.callCounter, bullfilters.length, _matchanalyser2.default.outputFilters(bullfilters, patternStr));
+
+                                                return;
+                                            }
+                                        } else {
+                                            var nxtfilter = candidateFiltersNext[0];
+                                            cbfilters[nxtfilter[0]] = nxtfilter[1];
+                                        }
+                                    } while (!WorkerGroup.addFootprint(cbfilters, footprint));
+
+                                    // console.log("cbcandidatefilters length", cbcandidatefilters.length, JSON.stringify(cbfilters))
+
+                                });
+
+                                callback(matchSum);
+                            })();
                         }
                     });
                 });
@@ -25483,28 +25543,34 @@ var WorkerGroup = function () {
         }
     }, {
         key: 'workersAnalyseBullConditions',
-        value: function workersAnalyseBullConditions(minNumber, filters, candidateFilters, callback) {
+        value: function workersAnalyseBullConditions(filters, candidateFilters, footprint, doStepBack) {
+            WorkerGroup.callCounter++;
             if (candidateFilters.length === 0) return;
-
+            // if (!WorkerGroup.addFootprint(filters, footprint)) {
+            //     callback(filters, candidateFilters);
+            //     WorkerGroup.workersAnalyseBullConditions(filters, candidateFilters, footprint, callback);
+            //     return;
+            // }
             var candidateFiltersNext = candidateFilters[candidateFilters.length - 1];
+
+            // debugger;
             var nxtfilter = candidateFiltersNext[0];
-            if (!nxtfilter) debugger;
-            var bbobj = nxtfilter[2];
+            var bbobj = nxtfilter[1]._counters;
 
             var rate = bbobj['1'] / (bbobj['-1'] + bbobj['0'] + bbobj['1']);
 
             if (rate >= 0.8) {
                 //debugger;
-                console.log("bull------------", rate, JSON.stringify(filters));
-                callback(filters, candidateFilters);
-                WorkerGroup.workersAnalyseBullConditions(minNumber, filters, candidateFilters, callback);
+                console.log("bull------------", rate, JSON.stringify(filters), bbobj['-1'] + bbobj['0'] + bbobj['1'], filters);
+                doStepBack(filters, candidateFilters, true);
+                WorkerGroup.workersAnalyseBullConditions(filters, candidateFilters, footprint, doStepBack);
                 return;
             }
 
             var finishedCount = 0;
             var sectionBBSum = {};
             // console.log("\n-->>", rate, JSON.stringify(filters), '*********', candidateFilters.length, JSON.stringify(candidateFilters));
-            //console.trace();
+
             WorkerGroup.dataWorkerProxies.forEach(function (workerProxy, idx) {
                 var params = [filters];
 
@@ -25525,19 +25591,19 @@ var WorkerGroup = function () {
                     //console.log("workersAnalyseBullConditions--------------finishedCount", finishedCount, JSON.stringify(sectionBBSum));
                     if (finishedCount === WorkerGroup.dataWorkerProxies.length) {
                         var validranges = {};
-                        var nextrate = rate + 0.02;
+                        var nextrate = WorkerGroup.increaseRate(rate);
                         for (var idxatt in sectionBBSum) {
                             var secs = sectionBBSum[idxatt];
-                            _matchanalyser2.default.filterValidRanges(idxatt, secs, nextrate, minNumber, validranges);
+                            _matchanalyser2.default.filterValidRanges(idxatt, secs, nextrate, WorkerGroup.casesMinNumber, validranges);
                         }
 
                         var _candidateFiltersNext = _matchanalyser2.default.rangesObjToArr2D(validranges);
                         if (_candidateFiltersNext.length === 0) {
                             //debugger;
-                            console.log("<<-- bear*******no further filters", rate, JSON.stringify(filters), '\n');
+                            //console.log("<<-- bear*******no further filters", rate, JSON.stringify(filters), '\n');
                             //callback(filters, rate);
-                            callback(filters, candidateFilters);
-                            WorkerGroup.workersAnalyseBullConditions(minNumber, filters, candidateFilters, callback);
+                            doStepBack(filters, candidateFilters);
+                            WorkerGroup.workersAnalyseBullConditions(filters, candidateFilters, footprint, doStepBack);
                             return;
                         }
 
@@ -25550,40 +25616,21 @@ var WorkerGroup = function () {
                         }
 
                         filters[nextfilter[0]] = nextfilter[1];
-
                         candidateFilters.push(_candidateFiltersNext);
-                        WorkerGroup.workersAnalyseBullConditions(minNumber, filters, candidateFilters, /*function (cbfilters, cbcandidatefilters) {
-                                                                                                       let candidateFiltersNext = cbcandidatefilters[cbcandidatefilters.length - 1];
-                                                                                                       let prefilter = candidateFiltersNext.shift();
-                                                                                                       if (candidateFiltersNext._replacement) {
-                                                                                                       cbfilters[prefilter[0]] = candidateFiltersNext._replacement;
-                                                                                                       delete candidateFiltersNext._replacement;
-                                                                                                       } else {
-                                                                                                       delete cbfilters[prefilter[0]];
-                                                                                                       }
-                                                                                                       console.log("cbcandidatefilters length", cbcandidatefilters.length, JSON.stringify(cbfilters))
-                                                                                                       if (candidateFiltersNext.length > 0) {
-                                                                                                       let nxtfilter = candidateFiltersNext[0];
-                                                                                                       cbfilters[nxtfilter[0]] = nxtfilter[1];
-                                                                                                       let bbobj = nxtfilter[2];
-                                                                                                       let nxtrate = bbobj['1'] / (bbobj['-1'] + bbobj['0'] + bbobj['1']);
-                                                                                                       WorkerGroup.workersAnalyseBullConditions(nxtrate, minNumber, cbfilters, cbcandidatefilters, callback);
-                                                                                                       } else {
-                                                                                                       //debugger;
-                                                                                                       cbcandidatefilters.pop();
-                                                                                                       let candidateFiltersNext = cbcandidatefilters[cbcandidatefilters.length - 1];
-                                                                                                       let nxtfilter = candidateFiltersNext[0];
-                                                                                                       cbfilters[nxtfilter[0]] = nxtfilter[1];
-                                                                                                       let bbobj = nxtfilter[2];
-                                                                                                       let nxtrate = bbobj['1'] / (bbobj['-1'] + bbobj['0'] + bbobj['1']);
-                                                                                                       console.log("<<--", nxtrate, JSON.stringify(cbfilters), '\n')
-                                                                                                       // callback(cbfilters, cbcandidatefilters);
-                                                                                                       WorkerGroup.workersAnalyseBullConditions(nxtrate, minNumber, cbfilters, cbcandidatefilters, callback);
-                                                                                                       }
-                                                                                                       }*/callback);
+                        if (!WorkerGroup.addFootprint(filters, footprint)) {
+                            doStepBack(filters, candidateFilters);
+                        }
+
+                        WorkerGroup.workersAnalyseBullConditions(filters, candidateFilters, footprint, doStepBack);
                     }
                 });
             });
+        }
+    }, {
+        key: 'increaseRate',
+        value: function increaseRate(rate) {
+            if (rate < 0.6) rate += 0.02;else if (rate < 0.7) rate += 0.02;else if (rate < 0.79) rate += 0.01;else rate += 0.01;
+            return rate;
         }
     }, {
         key: 'workersScanByIndex',
@@ -25645,10 +25692,11 @@ var WorkerGroup = function () {
 }();
 
 WorkerGroup.workerStarts = [0];
-
+WorkerGroup.casesMinNumber = 15000;
+WorkerGroup.callCounter = 0;
 exports.default = WorkerGroup;
 
-},{"../alpha/matchanalyser":178,"../alpha/netsumutil":181,"../alpha/zip":182,"./io":195,"./stockids":197,"./workerproxy":200}],200:[function(require,module,exports){
+},{"../alpha/matchanalyser":179,"../alpha/netsumutil":182,"../alpha/zip":184,"./io":197,"./stockids":199,"./workerproxy":202}],202:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -25712,4 +25760,4 @@ var WorkerProxy = function () {
 
 exports.default = WorkerProxy;
 
-},{"whatwg-fetch":174}]},{},[194]);
+},{"whatwg-fetch":174}]},{},[196]);

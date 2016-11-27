@@ -1,43 +1,11 @@
 'use strict';
-
-let conditions = [
-    ["dn.ave_close_21/dn.close", [0.9, 1, 1.08,1.15]],
-    ["dn.ave_close_8/dn.close", [1.03]],
-    ["dn.ave_amount_21/dn.ave_amount_8", [1]],
-    ["dn.ave_amount_21/dn.amount", [1.5]],
-    ["dn.netsummin_r0_21", [0, 0]],
-    ["dn.netsummax_r0_8", [0, 0]],
-    ["dn.ave_turnover_8/dn.ave_turnover_21", [1]],
-    ["dn.netsum_r0_below/dn.ave_amount_21", [0]],
-    ["dn.netsum_r0_below/dn.ave_amount_21", [0.02, 0.04]],
-    ["dn.marketCap", [2000000000, 3000000000, 5000000000, 10000000000]]
-
-];
+let conditions = require('./conditions');
 
 module.exports = class MatchAnalyser {
     constructor() {
         this.matchConditionsCount = conditions.length;
         this.matchConditions = this.composeMatchFunction(conditions);
 
-    }
-
-    C(arr, num) {
-        var r = [];
-        (function f(t, a, n) {
-            if (n == 0) return r.push(t);
-            for (var i = 0, l = a.length; i <= l - n; i++) {
-                f(t.concat(a[i]), a.slice(i + 1), n - 1);
-            }
-        })([], arr, num);
-        return r;
-    }
-
-    CArr(n, r) {
-        var arr = [];
-        for (var i = 0; i < n; i++) {
-            arr.push(i);
-        }
-        return this.C(arr, r);
     }
 
     getValueRange(val, ranges, expression) {
@@ -72,8 +40,8 @@ module.exports = class MatchAnalyser {
         let byteArr = new Int8Array(buflen * sublen);
         let offset = 0;
 
-        let len = data.length;
-        for (let i = 0; i < len; i++) {
+        let len = data.length-20;
+        for (let i = 80; i < len; i++) {
             let dn = data[i];
             if (!filterFun(dn)) continue;
 
@@ -82,9 +50,9 @@ module.exports = class MatchAnalyser {
             for (let n = 0; n < sublen - 1; n++) {
                 let idx = offset + n;
                 let sec = byteArr[idx];
-                
+
                 if (!sectionBBSum[n]) sectionBBSum[n] = {};
-                if (!sectionBBSum[n][sec]) sectionBBSum[n][sec] = {'-1':0, '0':0, '1':0};
+                if (!sectionBBSum[n][sec]) sectionBBSum[n][sec] = { '-1': 0, '0': 0, '1': 0 };
 
                 sectionBBSum[n][sec][bb]++;
             }
@@ -144,7 +112,7 @@ module.exports = class MatchAnalyser {
         return remap;
     }
 
-    generateSectionStatus(statusArr, filter){
+    generateSectionStatus(statusArr, filter) {
         statusArr = this.Arr2Dto1D(statusArr);
         //console.log("\generateSectionStatus", statusArr.length);
         let sublen = this.matchConditionsCount + 1;
@@ -168,36 +136,67 @@ module.exports = class MatchAnalyser {
             //console.log("generateSectionStatus--------------", idx, JSON.stringify(subre))
         }
         //console.log("generateSectionStatus--------------", JSON.stringify(remap))
-        
+
         return remap;
     }
-    
-    static cloneFilters(filters){
+
+    static outputFilters(filtersArr, funstr) {
+        let cdts = {};
+        let filterObjs = [];
+        for (let i = 0; i < filtersArr.length; i++) {
+            let filters = filtersArr[i];
+            let obj = {};
+            for (let j=0; j<filters.length; j++) {
+                if (cdts[j] === undefined) cdts[j] = conditions[j];
+            
+                if(filters[j] !== undefined) {
+                    obj[j] = {secs:filters[j],cases:filters[j]._counters};
+                }
+            }
+
+            filterObjs.push(obj);
+                
+        }
+
+        return {
+            filters: JSON.stringify(filterObjs),
+            conditions: JSON.stringify(cdts),
+            basefilter: funstr
+        }
+    }
+
+    static cloneFilters(filters) {
         let str = JSON.stringify(filters);
         let arr = JSON.parse(str);
-        for (let i=0;i<arr.length; i++) {
+        for (let i = 0; i < arr.length; i++) {
             if (arr[i] === null && filters[i] === undefined) arr[i] = undefined;
+            if (filters[i] && filters[i]._counters) {
+                let c = filters[i]._counters;
+                arr[i]._counters = { '1': c['1'], '0': c['0'], '-1': c['-1'] }
+            }
         }
         return arr;
     }
 
-    static isSubSections(sec0, sec1, seperator){
+    static isSubSections(sec0, sec1, seperator) {
         let arr0 = sec0.split(seperator);
         let arr1 = sec1.split(seperator);
-        for (let i=0; i<arr0.length; i++) {
-            if (arr1.indexOf(arr0[i])<0) return false;  
+        for (let i = 0; i < arr0.length; i++) {
+            if (arr1.indexOf(arr0[i]) < 0) return false;
         }
 
         return true;
 
     }
-    
-    static rangesObjToArr2D(ranges){
+
+    static rangesObjToArr2D(ranges) {
         let att2d = [];
         for (let idx in ranges) {
             let idxobj = ranges[idx];
             for (let secs in idxobj) {
-                att2d.push([idx, secs.split('_').map(Number),idxobj[secs]]);
+                let arr = [idx, secs.split('_').map(Number)];
+                arr[1]._counters = idxobj[secs];
+                att2d.push(arr);
             }
         }
         return att2d;

@@ -71,6 +71,16 @@ module.exports = class NetSumUtil {
                 netsummin_r0x = netsum_r0x;
             }
 
+            if (idx - j + 1 === 5) {
+                obj.netsummax_r0_5 = netsummax_r0;
+                obj.netsummin_r0_5 = netsummin_r0;
+                obj.netsummax_r0x_5 = netsummax_r0x;
+                obj.netsummin_r0x_5 = netsummin_r0x;
+                obj.netsum_r0_above_5 = netsum_r0_above;
+                obj.netsum_r0x_above_5 = netsum_r0x_above;
+                obj.netsum_r0_below_5 = netsum_r0_below;
+                obj.netsum_r0x_below_5 = netsum_r0x_below;
+            }
 
             if (idx - j + 1 === 8) {
                 obj.netsummax_r0_8 = netsummax_r0;
