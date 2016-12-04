@@ -31,13 +31,17 @@ module.exports = class BullBearUtil {
                 price = price * d.open / data[i - 1].close;
             }
 
-            if ((d.low - price) / price < -3 * almp) {
+            if ((d.low - price) / price < - 3.5 * almp) {
                 obj.bullbear = (d.low - price) / price;
                 return;
-            } else if ((d.high - price) / price > 3 * almp) {
+            } else if ((d.high - price) / price > 3.5 * almp) {
                 obj.bullbear = (d.high - price) / price;
                 return;
             }
+
+            // if (i>idx+150){
+            //     return;
+            // }
         }
 
     }

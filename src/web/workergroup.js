@@ -112,9 +112,12 @@ class WorkerGroup {
                                 
                                 if(candidateFiltersNext.length === 0 && cbcandidatefilters.pop()) {
                                     if (cbcandidatefilters.length === 0){
-                                        let alphaObj = MatchAnalyser.outputFilters(bullfilters, patternStr);
+                                        let alphaObj = MatchAnalyser.outputFilters(bullfilters, patternStr, WorkerGroup.casesMinNumber);
                                         console.log("call counter:", WorkerGroup.callCounter, bullfilters.length, alphaObj)
-                                        LocalStoreUtil.addToStore("alphaObj", alphaObj)
+                                        LocalStoreUtil.addToStore("alphaObj", alphaObj);
+                                        IO.httpSaveBullFilters(alphaObj, function(re){
+                                            console.log("-----------------finished:", re);
+                                        })
                                         return;
                                     } 
                                 } else {
@@ -160,7 +163,7 @@ class WorkerGroup {
 
         if (rate >= 0.8) {
             //debugger;
-            console.log("bull------------", rate, JSON.stringify(filters), bbobj['-1'] + bbobj['0'] + bbobj['1'], filters);
+            console.log("bull------------", rate, JSON.stringify(filters), bbobj['1'], filters);
             doStepBack(filters, candidateFilters, true);
             WorkerGroup.workersAnalyseBullConditions(filters, candidateFilters, footprint, doStepBack);
             return;
@@ -199,7 +202,7 @@ class WorkerGroup {
                     let candidateFiltersNext = MatchAnalyser.rangesObjToArr2D(validranges);
                     if (candidateFiltersNext.length === 0) {
                         //debugger;
-                        //console.log("<<-- bear*******no further filters", rate, JSON.stringify(filters), '\n');
+                        console.log("<<-- bear*******no further filters", rate,nextrate, JSON.stringify(filters), '\n');
                         //callback(filters, rate);
                         doStepBack(filters, candidateFilters);
                         WorkerGroup.workersAnalyseBullConditions(filters, candidateFilters, footprint, doStepBack);
@@ -230,9 +233,9 @@ class WorkerGroup {
     }
 
     static increaseRate(rate){
-        if (rate<0.6) rate += 0.02;
+        if (rate<0.6) rate += 0.03;
         else if (rate<0.7) rate += 0.02;
-        else if (rate<0.79) rate += 0.01;
+        else if (rate<0.79) rate += 0.02;
         else rate += 0.01;
         return rate;
     }
@@ -294,6 +297,6 @@ class WorkerGroup {
 }
 
 WorkerGroup.workerStarts = [0];
-WorkerGroup.casesMinNumber = 15000;
+WorkerGroup.casesMinNumber = 13000;
 WorkerGroup.callCounter = 0;
 export default WorkerGroup;

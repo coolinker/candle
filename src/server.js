@@ -10,7 +10,7 @@ let http = require("http"),
 
 let cacheMap = {};
 
-let server = http.createServer(function(req, res) {
+let server = http.createServer(function (req, res) {
     let uri = url.parse(req.url).pathname;
     if (uri === "/api" && handleApiRequest(req, res)) {
         return;
@@ -55,16 +55,16 @@ function handleApiRequest(request, response) {
         return false;
     } else if (request.method == 'POST') {
         let jsonString = '';
-        request.on('data', function(data) {
+        request.on('data', function (data) {
             jsonString += data;
         });
 
-        request.on('end', function() {
+        request.on('end', function () {
             let postJson = JSON.parse(jsonString);
             let action = postJson.action;
             if (!apiDispatcher[action]) return false;
             let startTime = new Date();
-            apiDispatcher[action](postJson, function(output, gzip, cacheKey) {
+            apiDispatcher[action](postJson, function (output, gzip, cacheKey) {
                 let endTime = new Date();
                 console.log("Action", action, "takes", endTime - startTime, "ms");
                 if (gzip) {
@@ -103,7 +103,7 @@ function outputZipResponse(response, output, cacheKey) {
     let startTime = new Date();
 
     if (needZip) {
-        zlib.gzip(output, function(error, result) { // The callback will give you the 
+        zlib.gzip(output, function (error, result) { // The callback will give you the 
             //response.write(result);
             if (cacheKey) cacheMap[cacheKey] = result;
             let endTime = new Date();
@@ -127,7 +127,7 @@ function errorMessage(msg) {
 let DataSourceIO = require("./alpha/datasourceio");
 let dataSourceIO = new DataSourceIO('../data');
 let apiDispatcher = {
-    stockIds: function(params, outputCallback) {
+    stockIds: function (params, outputCallback) {
         let filter = params.filter;
         let ids = dataSourceIO.getAllStockIds(filter);
         let str = JSON.stringify(ids);
@@ -135,7 +135,7 @@ let apiDispatcher = {
     },
 
 
-    stockCompressed: function(params, outputCallback) {
+    stockCompressed: function (params, outputCallback) {
         let sid = params.sid;
         let fields = params.fields.split(',');
         let content = dataSourceIO.readStockCompressedJsonSync(sid.toUpperCase(), fields);
@@ -148,7 +148,7 @@ let apiDispatcher = {
 
     },
 
-    stocksCompressed: function(params, outputCallback) {
+    stocksCompressed: function (params, outputCallback) {
         let sids = params.sids.split(',');
         let fields = params.fields.split(',');
         let obj = {
@@ -170,7 +170,7 @@ let apiDispatcher = {
         outputCallback(str, true, params.fields + params.sids);
     },
 
-    stock: function(params, outputCallback) {
+    stock: function (params, outputCallback) {
         let sid = params.sid;
         let content = dataSourceIO.readJsonSync(sid.toUpperCase());
         if (content) {
@@ -182,7 +182,7 @@ let apiDispatcher = {
 
     },
 
-    stockMoneyFlow: function(params, outputCallback) {
+    stockMoneyFlow: function (params, outputCallback) {
         let sid = params.sid;
         let content = dataSourceIO.readMoneyFlowSync(sid.toUpperCase());
         if (content) {
@@ -194,12 +194,25 @@ let apiDispatcher = {
 
     },
 
-    thirdPartyAjaxAPI: function(params, outputCallback) {
+    thirdPartyAjaxAPI: function (params, outputCallback) {
         let url = params.url;
         let mtd = params.http;
-        dataSourceIO.thirdPartyAjaxAPI(url, mtd, function(output) {
+        dataSourceIO.thirdPartyAjaxAPI(url, mtd, function (output) {
             outputCallback(output);
         });
+    },
+
+    saveBullFilters: function (params, outputCallback) {
+        if (params.filterObj) {
+            let filterObj = params.filterObj;
+            let filename = "../data/alpha/" + filterObj.name + "_" + filterObj.casesMin + "_" + new Date().getTime() + ".json";
+
+            fs.writeFileSync(filename, JSON.stringify(params.filterObj));
+            outputCallback("{\"message\": \"succeed\"}");
+        } else {
+            outputCallback(errorMessage("Can not find filterObj for saving."))
+        }
     }
+
 
 }

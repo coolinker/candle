@@ -140,6 +140,28 @@ class IO {
         }
     }
 
+    static httpSaveBullFilters(filterObj, callback) {
+        let obj = {
+            "filterObj":filterObj,
+            action: "saveBullFilters"
+        };
+        console.log("--------------httpSaveBullFilters", JSON.stringify(obj));
+        
+        fetch(IO.baseUrl, {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(obj)
+        }).then(function (res) {
+            return res.json();
+        }).then(function (json) {
+            callback(json);
+        });
+    }
+
+
 }
 
 IO.baseUrl = self.location.origin + '/api';

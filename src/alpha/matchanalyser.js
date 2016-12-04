@@ -140,7 +140,7 @@ module.exports = class MatchAnalyser {
         return remap;
     }
 
-    static outputFilters(filtersArr, funstr) {
+    static outputFilters(filtersArr, funstr, minNumber) {
         let cdts = {};
         let filterObjs = [];
         for (let i = 0; i < filtersArr.length; i++) {
@@ -157,11 +157,15 @@ module.exports = class MatchAnalyser {
             filterObjs.push(obj);
                 
         }
-
+        
+        let m = funstr.match(/\/\*\*([^]*)\*\*\//);
+        
         return {
+            name: m?m[1]:new Date().getTime(),
             filters: JSON.stringify(filterObjs),
             conditions: JSON.stringify(cdts),
-            basefilter: funstr
+            baseFilter: funstr,
+            casesMin:minNumber
         }
     }
 
@@ -242,7 +246,7 @@ module.exports = class MatchAnalyser {
                 let pending = sumobj['0'] += bbo['0'];
                 let bear = sumobj['-1'] += bbo['-1'];
 
-                if (bull + pending + bear < minNumber) badflag = true;
+                if (bull < minNumber) badflag = true;
 
                 for (let att_idx in remap) {
                     if (badflag) break;

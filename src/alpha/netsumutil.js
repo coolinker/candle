@@ -72,6 +72,8 @@ module.exports = class NetSumUtil {
             }
 
             if (idx - j + 1 === 5) {
+                obj.netsum_r0_5 = netsum_r0;
+                obj.netsum_r0x_5 = netsum_r0x;
                 obj.netsummax_r0_5 = netsummax_r0;
                 obj.netsummin_r0_5 = netsummin_r0;
                 obj.netsummax_r0x_5 = netsummax_r0x;
@@ -83,6 +85,8 @@ module.exports = class NetSumUtil {
             }
 
             if (idx - j + 1 === 8) {
+                obj.netsum_r0_8 = netsum_r0;
+                obj.netsum_r0x_8 = netsum_r0x;
                 obj.netsummax_r0_8 = netsummax_r0;
                 obj.netsummin_r0_8 = netsummin_r0;
                 obj.netsummax_r0x_8 = netsummax_r0x;
@@ -94,6 +98,8 @@ module.exports = class NetSumUtil {
             }
 
             if (idx - j + 1 === 21) {
+                obj.netsum_r0_21 = netsum_r0;
+                obj.netsum_r0x_21 = netsum_r0x;
                 obj.netsummax_r0_21 = netsummax_r0;
                 obj.netsummin_r0_21 = netsummin_r0;
                 obj.netsummax_r0x_21 = netsummax_r0x;
@@ -105,6 +111,8 @@ module.exports = class NetSumUtil {
             }
 
             if (idx - j + 1 === 55) {
+                obj.netsum_r0_55 = netsum_r0;
+                obj.netsum_r0x_55 = netsum_r0x;
                 obj.netsummax_r0_55 = netsummax_r0;
                 obj.netsummin_r0_55 = netsummin_r0;
                 obj.netsummax_r0x_55 = netsummax_r0x;

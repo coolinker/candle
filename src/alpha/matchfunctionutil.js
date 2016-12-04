@@ -19,7 +19,7 @@ module.exports = class MatchFunctionUtil {
             // if (returnStr.indexOf("priceCRA") >= 0) {
             //     funs += 'let priceCRA = ' + MatchFunctionUtil.priceCRA.toString() + '\n';
             // }
-            let matchFun = new Function('d', 'n', funs + '\nreturn ' + returnStr);
+            let matchFun = new Function('d', 'n','sid', funs + '\nreturn ' + returnStr);
             return matchFun;
         } catch (e) {
             console.log("e", e);
@@ -27,14 +27,14 @@ module.exports = class MatchFunctionUtil {
         }
     }
 
-    static scan(data, functionStr, matchInDay) {
+    static scan(data, functionStr, matchInDay, sid) {
         let matchFun = MatchFunctionUtil.composeFunction(functionStr);
         let cases = 0,
             bull = 0,
             bear = 0;
         if (matchFun) {
             for (let i = 80; i < data.length-20; i++) {
-                if (matchFun(data, i)) {
+                if (matchFun(data, i, sid)) {
                     let d = data[i];
                     //matchInDay[d.date] = true;
 

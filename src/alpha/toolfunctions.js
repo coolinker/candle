@@ -60,7 +60,18 @@ module.exports = {
                 v = v * data[i - 1].close/data[i].open;
             }            
         }
-        return arr;
+        return arr.reverse();
+    },
+    
+    higherItems(data, start, end, field, v) {
+        let arr = [];
+        for (let i = end; i >= start; i--) {
+            if (data[i][field] > v) arr.push(i);
+            if (data[i].ex) {
+                v = v * data[i - 1].close/data[i].open;
+            }            
+        }
+        return arr.reverse();
     },
 
     sum: function (data, n, field, period) {

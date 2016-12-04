@@ -21621,13 +21621,17 @@ module.exports = function () {
                     price = price * d.open / data[i - 1].close;
                 }
 
-                if ((d.low - price) / price < -3 * almp) {
+                if ((d.low - price) / price < -3.5 * almp) {
                     obj.bullbear = (d.low - price) / price;
                     return;
-                } else if ((d.high - price) / price > 3 * almp) {
+                } else if ((d.high - price) / price > 3.5 * almp) {
                     obj.bullbear = (d.high - price) / price;
                     return;
                 }
+
+                // if (i>idx+150){
+                //     return;
+                // }
             }
         }
     }]);
@@ -21638,7 +21642,7 @@ module.exports = function () {
 },{}],176:[function(require,module,exports){
 "use strict";
 
-module.exports = [["dn.ave_close_21/dn.close", [0.8, 0.9, 1, 1.1, 1.15]], ["dn.ave_close_8/dn.close", [1, 1.03]], ["dn.ave_amount_21/dn.ave_amount_8", [0.75, 1, 1.5]], ["dn.ave_amount_21/dn.amount", [1, 1.5, 2]], ["dn.netsummax_duration", [40, 80, 120]], ["dn.netsummin_r0_21", [0, 0.1]], ["dn.netsummin_r0_21/dn.amount_ave_21", [-0.2, 0, 0.2]], ["dn.netsummax_r0_5", [0, 0.1]], ["dn.netsummax_r0/dn.amount_ave_21", [0, 0.5, 1, 1.5, 2]], ["dn.ave_turnover_8/dn.ave_turnover_21", [1]], ["dn.netsum_r0_below", [0]], ["dn.netsum_r0_below/dn.ave_amount_21", [-0.02, 0, 0.02]], ["dn.netsum_r0_below/dn.netsum_r0_above", [-0.5, -0.2, 0, 0.2, 0.5]], ["dn.marketCap", [5000000000, 10000000000]]];
+module.exports = [["dn.ave_close_21/dn.close", [0.8, 0.9, 1, 1.1, 1.15]], ["dn.ave_close_8/dn.close", [1, 1.03]], ["dn.ave_close_144/dn.close", [1, 1.05, 1.1]], ["dn.ave_amount_21/dn.ave_amount_8", [0.75, 1, 1.5]], ["dn.ave_amount_21/dn.amount", [1, 1.5, 2]], ["dn.ave_amount_8/dn.amount", [0.5, 1, 1.5]], ["dn.netsummax_duration", [40, 80, 120]], ["dn.netsummin_r0_5/dn.amount_ave_21", [-0.05, 0, 0.05]], ["dn.netsummin_r0_8/dn.amount_ave_21", [-0.05, 0, 0.05]], ["dn.netsummin_r0_8/dn.marketCap", [-0.0001, 0, 0.0001]], ["dn.netsummin_r0_21", [0, 0.1]], ["dn.netsummin_r0_21/dn.amount_ave_21", [-0.2, 0, 0.2]], ["dn.netsummax_r0_5", [0, 0.1]], ["dn.netsummax_r0_5/dn.marketCap", [-0.00005, 0, 0.00005]], ["dn.netsummax_r0_5/dn.netsummax_r0_10", [1, 1.00001]], ["dn.netsummax_r0_10", [0, 0.1]], ["dn.netsummax_r0_10/dn.amount_ave_21", [0.03, 0.05, 0.08]], ["dn.netsummax_r0_20/dn.amount_ave_21", [0.05, 0.1]], ["dn.netsummax_r0/dn.amount_ave_21", [0, 0.5, 1, 1.5, 2]], ["dn.netsum_r0_below", [0]], ["dn.netsum_r0_below/dn.ave_amount_21", [-0.02, 0, 0.02, 0.04]], ["dn.netsum_r0_below/dn.netsum_r0_above", [-0.5, -0.2, 0, 0.2, 0.5]], ["dn.netsum_r0_above/dn.netsum_r0_below", [0, 2, 4]], ["dn.netsum_r0_10/dn.amount_ave_21", [-0.02, 0, 0.02]], ["dn.netsum_r0_5/dn.amount_ave_21", [-0.05, 0, 0.05]], ["(dn.netsummin_r0x_5-dn.netsummin_r0x_8)/dn.amount_ave_21", [0.1, 0.2, 0.4]], ["dn.ave_turnover_8/dn.ave_turnover_21", [1]], ["dn.ave_turnover_21/dn.turnover", [0.8, 1, 1.2]], ["dn.marketCap", [2500000000, 5000000000, 10000000000]]];
 
 },{}],177:[function(require,module,exports){
 'use strict';
@@ -21667,7 +21671,7 @@ module.exports = function () {
                 IncUtil.buildSingle(i, data);
 
                 MovingAverageUtil.buildSingle(i, 8, data, 'close');
-                //MovingAverageUtil.buildSingle(i, 13, data, 'close');
+                MovingAverageUtil.buildSingle(i, 13, data, 'close');
                 MovingAverageUtil.buildSingle(i, 21, data, 'close');
                 MovingAverageUtil.buildSingle(i, 55, data, 'close');
 
@@ -21755,9 +21759,18 @@ module.exports = function () {
     }, {
         key: 'buildSingle',
         value: function buildSingle(idx, data) {
-            var preprice = idx > 1 ? data[idx - 1].close : data[idx].open;
+            var preprice = void 0;
+            if (idx > 1) {
+                preprice = data[idx - 1].close;
+                if (data[idx].ex) {
+                    preprice = data[idx].open;
+                }
+            } else {
+                preprice = data[idx].open;
+            }
+
             var price = data[idx].close;
-            data[idx].inc = (price - preprice) / preprice;
+            data[idx].inc = Math.abs((price - preprice) / preprice);
         }
     }]);
 
@@ -21984,7 +21997,7 @@ module.exports = function () {
 
     }], [{
         key: 'outputFilters',
-        value: function outputFilters(filtersArr, funstr) {
+        value: function outputFilters(filtersArr, funstr, minNumber) {
             var cdts = {};
             var filterObjs = [];
             for (var i = 0; i < filtersArr.length; i++) {
@@ -22001,10 +22014,14 @@ module.exports = function () {
                 filterObjs.push(obj);
             }
 
+            var m = funstr.match(/\/\*\*([^]*)\*\*\//);
+
             return {
+                name: m ? m[1] : new Date().getTime(),
                 filters: JSON.stringify(filterObjs),
                 conditions: JSON.stringify(cdts),
-                basefilter: funstr
+                baseFilter: funstr,
+                casesMin: minNumber
             };
         }
     }, {
@@ -22085,7 +22102,7 @@ module.exports = function () {
                     var pending = sumobj['0'] += bbo['0'];
                     var bear = sumobj['-1'] += bbo['-1'];
 
-                    if (bull + pending + bear < minNumber) badflag = true;
+                    if (bull < minNumber) badflag = true;
 
                     for (var att_idx in remap) {
                         if (badflag) break;
@@ -22165,7 +22182,7 @@ module.exports = function () {
                 // if (returnStr.indexOf("priceCRA") >= 0) {
                 //     funs += 'let priceCRA = ' + MatchFunctionUtil.priceCRA.toString() + '\n';
                 // }
-                var matchFun = new Function('d', 'n', funs + '\nreturn ' + returnStr);
+                var matchFun = new Function('d', 'n', 'sid', funs + '\nreturn ' + returnStr);
                 return matchFun;
             } catch (e) {
                 console.log("e", e);
@@ -22174,14 +22191,14 @@ module.exports = function () {
         }
     }, {
         key: 'scan',
-        value: function scan(data, functionStr, matchInDay) {
+        value: function scan(data, functionStr, matchInDay, sid) {
             var matchFun = MatchFunctionUtil.composeFunction(functionStr);
             var cases = 0,
                 bull = 0,
                 bear = 0;
             if (matchFun) {
                 for (var i = 80; i < data.length - 20; i++) {
-                    if (matchFun(data, i)) {
+                    if (matchFun(data, i, sid)) {
                         var d = data[i];
                         //matchInDay[d.date] = true;
 
@@ -22433,6 +22450,8 @@ module.exports = function () {
                 }
 
                 if (idx - j + 1 === 5) {
+                    obj.netsum_r0_5 = netsum_r0;
+                    obj.netsum_r0x_5 = netsum_r0x;
                     obj.netsummax_r0_5 = netsummax_r0;
                     obj.netsummin_r0_5 = netsummin_r0;
                     obj.netsummax_r0x_5 = netsummax_r0x;
@@ -22444,6 +22463,8 @@ module.exports = function () {
                 }
 
                 if (idx - j + 1 === 8) {
+                    obj.netsum_r0_8 = netsum_r0;
+                    obj.netsum_r0x_8 = netsum_r0x;
                     obj.netsummax_r0_8 = netsummax_r0;
                     obj.netsummin_r0_8 = netsummin_r0;
                     obj.netsummax_r0x_8 = netsummax_r0x;
@@ -22455,6 +22476,8 @@ module.exports = function () {
                 }
 
                 if (idx - j + 1 === 21) {
+                    obj.netsum_r0_21 = netsum_r0;
+                    obj.netsum_r0x_21 = netsum_r0x;
                     obj.netsummax_r0_21 = netsummax_r0;
                     obj.netsummin_r0_21 = netsummin_r0;
                     obj.netsummax_r0x_21 = netsummax_r0x;
@@ -22466,6 +22489,8 @@ module.exports = function () {
                 }
 
                 if (idx - j + 1 === 55) {
+                    obj.netsum_r0_55 = netsum_r0;
+                    obj.netsum_r0x_55 = netsum_r0x;
                     obj.netsummax_r0_55 = netsummax_r0;
                     obj.netsummin_r0_55 = netsummin_r0;
                     obj.netsummax_r0x_55 = netsummax_r0x;
@@ -22559,7 +22584,17 @@ module.exports = {
                 v = v * data[i - 1].close / data[i].open;
             }
         }
-        return arr;
+        return arr.reverse();
+    },
+    higherItems: function higherItems(data, start, end, field, v) {
+        var arr = [];
+        for (var i = end; i >= start; i--) {
+            if (data[i][field] > v) arr.push(i);
+            if (data[i].ex) {
+                v = v * data[i - 1].close / data[i].open;
+            }
+        }
+        return arr.reverse();
     },
 
 
@@ -24666,7 +24701,7 @@ module.scanByIndex = function scanByIndex(idx, patternStr, callback) {
         //cacheDecompressedMap[sid] = decmpdata;
 
 
-        m = _matchfunctionutil2.default.scan(decmpdata, patternStr, matchOnDate);
+        m = _matchfunctionutil2.default.scan(decmpdata, patternStr, matchOnDate, sid);
     }
 
     //let total = StockIDs.getTotalCount();
@@ -24782,7 +24817,7 @@ module.buildForAnalysis = function buildAnalysisData(patternStr, callback) {
         var data = _zip2.default.decompressStockJson(cmpdata);
         _databuildpipe2.default.build(0, data.length - 1, data);
 
-        var m = _matchfunctionutil2.default.scan(data, patternStr, {});
+        var m = _matchfunctionutil2.default.scan(data, patternStr, {}, sid);
         matchSum.bull += m.bull;
         matchSum.bear += m.bear;
         matchSum.cases += m.cases;
@@ -25222,6 +25257,28 @@ var IO = function () {
                 }
             }
         }
+    }, {
+        key: 'httpSaveBullFilters',
+        value: function httpSaveBullFilters(filterObj, callback) {
+            var obj = {
+                "filterObj": filterObj,
+                action: "saveBullFilters"
+            };
+            console.log("--------------httpSaveBullFilters", JSON.stringify(obj));
+
+            fetch(IO.baseUrl, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(obj)
+            }).then(function (res) {
+                return res.json();
+            }).then(function (json) {
+                callback(json);
+            });
+        }
     }]);
 
     return IO;
@@ -25660,9 +25717,12 @@ var WorkerGroup = function () {
 
                                         if (candidateFiltersNext.length === 0 && cbcandidatefilters.pop()) {
                                             if (cbcandidatefilters.length === 0) {
-                                                var alphaObj = _matchanalyser2.default.outputFilters(bullfilters, patternStr);
+                                                var alphaObj = _matchanalyser2.default.outputFilters(bullfilters, patternStr, WorkerGroup.casesMinNumber);
                                                 console.log("call counter:", WorkerGroup.callCounter, bullfilters.length, alphaObj);
                                                 _localstoreutil2.default.addToStore("alphaObj", alphaObj);
+                                                _io2.default.httpSaveBullFilters(alphaObj, function (re) {
+                                                    console.log("-----------------finished:", re);
+                                                });
                                                 return;
                                             }
                                         } else {
@@ -25702,7 +25762,7 @@ var WorkerGroup = function () {
 
             if (rate >= 0.8) {
                 //debugger;
-                console.log("bull------------", rate, JSON.stringify(filters), bbobj['-1'] + bbobj['0'] + bbobj['1'], filters);
+                console.log("bull------------", rate, JSON.stringify(filters), bbobj['1'], filters);
                 doStepBack(filters, candidateFilters, true);
                 WorkerGroup.workersAnalyseBullConditions(filters, candidateFilters, footprint, doStepBack);
                 return;
@@ -25741,7 +25801,7 @@ var WorkerGroup = function () {
                         var _candidateFiltersNext = _matchanalyser2.default.rangesObjToArr2D(validranges);
                         if (_candidateFiltersNext.length === 0) {
                             //debugger;
-                            //console.log("<<-- bear*******no further filters", rate, JSON.stringify(filters), '\n');
+                            console.log("<<-- bear*******no further filters", rate, nextrate, JSON.stringify(filters), '\n');
                             //callback(filters, rate);
                             doStepBack(filters, candidateFilters);
                             WorkerGroup.workersAnalyseBullConditions(filters, candidateFilters, footprint, doStepBack);
@@ -25770,7 +25830,7 @@ var WorkerGroup = function () {
     }, {
         key: 'increaseRate',
         value: function increaseRate(rate) {
-            if (rate < 0.6) rate += 0.02;else if (rate < 0.7) rate += 0.02;else if (rate < 0.79) rate += 0.01;else rate += 0.01;
+            if (rate < 0.6) rate += 0.03;else if (rate < 0.7) rate += 0.02;else if (rate < 0.79) rate += 0.02;else rate += 0.01;
             return rate;
         }
     }, {
@@ -25833,7 +25893,7 @@ var WorkerGroup = function () {
 }();
 
 WorkerGroup.workerStarts = [0];
-WorkerGroup.casesMinNumber = 15000;
+WorkerGroup.casesMinNumber = 13000;
 WorkerGroup.callCounter = 0;
 exports.default = WorkerGroup;
 

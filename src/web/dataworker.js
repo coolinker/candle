@@ -62,7 +62,7 @@ module.scanByIndex = function scanByIndex(idx, patternStr, callback) {
         //cacheDecompressedMap[sid] = decmpdata;
 
 
-        m = MatchFunctionUtil.scan(decmpdata, patternStr, matchOnDate);
+        m = MatchFunctionUtil.scan(decmpdata, patternStr, matchOnDate, sid);
     }
 
     //let total = StockIDs.getTotalCount();
@@ -188,7 +188,7 @@ module.buildForAnalysis = function buildAnalysisData(patternStr, callback) {
         DataBuildPipe.build(0, data.length - 1, data);
 
 
-        let m = MatchFunctionUtil.scan(data, patternStr, {});
+        let m = MatchFunctionUtil.scan(data, patternStr, {}, sid);
         matchSum.bull += m.bull;
         matchSum.bear += m.bear;
         matchSum.cases += m.cases;
