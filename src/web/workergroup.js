@@ -240,11 +240,13 @@ class WorkerGroup {
         return rate;
     }
     
-    static workersScanByIndex(patternStr, callback) {
+    static workersScanByIndex(patternStr, options, callback) {
+        if (!options) options = {startFrom: 80, endOffset: 20};
+
         WorkerGroup.dataWorkerProxies.forEach(function (workerProxy, idx) {
             workerProxy.callMethod("reset", [], function (re) {
 
-                let params = [WorkerGroup.workerStarts[idx], patternStr];
+                let params = [WorkerGroup.workerStarts[idx], patternStr, options];
                 workerProxy.callMethod("scanByIndex", params, function (re) {
                     callback(re);
 

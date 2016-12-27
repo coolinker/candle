@@ -1,0 +1,28 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Launch Chrome against localhost, with sourcemaps",
+            "type": "chrome",
+            "request": "launch",
+            "url": "http://localhost/index.html?cpus=4",
+            "sourceMaps": true,
+            "webRoot": "${workspaceRoot}/build",
+            "program": "${workspaceRoot}/build/app.js",
+            "cwd": "${workspaceRoot}/src",
+            "outFiles": [ "${workspaceRoot}/build/**/*.js" ]
+        },
+        {
+            "name": "Attach to Chrome, with sourcemaps",
+            "type": "chrome",
+            "request": "attach",
+            "url": "http://localhost/index.html?cpus=4",
+            "port": 9222,
+            "sourceMaps": true,
+            "webRoot": "${workspaceRoot}/build",
+            "program": "${workspaceRoot}/build/app.js",
+            "cwd": "${workspaceRoot}/src",
+            "outFiles": [ "${workspaceRoot}/build/**/*.js" ]
+        }
+    ]
+}

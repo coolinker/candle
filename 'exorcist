@@ -1,0 +1,1 @@
+console.error("Error: SyntaxError: Unexpected token / while parsing json file D:\\works\\dev\\candle\\package.json");

@@ -32,29 +32,6 @@ class DateInput extends FormInput {
         this.updateState(fv, true);
     }
 
-        // trimMatchDate(str, regex){
-        //     let matchDateValues = function(dateStr){
-        //         var arr = str.split("/");
-        //         console.log("==", arr, arr[0] && arr[0].length===4 && !(Number(arr[0]) < 2020 && Number(arr[0]) > 1900))
-        //         if (arr[0] && arr[0].length===4 && !(Number(arr[0]) < 2020 && Number(arr[0]) > 1900)) {
-        //             return false;
-        //         }
-        //         if (arr[1] && arr[1].length===2 && !(Number(arr[1]) < 13 && Number(arr[1]) > 0)) {
-        //             return false;
-        //         }
-        //         if (arr[2] && arr[2].length===2 && !(Number(arr[2]) < 32 && Number(arr[2]) > 0)) {
-        //             return false;
-        //         }
-
-    //         return true;
-    //     }
-
-    //     while(str.length>0 && (!str.match(regex) || !matchDateValues(str))) {
-    //          str = str.substr(0, str.length - 1);
-    //     }
-
-    //     return str;
-    // }    
 
 }
 

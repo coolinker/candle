@@ -32,7 +32,7 @@ let volPainter = new VolumePainter(painterCore);
 
 let PointerPainter = require('../chart/pointerpainter');
 let pointerPainter = new PointerPainter(painterCore);
-pointerPainter.mouseDblclickHandler = function(e) {
+pointerPainter.mouseDblclickHandler = function (e) {
     let x = e.x;
     let y = e.y;
     let candleCanvasX = parseInt(candlePainter.canvas.style.left, 10);
@@ -42,7 +42,7 @@ pointerPainter.mouseDblclickHandler = function(e) {
     console.log("mouseDblclickHandler", data)
 }
 
-pointerPainter.selectionHandler = function(x, y, endx, endy) {
+pointerPainter.selectionHandler = function (x, y, endx, endy) {
     let candleCanvasX = parseInt(candlePainter.canvas.style.left, 10);
     let startindex = painterCore.getDataIndexByX(x - candleCanvasX);
     let endindex = painterCore.getDataIndexByX(endx - candleCanvasX);
@@ -55,7 +55,7 @@ pointerPainter.selectionHandler = function(x, y, endx, endy) {
     painterCore.zoom(startindex, endindex);
 }
 
-pointerPainter.mouseMoveHandler = function(e) {
+pointerPainter.mouseMoveHandler = function (e) {
     if (!painterCore.arrayData) return;
     let x = e.x;
     let y = e.y;
@@ -77,8 +77,8 @@ pointerPainter.mouseMoveHandler = function(e) {
 }
 
 import ChartCanvas from './chartcanvas';
-import FormInput from './forms/forminput';
-import DateInput from './forms/dateinput';
+import FormInput from './components/forms/forminput';
+import DateInput from './components/forms/dateinput';
 import TradingDate from './tradingdate';
 import StockIDs from './stockids';
 import LocalStoreUtil from './localstoreutil';
@@ -93,7 +93,8 @@ class CandleApp extends React.Component {
         this.handleMatchTextAreaKeyUp = this.handleMatchTextAreaKeyUp.bind(this);
         this.scanAllBtnClick = this.scanAllBtnClick.bind(this);
         this.doAnalyseClick = this.doAnalyseClick.bind(this);
-        
+        this.doEvalueate = this.doEvalueate.bind(this);
+
         //let matchStr = LocalStoreUtil.getCookie('scanExp');
         let matchStr = LocalStoreUtil.getLastOfKey('scanExp');
         if (!matchStr) {
@@ -139,26 +140,28 @@ class CandleApp extends React.Component {
 
         let sidwidth = 70;
         let sidinputleft = (this.state.windowWidth - sidwidth) / 2;
-        return <div style = { divstyle } >
-            <div ref = "toolbar" height = { toolbarHeight } style = { toolbarStyle } >
-                <FormInput ref = "sidInput" style={{color: '#c0c0c0', width: '75px', borderStyle: 'groove', borderColor: '#424242', backgroundColor: 'transparent',}} 
-                    validRegex = {"^(sh|sz|SH|SZ)\\d{6}$"} value = "SH000001"
-                    handleInputChanged = {this.handleSidInputChagned} onKeyDownHandler ={function(e){e.nativeEvent.stopImmediatePropagation()}}/>
-                <div style = {{position: 'absolute', top: '30px', color: '#c0c0c0', zIndex: 100}} ref={(ref) => this.suggest = ref}/>
-                <DateInput ref = "dateInput" value = { '07/04/2016' } style={{color: '#c0c0c0', width: '130px', borderStyle: 'groove', borderColor: '#424242', backgroundColor: 'transparent',}} 
-                    handleInputCompleted = { this.handleDateChanged } onKeyDownHandler ={function(e){e.nativeEvent.stopImmediatePropagation()}}/> 
-                <div style = {{position: 'absolute', right: '20px',  color: '#f0f0f0', top:'10px'}} ref={(ref) => this.info = ref}>Loading...</div>
-                <div style = {{position: 'absolute', right: '70px',  color: '#f0f0f0', top:'30px'}} ref={(ref) => this.scanAllInfo = ref}>0/0/0</div>
-                <div style = {{position: 'absolute', right: '50px',  color: '#f44336', top:'15px', 'fontSize': 'xx-large' , cursor: 'pointer'}} onClick={this.scanAllBtnClick} ref={(ref) => this.scanAllBtn = ref}>▹</div>
-                <div style = {{position: 'absolute', right: '20px',  color: '#f44336', top:'20px', 'fontSize': 'xx-large' , cursor: 'pointer'}} onClick={this.doAnalyseClick} ref={(ref) => this.analyseBtn = ref}>α</div>
-                <div style = {{position: 'absolute', right: '390px',  color: '#f0f0f0', top:'30px', cursor: 'pointer'}} ref={(ref) => this.scanInfo = ref} onClick={this.toggleMatchTextArea}>0/0/0/0(run:Ctrl+↵)</div>
-                <textarea value={this.state.matchStr} style = {{position: 'absolute', right: '20px',  color: 'rgba(255, 255, 255, 1)', borderColor: 'rgba(230, 230, 230, 0.1)', top:'50px', zIndex: 100, width: '500px', height: '500px', background: 'rgba(0, 0, 0, 0.8)', 'fontSize': '12px', 'fontFamily':'微软雅黑'}} 
-                    ref={(ref) => this.matchTextArea = ref} onChange={this.handleMatchTextAreaChange} onKeyUp={this.handleMatchTextAreaKeyUp} onKeyDown ={function(e){e.nativeEvent.stopImmediatePropagation();}}></textarea>
-            </div > 
-            <ChartCanvas ref={(ref) => this.alphaChart = ref} width = "2000" height = { candleChartHeight } y = { candleChartY } > </ChartCanvas>  
-            <ChartCanvas ref = "candleChart" width = "2000" height = { candleChartHeight } y = { candleChartY } > </ChartCanvas>  
-            <ChartCanvas ref = "volChart" width = "2000" height = { volChartHeight } y = { volChartY } > </ChartCanvas> 
-            <ChartCanvas ref = "pointerCanvas" width = { this.state.windowWidth } height = { ponterCanvasHeight } y = { pointerCanvasY } > </ChartCanvas>  
+        return <div style={divstyle} >
+            <div ref="toolbar" height={toolbarHeight} style={toolbarStyle} >
+                <FormInput ref="sidInput" style={{ color: '#c0c0c0', width: '75px', borderStyle: 'groove', borderColor: '#424242', backgroundColor: 'transparent', }}
+                    validRegex={"^(sh|sz|SH|SZ)\\d{6}$"} value="SH000001"
+                    handleInputChanged={this.handleSidInputChagned} onKeyDownHandler={function (e) { e.nativeEvent.stopImmediatePropagation() } } />
+                <div style={{ position: 'absolute', top: '30px', color: '#c0c0c0', zIndex: 100 }} ref={(ref) => this.suggest = ref} />
+                <DateInput ref="dateInput" value={'07/04/2016'} style={{ color: '#c0c0c0', width: '130px', borderStyle: 'groove', borderColor: '#424242', backgroundColor: 'transparent' }}
+                    handleInputCompleted={this.handleDateChanged} onKeyDownHandler={function (e) { e.nativeEvent.stopImmediatePropagation() } } />
+                <div style={{ position: 'absolute', color: '#c0c0c0', top: '5px', left: '230px', 'fontSize': 'small' }} ref={(ref) => this.info = ref}>Loading...</div>
+                
+                
+                <div style={{ position: 'absolute', right: '70px', color: '#c0c0c0', top: '30px' }} ref={(ref) => this.scanAllInfo = ref}>0/0/0</div>
+                <div style={{ position: 'absolute', right: '50px', color: '#f44336', top: '15px', 'fontSize': 'xx-large', cursor: 'pointer' }} onClick={this.scanAllBtnClick} ref={(ref) => this.scanAllBtn = ref}>▹</div>
+                <div style={{ position: 'absolute', right: '20px', color: '#f44336', top: '20px', 'fontSize': 'xx-large', cursor: 'pointer' }} onClick={this.doAnalyseClick} ref={(ref) => this.analyseBtn = ref}>α</div>
+                <div style={{ position: 'absolute', right: '390px', color: '#c0c0c0', top: '30px', cursor: 'pointer' }} ref={(ref) => this.scanInfo = ref} onClick={this.toggleMatchTextArea}>0/0/0/0(run:Ctrl+↵)</div>
+                <textarea value={this.state.matchStr} style={{ position: 'absolute', right: '20px', color: 'rgba(255, 255, 255, 1)', borderColor: 'rgba(230, 230, 230, 0.1)', top: '50px', zIndex: 100, width: '500px', height: '500px', background: 'rgba(0, 0, 0, 0.8)', 'fontSize': '12px', 'fontFamily': '微软雅黑' }}
+                    ref={(ref) => this.matchTextArea = ref} onChange={this.handleMatchTextAreaChange} onKeyUp={this.handleMatchTextAreaKeyUp} onKeyDown={function (e) { e.nativeEvent.stopImmediatePropagation(); } }></textarea>
+            </div >
+            <ChartCanvas ref={(ref) => this.alphaChart = ref} width="2000" height={candleChartHeight} y={candleChartY} > </ChartCanvas>
+            <ChartCanvas ref="candleChart" width="2000" height={candleChartHeight} y={candleChartY} > </ChartCanvas>
+            <ChartCanvas ref="volChart" width="2000" height={volChartHeight} y={volChartY} > </ChartCanvas>
+            <ChartCanvas ref="pointerCanvas" width={this.state.windowWidth} height={ponterCanvasHeight} y={pointerCanvasY} > </ChartCanvas>
         </div >
     }
 
@@ -176,7 +179,7 @@ class CandleApp extends React.Component {
         pointerPainter.setCanvas(pointerDomCanvas);
 
         let me = this;
-        window.addEventListener('resize', function(e) {
+        window.addEventListener('resize', function (e) {
             me.setState({
                 windowHeight: window.innerHeight,
                 windowWidth: window.innerWidth
@@ -185,7 +188,7 @@ class CandleApp extends React.Component {
             me.doOnResize(e);
         });
 
-        document.addEventListener('keydown', function(e) {
+        document.addEventListener('keydown', function (e) {
             // console.log(e.ctrlKey, e.keyCode)
             if (e.ctrlKey) {
                 if (e.keyCode === 37) {
@@ -220,7 +223,7 @@ class CandleApp extends React.Component {
 
         //document.addEventListener('keyup', function(e) {});
 
-        painterCore.on("range", function() {
+        painterCore.on("range", function () {
             let date = painterCore.getMiddleDateOfRange();
             // console.log("on range:", painterCore.drawRangeStart, date)
             me.refs.dateInput.updateState(date, false);
@@ -233,20 +236,22 @@ class CandleApp extends React.Component {
 
         //this.loadDataBySid(sid, date);
         this.handleSidInputChagned();
-        setTimeout(function() {
+
+        setTimeout(function () {
             let count = 0;
-            WorkerGroup.loadStocksPerPage(function(re) {
+            WorkerGroup.loadStocksPerPage(function (re) {
                 count += re.count;
             });
             let timer = 0;
             let spinner = ['/', '—', '\\', '|'];
-            let interval = setInterval(function() {
+            let interval = setInterval(function () {
                 timer++;
                 let per = Math.round(100 * (count / 2886));
                 me.info.innerHTML = count + '(' + per + '%)' + spinner[timer % 4];
                 if (count === 2886) {
                     clearInterval(interval);
                     me.info.innerHTML = count + '(' + per + '%)';
+                    me.handlePageLoadFinished();
                 }
             }, 100);
 
@@ -254,11 +259,11 @@ class CandleApp extends React.Component {
 
     }
 
-    doAnalyseClick(){
+    doAnalyseClick() {
         let matchStr = this.matchTextArea.value;
-        WorkerGroup.workersBuildAndAnalyse(matchStr, function(re) {
-                console.log("workersBuildAndAnalyse", re)
-            });
+        WorkerGroup.workersBuildAndAnalyse(matchStr, function (re) {
+            console.log("workersBuildAndAnalyse", re)
+        });
     }
 
     scanAllBtnClick() {
@@ -268,7 +273,7 @@ class CandleApp extends React.Component {
             this.scanAllBtn.innerHTML = startChar;
             this.scanAllBtn.style.fontSize = 'xx-large';
             this.scanAllBtn.style.top = '17px';
-            WorkerGroup.workersStopScanByIndex(function(re) {
+            WorkerGroup.workersStopScanByIndex(function (re) {
                 console.log("workerStopScanAll", re)
             });
             return;
@@ -285,13 +290,13 @@ class CandleApp extends React.Component {
         let matchStr = this.matchTextArea.value;
         painterCore.clearMatchCases();
 
-        WorkerGroup.workersScanByIndex(matchStr, function(cnts) { // && data[n].ave_close_8 > data[n-2].ave_close_8 && data[n].ave_close_8 > data[n-3].ave_close_8
+        WorkerGroup.workersScanByIndex(matchStr, {startFrom:80, endOffset:20}, function (cnts) { // && data[n].ave_close_8 > data[n-2].ave_close_8 && data[n].ave_close_8 > data[n-3].ave_close_8
             count++; //= cnts.index;
             bull += cnts.bull;
             bear += cnts.bear;
             cases += cnts.cases;
             painterCore.addMatchCases(cnts.sid, cnts.matchOnDate)
-            let per = bull + bear > 0 ? Math.round(1000 * bull / cases)/10 : 0;
+            let per = bull + bear > 0 ? Math.round(1000 * bull / cases) / 10 : 0;
             me.scanAllInfo.innerHTML = per + '%/' + cases + '/' + count;
 
             if (cnts.finished && count === 2886) {
@@ -323,7 +328,7 @@ class CandleApp extends React.Component {
             matchStr: e.target.value
         });
         // LocalStoreUtil.setCookie('scanExp', escape(e.target.value));
-        
+
     }
 
     toggleMatchTextArea() {
@@ -333,7 +338,7 @@ class CandleApp extends React.Component {
 
     loadDataBySid(sid, date) {
         let start = new Date();
-        WorkerGroup.workerGetStockJson(sid, function(json) {
+        WorkerGroup.workerGetStockJson(sid, function (json) {
             if (!json) return;
             console.log("workerGetStockJson time", new Date() - start, sid, json.length)
             painterCore.loadData(json);
@@ -349,17 +354,50 @@ class CandleApp extends React.Component {
 
     }
 
+    doEvalueate() {
+        let me = this;
+        let count = 0,
+            bull = 0,
+            bear = 0,
+            cases = 0;
+        painterCore.clearMatchCases();
+        IO.httpReadBullFilters(function (filters) {
+
+            WorkerGroup.workersScanByIndex(filters,{startOffset:60, endOffset:0}, function (cnts) { // && data[n].ave_close_8 > data[n-2].ave_close_8 && data[n].ave_close_8 > data[n-3].ave_close_8
+                count++; //= cnts.index;
+                bull += cnts.bull;
+                bear += cnts.bear;
+                cases += cnts.cases;
+                painterCore.addMatchCases(cnts.sid, cnts.matchOnDate)
+                let per = bull + bear > 0 ? Math.round(1000 * bull / cases) / 10 : 0;
+                me.scanAllInfo.innerHTML = per + '%/' + cases + '/' + count;
+
+                if (cnts.finished && count === 2886) {
+
+                    console.log("-------------------------bull/bear/cases:", bull, bear, cases)
+                }
+            })
+
+        });
+    }
+
+
+    handlePageLoadFinished() {
+        console.log("page load finished")
+    }
+
+
     handleSidInputChagned(value) {
         if (this.timeoutHandleSidInputChagned) {
             clearTimeout(this.timeoutHandleSidInputChagned);
         }
 
         let me = this;
-        this.timeoutHandleSidInputChagned = setTimeout(function() {
+        this.timeoutHandleSidInputChagned = setTimeout(function () {
             let sidin = me.refs.sidInput.state.value;
             if (sidin === '') return;
 
-            IO.sidSuggest(sidin, function(arr) {
+            IO.sidSuggest(sidin, function (arr) {
                 //console.log(arr)
                 let list = "",
                     count = 0,
@@ -386,7 +424,7 @@ class CandleApp extends React.Component {
         let date = this.refs.dateInput.state.value;
         clearTimeout(this.timeoutHandler);
         let me = this;
-        this.timeoutHandler = setTimeout(function() {
+        this.timeoutHandler = setTimeout(function () {
             me.loadDataBySid(sid, date)
         }, 500);
 

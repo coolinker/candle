@@ -227,7 +227,7 @@ module.exports = class PainterCore extends EventEmitter {
         let data = this.arrayData;
         for (let i = 0; i < data.length; i++) {
             let d = data[i].date;
-            let r = matchOnDate[d];
+            let r = Number(matchOnDate[d]);
             if (r !== undefined) {
                 if (!data[i].matchCases) data[i].matchCases = {
                     pending: [],

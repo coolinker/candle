@@ -77,7 +77,7 @@ module.exports = class DataSourceIO {
     }
 
     httpGetStockMoneyFlowHistory(sid, callback) {
-        let num = 30;
+        let num = 60;
         fetch("http://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/MoneyFlow.ssl_qsfx_zjlrqs?page=1&num=" + num + "&sort=opendate&asc=0&daima=" + sid.toLowerCase(), {
                 method: 'GET',
                 timeout: 5000
@@ -179,6 +179,9 @@ module.exports = class DataSourceIO {
             return null;
         }
         let mfArr = this.readMoneyFlowSync(sid);
+        if (!mfArr) {
+            console.log("readStockCompressedJsonSync mfArr is null error", sid)
+        }
         let zipobj = Zip.compressStockJson(fields, jsonArr, mfArr);
         if (!zipobj) console.log("readStockCompressedJsonSync is null error", sid)
         else this.putToCache(sid, fields, zipobj);
@@ -239,6 +242,27 @@ module.exports = class DataSourceIO {
             console.log('request failed', error)
             callback(null);
         });
+    }
+
+    writeBullFilters (filterObj) {
+        if (filterObj) {
+            let filename = "/alpha/output/" + filterObj.name + "_" + filterObj.casesMin + "_" + new Date().getTime() + ".json";
+            fs.writeFileSync(filename, JSON.stringify(filterObj));
+            outputCallback("{\"message\": \"succeed\"}");
+        }
+    }
+
+    readBullFilters(){
+        let fs = require("fs");
+        let files = fs.readdirSync("alpha/output");
+        let filters = {};
+        files.forEach(function(fileName) {
+            console.log("readBullFilters", fileName)
+            let content = fs.readFileSync("alpha/output/" + fileName, "utf8");
+            filters[fileName] = JSON.parse(content);
+        });
+        
+        return filters;
     }
 
 }

@@ -45,7 +45,7 @@ module.stopScanByIndex = function stopScanByIndex(callback) {
     callback(stopScanFlag);
 }
 
-module.scanByIndex = function scanByIndex(idx, patternStr, callback) {
+module.scanByIndex = function scanByIndex(idx, patternStr, options, callback) {
     let sid = StockIDs.getSidByIndex(idx);
     let matchOnDate = {};
     let cmpdata = module.getStockDataSync(sid, stockFields);
@@ -61,8 +61,8 @@ module.scanByIndex = function scanByIndex(idx, patternStr, callback) {
         DataBuildPipe.build(0, decmpdata.length - 1, decmpdata);
         //cacheDecompressedMap[sid] = decmpdata;
 
-
-        m = MatchFunctionUtil.scan(decmpdata, patternStr, matchOnDate, sid);
+        options.sid = sid;
+        m = MatchFunctionUtil.scan(decmpdata, patternStr, matchOnDate, options);
     }
 
     //let total = StockIDs.getTotalCount();
@@ -84,7 +84,7 @@ module.scanByIndex = function scanByIndex(idx, patternStr, callback) {
             if (stopScanFlag) {
                 //stopScanFlag = false;
             } else {
-                module.scanByIndex(++idx, patternStr, callback);
+                module.scanByIndex(++idx, patternStr, options, callback);
             }
 
         }, 0);
@@ -170,7 +170,7 @@ module.loadStockBatch = function loadStockBatch(start, count, fields, callback) 
 }
 
 
-module.buildForAnalysis = function buildAnalysisData(patternStr, callback) {
+module.buildForAnalysis = function buildAnalysisData(patternStr, options, callback) {
     console.log("buildForAnalysis")
     let analysisBufferLength = 0;
     let matchBufferLength = 0;
@@ -187,8 +187,8 @@ module.buildForAnalysis = function buildAnalysisData(patternStr, callback) {
         let data = Zip.decompressStockJson(cmpdata)
         DataBuildPipe.build(0, data.length - 1, data);
 
-
-        let m = MatchFunctionUtil.scan(data, patternStr, {}, sid);
+        options.sid = sid;
+        let m = MatchFunctionUtil.scan(data, patternStr, {}, options);
         matchSum.bull += m.bull;
         matchSum.bear += m.bear;
         matchSum.cases += m.cases;

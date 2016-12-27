@@ -204,14 +204,16 @@ let apiDispatcher = {
 
     saveBullFilters: function (params, outputCallback) {
         if (params.filterObj) {
-            let filterObj = params.filterObj;
-            let filename = "../data/alpha/" + filterObj.name + "_" + filterObj.casesMin + "_" + new Date().getTime() + ".json";
-
-            fs.writeFileSync(filename, JSON.stringify(params.filterObj));
+            dataSourceIO.writeBullFilters(param.filterObj);
             outputCallback("{\"message\": \"succeed\"}");
         } else {
             outputCallback(errorMessage("Can not find filterObj for saving."))
         }
+    },
+
+    readBullFilters: function(params, outputCallback){
+        let filers = dataSourceIO.readBullFilters();
+        outputCallback(JSON.stringify(filers));
     }
 
 

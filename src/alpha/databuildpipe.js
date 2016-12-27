@@ -17,7 +17,7 @@ module.exports = class DataBuildPipe {
             IncUtil.buildSingle(i, data);
 
             MovingAverageUtil.buildSingle(i, 8, data, 'close');
-            MovingAverageUtil.buildSingle(i, 13, data, 'close');
+            //MovingAverageUtil.buildSingle(i, 13, data, 'close');
             MovingAverageUtil.buildSingle(i, 21, data, 'close');
             MovingAverageUtil.buildSingle(i, 55, data, 'close');
 

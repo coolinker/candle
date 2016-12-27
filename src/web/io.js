@@ -161,6 +161,24 @@ class IO {
         });
     }
 
+    static httpReadBullFilters(callback) {
+        let obj = {
+            action: "readBullFilters"
+        };
+        
+        fetch(IO.baseUrl, {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(obj)
+        }).then(function (res) {
+            return res.json();
+        }).then(function (json) {
+            callback(json);
+        });
+    }
 
 }
 
