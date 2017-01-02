@@ -9,7 +9,7 @@
             "sourceMaps": true,
             "webRoot": "${workspaceRoot}/build",
             "program": "${workspaceRoot}/build/app.js",
-            "cwd": "${workspaceRoot}/src",
+            "cwd": "${workspaceRoot}",
             "outFiles": [ "${workspaceRoot}/build/**/*.js" ]
         },
         {

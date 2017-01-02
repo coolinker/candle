@@ -64,8 +64,8 @@ module.exports = class VolumePainter extends MassPainter {
         if (data.netsummax_r0 !== undefined) {
             let nsmr0h = Math.round(data.netsummax_r0 * this.heightPerNetSumMax_r0Unit);
             var grd = ctx.createLinearGradient(0, nsmr0h, 0, 0);
-            grd.addColorStop(0, 'rgba(66, 66, 66, 0.5)');
-            grd.addColorStop(1, 'rgba(66, 66,66, 0)');
+            grd.addColorStop(0, 'rgba(220, 220, 220, 0.6)');
+            grd.addColorStop(1, 'rgba(220, 220, 220, 0)');
             ctx.fillStyle = grd;
             ctx.fillRect(x, 0, cw, nsmr0h);
 
@@ -81,7 +81,7 @@ module.exports = class VolumePainter extends MassPainter {
             ctx.beginPath();
             ctx.moveTo(x, 0);
             ctx.lineTo(x, nsmr0dh);
-            ctx.strokeStyle = 'rgba(66, 66, 66, 0.8)';
+            ctx.strokeStyle = 'rgba(220, 220, 220, 0.6)';
             ctx.lineWidth = 1;
             ctx.stroke();
             ctx.restore();

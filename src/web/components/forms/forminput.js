@@ -67,11 +67,14 @@ FormInput.defaultProps = {
     type: "text",
     value: "",
     style: {
+        position: 'absolute',
         color: '#f0f0f0',
         width: '100px',
+        top: '30px',
         borderStyle: 'groove',
         borderColor: '#424242',
-        backgroundColor: 'transparent'
+        backgroundColor: 'transparent',
+        height: '20px'
     }
 };
 

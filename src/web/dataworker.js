@@ -40,6 +40,26 @@ module.reset = function reset(callback) {
     stopScanFlag = false;
     callback(stopScanFlag);
 }
+
+module.getStockDataOnDate = function(sids, date, callback){
+    let re = {};
+    for (let i=0; i<sids.length; i++) {
+        let sid = sids[i];
+        let data = module.getStockDataSync(sid, stockFields);
+        if (!data) continue;
+        let decmpdata = Zip.decompressStockJson(data);
+        for (let j = decmpdata.length-1; j>=0; j--) {
+            if (decmpdata[j].date === date) {
+                DataBuildPipe.build(j, j, decmpdata);
+                re[sid] = decmpdata[j];
+            }
+        }
+        
+    }
+
+    callback(re);
+}
+
 module.stopScanByIndex = function stopScanByIndex(callback) {
     stopScanFlag = true;
     callback(stopScanFlag);

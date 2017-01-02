@@ -13,23 +13,27 @@ class ChartCanvas extends React.Component {
     render() {
         let cstyle = {
             position: 'absolute',
-            top: this.props.y+'px'
+            top: this.props.y + 'px'
         };
-        return <canvas ref = "cvs" width={this.props.width} height={this.props.height} style={cstyle}> </canvas>;
+        return <canvas ref="cvs" width={this.props.width} height={this.props.height} style={cstyle}
+            onDoubleClick={(e) => {
+                //e.stopPropagation();
+                if (this.props.doDblClick) this.props.doDblClick(e);
+            } }> </canvas>;
     }
-    
+
     getDomCanvas() {
         return this.refs.cvs;
     }
 
     updateX(x) {
-        this.getDomCanvas().style.left = -x+'px';
+        this.getDomCanvas().style.left = -x + 'px';
     }
 
-    componentDidUpdate (){
+    componentDidUpdate() {
         //this.drawBorder();
     }
-    
+
 }
 
 export default ChartCanvas;

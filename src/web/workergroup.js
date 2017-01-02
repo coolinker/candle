@@ -109,17 +109,17 @@ class WorkerGroup {
                                     delete cbfilters[prefilter[0]];
                                 }
 
-                                
-                                if(candidateFiltersNext.length === 0 && cbcandidatefilters.pop()) {
-                                    if (cbcandidatefilters.length === 0){
+
+                                if (candidateFiltersNext.length === 0 && cbcandidatefilters.pop()) {
+                                    if (cbcandidatefilters.length === 0) {
                                         let alphaObj = MatchAnalyser.outputFilters(bullfilters, patternStr, WorkerGroup.casesMinNumber);
                                         console.log("call counter:", WorkerGroup.callCounter, bullfilters.length, alphaObj)
                                         LocalStoreUtil.addToStore("alphaObj", alphaObj);
-                                        IO.httpSaveBullFilters(alphaObj, function(re){
+                                        IO.httpSaveBullFilters(alphaObj, function (re) {
                                             console.log("-----------------finished:", re);
                                         })
                                         return;
-                                    } 
+                                    }
                                 } else {
                                     let nxtfilter = candidateFiltersNext[0];
                                     cbfilters[nxtfilter[0]] = nxtfilter[1];
@@ -154,7 +154,7 @@ class WorkerGroup {
         //     return;
         // }
         let candidateFiltersNext = candidateFilters[candidateFilters.length - 1];
-        
+
         // debugger;
         let nxtfilter = candidateFiltersNext[0];
         let bbobj = nxtfilter[1]._counters;
@@ -172,7 +172,7 @@ class WorkerGroup {
         let finishedCount = 0;
         let sectionBBSum = {};
         // console.log("\n-->>", rate, JSON.stringify(filters), '*********', candidateFilters.length, JSON.stringify(candidateFilters));
- 
+
         WorkerGroup.dataWorkerProxies.forEach(function (workerProxy, idx) {
             let params = [filters];
 
@@ -202,7 +202,7 @@ class WorkerGroup {
                     let candidateFiltersNext = MatchAnalyser.rangesObjToArr2D(validranges);
                     if (candidateFiltersNext.length === 0) {
                         //debugger;
-                        console.log("<<-- bear*******no further filters", rate,nextrate, JSON.stringify(filters), '\n');
+                        console.log("<<-- bear*******no further filters", rate, nextrate, JSON.stringify(filters), '\n');
                         //callback(filters, rate);
                         doStepBack(filters, candidateFilters);
                         WorkerGroup.workersAnalyseBullConditions(filters, candidateFilters, footprint, doStepBack);
@@ -221,8 +221,8 @@ class WorkerGroup {
                     candidateFilters.push(candidateFiltersNext);
                     if (!WorkerGroup.addFootprint(filters, footprint)) {
                         doStepBack(filters, candidateFilters);
-                    } 
-                    
+                    }
+
                     WorkerGroup.workersAnalyseBullConditions(filters, candidateFilters, footprint, doStepBack);
                 }
             });
@@ -232,16 +232,16 @@ class WorkerGroup {
 
     }
 
-    static increaseRate(rate){
-        if (rate<0.6) rate += 0.03;
-        else if (rate<0.7) rate += 0.02;
-        else if (rate<0.79) rate += 0.02;
+    static increaseRate(rate) {
+        if (rate < 0.6) rate += 0.03;
+        else if (rate < 0.7) rate += 0.02;
+        else if (rate < 0.79) rate += 0.02;
         else rate += 0.01;
         return rate;
     }
-    
+
     static workersScanByIndex(patternStr, options, callback) {
-        if (!options) options = {startFrom: 80, endOffset: 20};
+        if (!options) options = { startFrom: 80, endOffset: 20 };
 
         WorkerGroup.dataWorkerProxies.forEach(function (workerProxy, idx) {
             workerProxy.callMethod("reset", [], function (re) {
@@ -283,6 +283,23 @@ class WorkerGroup {
             if (WorkerGroup.workerStarts[i] > idx) return WorkerGroup.dataWorkerProxies[i - 1];
         }
         return WorkerGroup.dataWorkerProxies[i - 1];
+    }
+
+    static getStockDataOnDate(sids, date, callback) {
+        let obj = {};
+        let count = WorkerGroup.dataWorkerProxies.length;
+        WorkerGroup.dataWorkerProxies.forEach(function (workerProxy, idx) {
+            let params = [sids, date];
+            workerProxy.callMethod("getStockDataOnDate", params, function (re) {
+                count--;
+                for (let att in re) {
+                    obj[att] = re[att];
+                }
+                if (count===0) callback(obj);
+            });
+
+
+        });
     }
 
     static loadStocksPerPage(callback) {

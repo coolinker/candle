@@ -39,6 +39,7 @@ pointerPainter.mouseDblclickHandler = function (e) {
     let dataindex = painterCore.getDataIndexByX(x - candleCanvasX);
 
     let data = painterCore.getDataByIndex(dataindex);
+
     console.log("mouseDblclickHandler", data)
 }
 
@@ -79,6 +80,8 @@ pointerPainter.mouseMoveHandler = function (e) {
 import ChartCanvas from './chartcanvas';
 import FormInput from './components/forms/forminput';
 import DateInput from './components/forms/dateinput';
+import ToolButton from './components/toolbutton';
+import StocksBoard from './components/stocksboard';
 import TradingDate from './tradingdate';
 import StockIDs from './stockids';
 import LocalStoreUtil from './localstoreutil';
@@ -91,10 +94,11 @@ class CandleApp extends React.Component {
         this.toggleMatchTextArea = this.toggleMatchTextArea.bind(this);
         this.handleMatchTextAreaChange = this.handleMatchTextAreaChange.bind(this);
         this.handleMatchTextAreaKeyUp = this.handleMatchTextAreaKeyUp.bind(this);
-        this.scanAllBtnClick = this.scanAllBtnClick.bind(this);
-        this.doAnalyseClick = this.doAnalyseClick.bind(this);
-        this.doEvalueate = this.doEvalueate.bind(this);
-
+        this.scanAllDoAction = this.scanAllDoAction.bind(this);
+        this.analyseDoAction = this.analyseDoAction.bind(this);
+        this.candidateDoAction = this.candidateDoAction.bind(this);
+        this.candidateDoInfoClick = this.candidateDoInfoClick.bind(this);
+        this.doDblClickPointerCanvas = this.doDblClickPointerCanvas.bind(this);
         //let matchStr = LocalStoreUtil.getCookie('scanExp');
         let matchStr = LocalStoreUtil.getLastOfKey('scanExp');
         if (!matchStr) {
@@ -120,16 +124,18 @@ class CandleApp extends React.Component {
         let divstyle = {
             width: "100%",
             height: "100%",
-            overflow: "hidden"
+            overflow: "hidden",
+            color: 'rgba(220, 220, 220, 0.6)'
         };
         let toolbarStyle = {
             position: 'absolute',
             top: '0px',
             width: '100%',
-            padding: '5px'
+            padding: '5px',
+            zIndex: 100,
         };
 
-        let toolbarHeight = 50;
+        let toolbarHeight = 40;
 
         let candleChartHeight = Math.floor((this.state.windowHeight - toolbarHeight) * 2 / 3);
         let candleChartY = toolbarHeight;
@@ -141,27 +147,33 @@ class CandleApp extends React.Component {
         let sidwidth = 70;
         let sidinputleft = (this.state.windowWidth - sidwidth) / 2;
         return <div style={divstyle} >
-            <div ref="toolbar" height={toolbarHeight} style={toolbarStyle} >
-                <FormInput ref="sidInput" style={{ color: '#c0c0c0', width: '75px', borderStyle: 'groove', borderColor: '#424242', backgroundColor: 'transparent', }}
+            <div ref="toolbar" height={toolbarHeight} style={toolbarStyle}>
+                <FormInput ref="sidInput" style={{ color: '#c0c0c0', position: 'absolute', top: '40px', width: '75px', borderStyle: 'groove', borderColor: 'rgba(220, 220, 220, 0.6)', backgroundColor: 'black' }}
                     validRegex={"^(sh|sz|SH|SZ)\\d{6}$"} value="SH000001"
                     handleInputChanged={this.handleSidInputChagned} onKeyDownHandler={function (e) { e.nativeEvent.stopImmediatePropagation() } } />
-                <div style={{ position: 'absolute', top: '30px', color: '#c0c0c0', zIndex: 100 }} ref={(ref) => this.suggest = ref} />
-                <DateInput ref="dateInput" value={'07/04/2016'} style={{ color: '#c0c0c0', width: '130px', borderStyle: 'groove', borderColor: '#424242', backgroundColor: 'transparent' }}
+                <div style={{ position: 'absolute', top: '65px', zIndex: 1000, 'fontSize': 'small', backgroundColor: 'black' }} ref={(ref) => this.suggest = ref} />
+                <DateInput ref="dateInput" value={'07/04/2016'} style={{ color: '#c0c0c0', position: 'absolute', top: '40px', left: '75px', width: '130px', borderStyle: 'groove', borderColor: 'rgba(220, 220, 220, 0.6)', backgroundColor: 'black' }}
                     handleInputCompleted={this.handleDateChanged} onKeyDownHandler={function (e) { e.nativeEvent.stopImmediatePropagation() } } />
-                <div style={{ position: 'absolute', color: '#c0c0c0', top: '5px', left: '230px', 'fontSize': 'small' }} ref={(ref) => this.info = ref}>Loading...</div>
-                
-                
-                <div style={{ position: 'absolute', right: '70px', color: '#c0c0c0', top: '30px' }} ref={(ref) => this.scanAllInfo = ref}>0/0/0</div>
-                <div style={{ position: 'absolute', right: '50px', color: '#f44336', top: '15px', 'fontSize': 'xx-large', cursor: 'pointer' }} onClick={this.scanAllBtnClick} ref={(ref) => this.scanAllBtn = ref}>▹</div>
-                <div style={{ position: 'absolute', right: '20px', color: '#f44336', top: '20px', 'fontSize': 'xx-large', cursor: 'pointer' }} onClick={this.doAnalyseClick} ref={(ref) => this.analyseBtn = ref}>α</div>
-                <div style={{ position: 'absolute', right: '390px', color: '#c0c0c0', top: '30px', cursor: 'pointer' }} ref={(ref) => this.scanInfo = ref} onClick={this.toggleMatchTextArea}>0/0/0/0(run:Ctrl+↵)</div>
-                <textarea value={this.state.matchStr} style={{ position: 'absolute', right: '20px', color: 'rgba(255, 255, 255, 1)', borderColor: 'rgba(230, 230, 230, 0.1)', top: '50px', zIndex: 100, width: '500px', height: '500px', background: 'rgba(0, 0, 0, 0.8)', 'fontSize': '12px', 'fontFamily': '微软雅黑' }}
+                <div style={{ position: 'absolute', top: '5px', right: '10px', 'fontSize': 'small' }} ref={(ref) => this.info = ref}>Loading...</div>
+
+                <ToolButton ref={(ref) => this.candidateBtn = ref} btnStyle={{ top: '5px', left: '10px' }} text="CND" enabled="false" doAction={this.candidateDoAction}
+                    doInfoClick={this.candidateDoInfoClick}></ToolButton>
+
+                <ToolButton ref={(ref) => this.scanAllBtn = ref} btnStyle={{ top: '5px', left: '110px' }} text="SCN" enabled="false" doAction={this.scanAllDoAction}
+                    doInfoClick={this.scanAllDoInfoClick}></ToolButton>
+
+                <ToolButton ref={(ref) => this.analyseBtn = ref} btnStyle={{ top: '5px', left: '210px' }} text="ANLS" enabled="false" doAction={this.analyseDoAction}></ToolButton>
+
+                <div style={{ position: 'absolute', right: '10px', top: '25px', cursor: 'pointer', 'fontSize': 'small' }} ref={(ref) => this.scanInfo = ref} onClick={this.toggleMatchTextArea}>0/0/0/0(run:Ctrl+↵)</div>
+                <textarea value={this.state.matchStr} style={{ position: 'absolute', right: '20px', color: 'whitesmoke', top: '40px', zIndex: 1000, width: '500px', height: '500px', background: 'rgba(0, 0, 0, 0.8)', 'fontSize': '12px', 'fontFamily': '微软雅黑' }}
                     ref={(ref) => this.matchTextArea = ref} onChange={this.handleMatchTextAreaChange} onKeyUp={this.handleMatchTextAreaKeyUp} onKeyDown={function (e) { e.nativeEvent.stopImmediatePropagation(); } }></textarea>
+                <StocksBoard ref={(ref) => this.stocksBoard = ref} parentStyle={{ zIndex: 1001, top: toolbarHeight+'px', height: (this.state.windowHeight - toolbarHeight)+'px' }}></StocksBoard>
             </div >
-            <ChartCanvas ref={(ref) => this.alphaChart = ref} width="2000" height={candleChartHeight} y={candleChartY} > </ChartCanvas>
+            <ChartCanvas ref={(ref) => this.alphaChart = ref} width="2000" height={candleChartHeight} y={candleChartY}> </ChartCanvas>
             <ChartCanvas ref="candleChart" width="2000" height={candleChartHeight} y={candleChartY} > </ChartCanvas>
             <ChartCanvas ref="volChart" width="2000" height={volChartHeight} y={volChartY} > </ChartCanvas>
-            <ChartCanvas ref="pointerCanvas" width={this.state.windowWidth} height={ponterCanvasHeight} y={pointerCanvasY} > </ChartCanvas>
+            <ChartCanvas ref="pointerCanvas" width={this.state.windowWidth} height={ponterCanvasHeight} y={pointerCanvasY} doDblClick={this.doDblClickPointerCanvas}> </ChartCanvas>
+
         </div >
     }
 
@@ -242,13 +254,14 @@ class CandleApp extends React.Component {
             WorkerGroup.loadStocksPerPage(function (re) {
                 count += re.count;
             });
+            let total = StockIDs.getTotalCount();
             let timer = 0;
             let spinner = ['/', '—', '\\', '|'];
             let interval = setInterval(function () {
                 timer++;
-                let per = Math.round(100 * (count / 2886));
-                me.info.innerHTML = count + '(' + per + '%)' + spinner[timer % 4];
-                if (count === 2886) {
+                let per = Math.round(100 * (count / total));
+                me.info.innerHTML = count + '(' + per + '%)'; //+ spinner[timer % 4];
+                if (count === total) {
                     clearInterval(interval);
                     me.info.innerHTML = count + '(' + per + '%)';
                     me.handlePageLoadFinished();
@@ -259,29 +272,40 @@ class CandleApp extends React.Component {
 
     }
 
-    doAnalyseClick() {
+    doDblClickPointerCanvas(e) {
+        let x = e.clientX;
+        let y = e.clinetY;
+        let candleCanvasX = parseInt(candlePainter.canvas.style.left, 10);
+        let dataindex = painterCore.getDataIndexByX(x - candleCanvasX);
+
+        let data = painterCore.getDataByIndex(dataindex);
+        let matchCases = data.matchCases;
+        let me = this;
+        if (matchCases) {
+            let cases = matchCases.bull.concat(matchCases.bear.concat(matchCases.pending));
+            let date = data.date;
+            WorkerGroup.getStockDataOnDate(cases, date, function (d) {
+                me.stocksBoard.setState({ data: d });
+            })
+        }
+
+    }
+
+    analyseDoAction() {
         let matchStr = this.matchTextArea.value;
         WorkerGroup.workersBuildAndAnalyse(matchStr, function (re) {
             console.log("workersBuildAndAnalyse", re)
         });
     }
 
-    scanAllBtnClick() {
-        let startChar = '▹';
-        let start = this.scanAllBtn.innerHTML === startChar;
-        if (!start) {
-            this.scanAllBtn.innerHTML = startChar;
-            this.scanAllBtn.style.fontSize = 'xx-large';
-            this.scanAllBtn.style.top = '17px';
-            WorkerGroup.workersStopScanByIndex(function (re) {
-                console.log("workerStopScanAll", re)
-            });
-            return;
-        }
+    scanAllDoInfoClick() {
+        WorkerGroup.workersStopScanByIndex(function (re) {
+            console.log("workerStopScanAll", re)
+        });
+    }
 
-        this.scanAllBtn.innerHTML = '◻'; //stop;
-        this.scanAllBtn.style.fontSize = 'x-large';
-        this.scanAllBtn.style.top = '22px';
+    scanAllDoAction() {
+
         let me = this;
         let count = 0,
             bull = 0,
@@ -290,21 +314,14 @@ class CandleApp extends React.Component {
         let matchStr = this.matchTextArea.value;
         painterCore.clearMatchCases();
 
-        WorkerGroup.workersScanByIndex(matchStr, {startFrom:80, endOffset:20}, function (cnts) { // && data[n].ave_close_8 > data[n-2].ave_close_8 && data[n].ave_close_8 > data[n-3].ave_close_8
+        WorkerGroup.workersScanByIndex(matchStr, { startFrom: 80, endOffset: 20 }, function (cnts) { // && data[n].ave_close_8 > data[n-2].ave_close_8 && data[n].ave_close_8 > data[n-3].ave_close_8
             count++; //= cnts.index;
             bull += cnts.bull;
             bear += cnts.bear;
             cases += cnts.cases;
             painterCore.addMatchCases(cnts.sid, cnts.matchOnDate)
             let per = bull + bear > 0 ? Math.round(1000 * bull / cases) / 10 : 0;
-            me.scanAllInfo.innerHTML = per + '%/' + cases + '/' + count;
-
-            if (cnts.finished && count === 2886) {
-                me.scanAllBtn.innerHTML = startChar;
-                me.scanAllBtn.style.fontSize = 'xx-large';
-                me.scanAllBtn.style.top = '17px';
-                console.log("-------------------------bull/bear/cases:", bull, bear, cases)
-            }
+            me.scanAllBtn.setState({ info: per + '%/' + cases + '/' + count })
         })
         LocalStoreUtil.addToStore('scanExp', matchStr, 100);
     }
@@ -327,7 +344,6 @@ class CandleApp extends React.Component {
         this.setState({
             matchStr: e.target.value
         });
-        // LocalStoreUtil.setCookie('scanExp', escape(e.target.value));
 
     }
 
@@ -343,18 +359,19 @@ class CandleApp extends React.Component {
             console.log("workerGetStockJson time", new Date() - start, sid, json.length)
             painterCore.loadData(json);
             painterCore.updateDrawPort(date, window.innerWidth);
-            // IO.httpGetStockMoneyFlowJson(sid, function(json) {
-            //     painterCore.updateMoneyFlow(json);
-            //     // IO.httpGetStockFullJson(sid, 'date,open,close,high,low,amount,netamount,r0_net', function(json) {
-            //     //     console.log("get full")
-            //     // });
-            // })
+
 
         });
 
     }
 
-    doEvalueate() {
+    candidateDoInfoClick() {
+        WorkerGroup.workersStopScanByIndex(function (re) {
+            console.log("workerStopScanAll", re)
+        });
+    }
+
+    candidateDoAction() {
         let me = this;
         let count = 0,
             bull = 0,
@@ -362,17 +379,16 @@ class CandleApp extends React.Component {
             cases = 0;
         painterCore.clearMatchCases();
         IO.httpReadBullFilters(function (filters) {
-
-            WorkerGroup.workersScanByIndex(filters,{startOffset:60, endOffset:0}, function (cnts) { // && data[n].ave_close_8 > data[n-2].ave_close_8 && data[n].ave_close_8 > data[n-3].ave_close_8
+            WorkerGroup.workersScanByIndex(filters, { startOffset: 60, endOffset: 0 }, function (cnts) { // && data[n].ave_close_8 > data[n-2].ave_close_8 && data[n].ave_close_8 > data[n-3].ave_close_8
                 count++; //= cnts.index;
                 bull += cnts.bull;
                 bear += cnts.bear;
                 cases += cnts.cases;
                 painterCore.addMatchCases(cnts.sid, cnts.matchOnDate)
                 let per = bull + bear > 0 ? Math.round(1000 * bull / cases) / 10 : 0;
-                me.scanAllInfo.innerHTML = per + '%/' + cases + '/' + count;
+                me.candidateBtn.setState({ info: per + '%/' + cases + '/' + count })
 
-                if (cnts.finished && count === 2886) {
+                if (cnts.finished && count === StockIDs.getTotalCount()) {
 
                     console.log("-------------------------bull/bear/cases:", bull, bear, cases)
                 }
@@ -384,6 +400,9 @@ class CandleApp extends React.Component {
 
     handlePageLoadFinished() {
         console.log("page load finished")
+        this.candidateBtn.setState({ enabled: true });
+        this.scanAllBtn.setState({ enabled: true })
+        this.analyseBtn.setState({ enabled: true })
     }
 
 

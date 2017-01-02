@@ -10,7 +10,7 @@ class StockIDs {
             StockIDs.idIndexMap[ids[i]] = i;
         }
     }
-
+    
     static validSid(sid) {
         if (sid === 'SH000001') sid = 'SH999999';
         return StockIDs.idIndexMap[sid] !== undefined ? sid : null;

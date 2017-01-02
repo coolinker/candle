@@ -99,7 +99,7 @@ module.exports = class MassPainter {
         //console.log("border draw", this.topBorder, this.bottomBorder)
         let canvas = this.canvas;
         let ctx = this.canvas2DCtx
-        ctx.strokeStyle = '#424242';
+        ctx.strokeStyle = "rgba(220, 220, 220, 0.6)";
         if (this.topBorder > 0) {
             ctx.beginPath();
             ctx.moveTo(0, 0);
